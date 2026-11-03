@@ -121,7 +121,7 @@ export default function CustomersIndexPage() {
                 </code>
                 . In the meantime, the{' '}
                 <Link
-                  href="/#product"
+                  href="/landing#product"
                   className="text-brand-300 underline underline-offset-2 hover:text-brand-200"
                 >
                   screenshots on the home page

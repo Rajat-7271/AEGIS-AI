@@ -123,7 +123,7 @@ export default function NotFoundPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/"
+              href="/landing"
               className="inline-flex h-11 items-center gap-2 rounded-md bg-brand-500 px-5 text-sm font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset] transition-colors hover:bg-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base"
             >
               Back to home

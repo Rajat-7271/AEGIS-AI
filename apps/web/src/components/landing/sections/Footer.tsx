@@ -48,10 +48,10 @@ const COLUMNS: ReadonlyArray<LinkColumn> = [
       // that's how buyers compare AI-SOC vendors — by named agent —
       // but they all land on the same anchor today. When the agent
       // deep-dives ship we'll point each row at its own page.
-      { label: 'Detect agent', href: '/#solution' },
-      { label: 'Triage agent', href: '/#solution' },
-      { label: 'Hunt agent', href: '/#solution' },
-      { label: 'Respond agent', href: '/#solution' },
+      { label: 'Detect agent', href: '/landing#solution' },
+      { label: 'Triage agent', href: '/landing#solution' },
+      { label: 'Hunt agent', href: '/landing#solution' },
+      { label: 'Respond agent', href: '/landing#solution' },
       { label: 'Connectors', href: docs('connectors') },
       { label: 'Marketplace', href: '/marketplace' },
     ],

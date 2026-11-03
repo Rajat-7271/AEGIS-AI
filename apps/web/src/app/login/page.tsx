@@ -220,7 +220,7 @@ async function landingRoute(requested: string): Promise<string> {
           {/* Brand */}
           <div className="flex flex-col items-center text-center mb-10">
             <Link
-              href="/"
+              href="/landing"
               className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center mb-5 hover:bg-indigo-500 transition"
               aria-label="Back to AiSOC home"
             >
@@ -519,7 +519,7 @@ async function landingRoute(requested: string): Promise<string> {
             </p>
             <p className="text-[11px] text-zinc-600">
               <Link
-                href="/"
+                href="/landing"
                 className="hover:text-zinc-400 underline-offset-2 hover:underline"
               >
                 ← Back to home

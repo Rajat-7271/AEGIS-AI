@@ -138,6 +138,18 @@ const nextConfig = {
         destination: '/dashboard',
         permanent: true,
       },
+      // Root route redirects directly to the console dashboard.
+      {
+        source: '/',
+        destination: '/dashboard',
+        permanent: false,
+      },
+      // Convenience alias for the marketing landing page.
+      {
+        source: '/welcome',
+        destination: '/landing',
+        permanent: false,
+      },
     ];
   },
 

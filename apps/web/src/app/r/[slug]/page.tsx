@@ -39,7 +39,7 @@ function ReplayUnavailable({ status }: { status: number | null }) {
   return (
     <main style={{ background: "#0b1020", minHeight: "100vh", color: "#e6e9f5", padding: "48px 24px" }}>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <Link href="/" style={{ color: "#8b93b7", textDecoration: "none", fontSize: 14 }}>
+        <Link href="/landing" style={{ color: "#8b93b7", textDecoration: "none", fontSize: 14 }}>
           ← AiSOC
         </Link>
         <h1 style={{ fontSize: 26, fontWeight: 800, margin: "24px 0 8px" }}>Replay temporarily unavailable</h1>
@@ -66,7 +66,7 @@ export default async function ReplayPage({ params }: PageProps) {
   return (
     <main style={{ background: "#0b1020", minHeight: "100vh", color: "#e6e9f5", padding: "48px 24px" }}>
       <div style={{ maxWidth: 1040, margin: "0 auto" }}>
-        <Link href="/" style={{ color: "#8b93b7", textDecoration: "none", fontSize: 14 }}>
+        <Link href="/landing" style={{ color: "#8b93b7", textDecoration: "none", fontSize: 14 }}>
           ← AiSOC
         </Link>
         <header style={{ margin: "16px 0 32px" }}>

@@ -50,9 +50,9 @@ import { cn } from '@/lib/utils';
 const REPO_URL = 'https://github.com/beenuar/AiSOC';
 
 const NAV_LINKS: ReadonlyArray<{ label: string; href: string }> = [
-  { label: 'Product', href: '/#product' },
-  { label: 'Solutions', href: '/#pillars' },
-  { label: 'Connectors', href: '/#connectors' },
+  { label: 'Product', href: '/landing#product' },
+  { label: 'Solutions', href: '/landing#pillars' },
+  { label: 'Connectors', href: '/landing#connectors' },
   { label: 'Benchmark', href: '/benchmark' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Docs', href: docs('intro') },
@@ -91,7 +91,7 @@ export function StickyNav() {
         className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8"
       >
         <Link
-          href="/"
+          href="/landing"
           aria-label="AiSOC home"
           className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-velvet-emerald-mint focus-visible:ring-offset-2 focus-visible:ring-offset-velvet-surface-base"
         >
