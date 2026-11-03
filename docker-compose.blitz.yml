@@ -1,0 +1,62 @@
+services:
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: aegis-api
+    restart: unless-stopped
+    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--access-log" ]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\" || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    environment:
+      - ENVIRONMENT=production
+      - PORT=8000
+      - LOG_LEVEL=info
+      - DATABASE_POOL_SIZE=3
+      - DATABASE_MAX_OVERFLOW=1
+      - DATABASE_POOL_RECYCLE_SECONDS=300
+      - AISOC_ALLOW_CLEARTEXT_DB=0
+      - AISOC_DISABLE_KAFKA=true
+      - AISOC_DISABLE_CLICKHOUSE=true
+      - AISOC_DISABLE_NEO4J=true
+      - AISOC_DISABLE_QDRANT=true
+      - KAFKA_BOOTSTRAP_SERVERS=
+      - CLICKHOUSE_HOST=
+      - NEO4J_URI=
+      - QDRANT_URL=
+      - OPENSEARCH_URL=
+      - CONNECTORS_SERVICE_URL=
+      - THREATINTEL_SERVICE_URL=
+      - AGENTS_API_URL=
+      - AGENTS_SERVICE_URL=
+      - OAUTH_REFRESH_WORKER_ENABLED=false
+      - WEEKLY_DIGEST_WORKER_ENABLED=false
+      - AUTONOMY_DRIFT_ENABLED=false
+      - REPORT_SCHEDULER_ENABLED=false
+      - OUTBOUND_WEBHOOK_WORKER_ENABLED=false
+      - HUNT_SCHEDULER_ENABLED=false
+      - RETENTION_WORKER_ENABLED=false
+      - PHISHING_INTAKE_WORKER_ENABLED=false
+      - APPROVAL_EXPIRY_ENABLED=false
+      - SHADOW_RECONCILE_ENABLED=false
+      - RETRO_HUNT_ENABLED=false
+      - PLUGIN_TRUST_MODE=signature
+      - DATABASE_URL
+      - SECRET_KEY
+      - JWT_SECRET
+      - AISOC_CREDENTIAL_KEY
+      - METRICS_TOKEN
+      - AISOC_SERVICE_TOKEN
+      - AISOC_API_SERVICE_TOKEN
+      - REALTIME_INTERNAL_TOKEN
+      - AISOC_REALTIME_JWT_SECRET
+      - AISOC_CORS_ORIGINS
+      - CORS_ORIGINS
+      - AISOC_CONSOLE_URL
+      - CONSOLE_PUBLIC_BASE_URL
