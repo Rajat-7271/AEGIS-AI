@@ -1,0 +1,59 @@
+# Trivy suppression list. Same contract as scripts/security_audit_ignores.txt:
+# every entry carries the path it is scoped to, the reason it is acceptable,
+# and an expiry (`expired_at`) so it is re-checked rather than inherited.
+#
+# The nine pillow advisories below are fixed exclusively in pillow 13.0.0 —
+# no 12.x patch release exists. services/agents cannot take pillow 13 because
+# qdrant-client[fastembed] depends on fastembed, and every fastembed release
+# through 0.9.0 (latest as of 2026-10-21) caps `pillow <13.0`. services/api
+# carried the same advisories and was fixed properly (pillow 13.0.0 in its
+# lock — no parent cap there), which is why these statements are scoped to
+# services/agents/poetry.lock alone: a pillow finding anywhere else must
+# still fail the scan. No module in services/agents imports PIL directly;
+# pillow arrives only as fastembed's image-model leg.
+vulnerabilities:
+  - id: CVE-2026-112395
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112397
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112400
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112403
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112404
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112895
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112896
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112897
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents
+  - id: CVE-2026-112899
+    paths:
+      - services/agents/poetry.lock
+    expired_at: 2027-01-15
+    statement: pillow fix is 13.0.0-only; fastembed <=0.9.0 caps pillow <13.0 in services/agents

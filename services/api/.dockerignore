@@ -1,0 +1,14 @@
+# Local-only artifacts must not be copied into a public-facing API image.
+*.bak
+*.patch
+.env
+.env.*
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/

@@ -1,0 +1,201 @@
+# AiSOC — free-tier MVP Blueprint for Render (Hobby workspace)
+#
+# Deploys: API + Agents as free web services.
+# Database: Supabase (external, free tier) — NOT a Render database.
+# Frontend: Vercel (separate deployment, not listed here).
+#
+# FREE-TIER CONSTRAINTS (verified from render.com/docs/free, November 2026):
+#   - Free web services: sleep after 15 min idle, ~1 min cold start.
+#   - 750 free instance hours shared across ALL free web services per workspace
+#     per calendar month. Two services consume those 750 hours together, not
+#     375 h each — whichever service is running at any given minute draws from
+#     the same pool. At normal team usage (sporadic, not always-on) this is
+#     sufficient. Keeping both services alive 24/7 would exhaust the budget in
+#     ~15 days and suspend both until the next month.
+#   - No persistent disk on free tier. All durable state lives in Supabase.
+#   - No shell access on free tier.
+#   - Background worker service type: NOT available on free tier (min $7/mo).
+#     Background tasks run as in-process asyncio workers inside web services.
+#   - Free Render Postgres expires 30 days after creation — use Supabase instead.
+#
+# SECRETS — set these in the Render dashboard, NOT in this file:
+#   DATABASE_URL              Supabase session-pooler URL (port 5432, session mode)
+#   DATABASE_MIGRATION_URL    Supabase session-pooler URL (port 5432, used by run_migrations)
+#   SECRET_KEY                Random 64-char hex
+#   JWT_SECRET                Random 64-char hex
+#   AISOC_CREDENTIAL_KEY      Fernet key (python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+#   METRICS_TOKEN             Random 32-char hex
+#   AISOC_SERVICE_TOKEN       Random 43-char token
+#   AISOC_API_SERVICE_TOKEN   Random 43-char token
+#   AISOC_AGENTS_SERVICE_TOKEN  Random 43-char token
+#   AISOC_APP_DB_PASSWORD     Password for the aisoc_app Postgres role
+#   REALTIME_INTERNAL_TOKEN   Random 32-char hex (required by enforce_secure_defaults in production)
+#   AISOC_REALTIME_JWT_SECRET Random 32-char hex (required by enforce_secure_defaults in production)
+#   OPENAI_API_KEY            Optional; AI triage degrades to heuristics without it
+
+services:
+
+  # ── API (FastAPI core) ─────────────────────────────────────────────────────
+  - type: web
+    name: aegis-api
+    runtime: docker
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: ./services/api
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: false   # set true once the first manual migration-run deploy succeeds
+    envVars:
+
+      # ── Runtime ──────────────────────────────────────────────────────────
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8000"
+      - key: LOG_LEVEL
+        value: info
+
+      # ── Database ─────────────────────────────────────────────────────────
+      # Set DATABASE_URL and DATABASE_MIGRATION_URL as secrets in the dashboard.
+      # DATABASE_URL must use Supabase's session-pooler (port 5432):
+      #   postgresql+asyncpg://postgres.[REF]:[PASS]@aws-0-[region].pooler.supabase.com:5432/postgres?sslmode=require
+      # DATABASE_MIGRATION_URL must use the direct connection:
+      #   postgresql+asyncpg://postgres:[PASS]@db.[REF].supabase.co:5432/postgres?sslmode=require
+      - key: AISOC_ALLOW_CLEARTEXT_DB
+        value: "0"    # Supabase enforces TLS — do NOT set this to 1
+      - key: DATABASE_POOL_SIZE
+        value: "5"    # Supabase Nano: 60 direct connections max; Supavisor session
+      - key: DATABASE_MAX_OVERFLOW    # mode has 200 client slots but uses shared backends
+        value: "2"
+      - key: DATABASE_POOL_RECYCLE_SECONDS
+        value: "300"
+
+      # ── Disable unused infrastructure ────────────────────────────────────
+      - key: AISOC_DISABLE_KAFKA
+        value: "true"
+      - key: AISOC_DISABLE_NEO4J
+        value: "true"
+      - key: AISOC_DISABLE_CLICKHOUSE
+        value: "true"
+      - key: AISOC_DISABLE_QDRANT
+        value: "true"
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: ""     # empty → retro_hunt consumer never starts
+      - key: AISOC_ALLOW_CLEARTEXT_KAFKA
+        value: "0"
+      # Redis is omitted intentionally. The API is fail-open without it:
+      # login throttle falls back to in-process counting, scheduler locks
+      # proceed without distributed coordination (fine for 1 instance).
+      # A non-existent REDIS_URL causes a warning then fail-open behaviour.
+      - key: REDIS_URL
+        value: "redis://localhost:6379/0"   # unreachable → triggers graceful fallback
+
+      # ── Workers: disable those that need heavy resources ─────────────────
+      - key: WEEKLY_DIGEST_WORKER_ENABLED
+        value: "false"   # WeasyPrint too heavy for 512 MB RAM
+      - key: REPORT_SCHEDULER_ENABLED
+        value: "false"   # requires SMTP relay to be useful; off by default
+      - key: RETRO_HUNT_ENABLED
+        value: "false"   # requires Kafka
+      - key: SHADOW_RECONCILE_ENABLED
+        value: "false"   # reaches external SIEMs on a timer; off by default
+      - key: RETENTION_WORKER_ENABLED
+        value: "false"   # data deletion; explicit opt-in only
+
+      # ── Connectivity ─────────────────────────────────────────────────────
+      # Set AISOC_CORS_ORIGINS as a secret (comma-separated):
+      #   https://your-project.vercel.app,https://your-custom-domain.com
+      # AISOC_CONSOLE_URL: set as secret to https://your-project.vercel.app
+      - key: AGENTS_API_URL
+        value: "https://aegis-agents.onrender.com"
+      - key: AGENTS_SERVICE_URL
+        value: "https://aegis-agents.onrender.com"
+      - key: CONNECTORS_SERVICE_URL
+        value: ""    # no connectors service deployed
+      - key: THREATINTEL_SERVICE_URL
+        value: ""    # no threatintel service deployed
+      - key: NEO4J_URI
+        value: ""
+      - key: CLICKHOUSE_HOST
+        value: ""
+      - key: OPENSEARCH_URL
+        value: ""
+      - key: QDRANT_URL
+        value: ""
+
+      # ── LLM ──────────────────────────────────────────────────────────────
+      # Set OPENAI_API_KEY as a secret if AI triage is wanted.
+      # Without it, investigations still run with heuristics only.
+      - key: LLM_GATEWAY_URL
+        value: "https://api.openai.com/v1"   # bypass LiteLLM, use OpenAI directly
+      - key: LITELLM_MASTER_KEY
+        value: ""
+
+      # ── Security ─────────────────────────────────────────────────────────
+      # Set as secrets: SECRET_KEY, JWT_SECRET, AISOC_CREDENTIAL_KEY,
+      # METRICS_TOKEN, AISOC_SERVICE_TOKEN, AISOC_API_SERVICE_TOKEN,
+      # AISOC_AGENTS_SERVICE_TOKEN, AISOC_APP_DB_PASSWORD,
+      # REALTIME_INTERNAL_TOKEN, AISOC_REALTIME_JWT_SECRET
+      # (Note: REALTIME_INTERNAL_TOKEN and AISOC_REALTIME_JWT_SECRET must be set as
+      # non-empty secrets to satisfy enforce_secure_defaults when ENVIRONMENT=production)
+
+      # ── Passkey RP (set to your Vercel domain) ────────────────────────────
+      # Set as secrets: PASSKEY_RP_ID, PASSKEY_RP_ORIGINS
+      # PASSKEY_RP_ID = your-project.vercel.app (eTLD+1, no scheme/port)
+      # PASSKEY_RP_ORIGINS = https://your-project.vercel.app
+
+  # ── Agents (LangGraph orchestrator + investigator) ─────────────────────────
+  - type: web
+    name: aegis-agents
+    runtime: docker
+    dockerfilePath: ./services/agents/Dockerfile
+    dockerContext: ./services/agents
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8084"
+      - key: LOG_LEVEL
+        value: info
+
+      # ── Database ─────────────────────────────────────────────────────────
+      # Set DATABASE_URL as the same Supabase session-pooler URL as above.
+      - key: DATABASE_POOL_SIZE
+        value: "3"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "1"
+
+      # ── Kafka off ────────────────────────────────────────────────────────
+      # Empty KAFKA_BOOTSTRAP_SERVERS → FusedAlertTriageWorker never starts.
+      # worker_enabled() in agents returns bool(os.getenv("KAFKA_BOOTSTRAP_SERVERS",""))
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: ""
+      - key: AISOC_HUNT_SCHEDULER_DISABLE
+        value: "1"
+
+      # ── API connectivity ──────────────────────────────────────────────────
+      - key: API_SERVICE_URL
+        value: "https://aegis-api.onrender.com"
+      - key: AISOC_API_URL
+        value: "https://aegis-api.onrender.com"
+      - key: API_URL
+        value: "https://aegis-api.onrender.com"
+      - key: NEO4J_URI
+        value: ""
+      - key: QDRANT_URL
+        value: ""
+
+      # ── LLM ──────────────────────────────────────────────────────────────
+      # Set OPENAI_API_KEY as a secret (same value as in aegis-api).
+      - key: LLM_GATEWAY_URL
+        value: "https://api.openai.com/v1"
+      - key: OPENAI_MODEL
+        value: "gpt-4o-mini"   # cost-effective for triage
+
+      # ── Security ─────────────────────────────────────────────────────────
+      # Set as secrets (same values as aegis-api):
+      # SECRET_KEY, AISOC_SERVICE_TOKEN, AISOC_API_SERVICE_TOKEN,
+      # AISOC_AGENTS_SERVICE_TOKEN, DATABASE_URL
