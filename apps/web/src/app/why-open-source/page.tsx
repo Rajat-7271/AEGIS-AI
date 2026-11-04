@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   // Use `absolute` so the root layout's `template: '%s | AiSOC'` doesn't
   // append a redundant " | AiSOC" to a title that already leads with the
   // brand name.
-  title: { absolute: 'Why AiSOC is open source' },
+  title: { absolute: 'Why AEGIS AI is open source' },
   description:
-    'AiSOC is MIT-licensed and self-hostable, with the agent loop and prompt templates in the repo. This page explains why that posture matters for regulated buyers and what the trade-offs are.',
+    'AEGIS AI is MIT-licensed and self-hostable, with the agent loop and prompt templates in the repo. This page explains why that posture matters for regulated buyers and what the trade-offs are.',
   alternates: { canonical: '/why-open-source' },
   openGraph: {
-    title: 'Why AiSOC is open source',
+    title: 'Why AEGIS AI is open source',
     description:
-      'AiSOC is MIT-licensed and self-hostable. The agent loop and prompts are in the repo, and a 200-incident eval harness runs in CI.',
+      'AEGIS AI is MIT-licensed and self-hostable. The agent loop and prompts are in the repo, and a 200-incident eval harness runs in CI.',
     type: 'article',
   },
 };
@@ -123,10 +123,10 @@ export default function WhyOpenSourcePage() {
             <span className="text-xs text-gray-500">~7 min read</span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-            Why AiSOC is open source.
+            Why AEGIS AI is open source.
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-gray-400">
-            AiSOC is MIT-licensed and self-hostable. The agent loop, prompt
+            AEGIS AI is MIT-licensed and self-hostable. The agent loop, prompt
             templates, and eval harness are in this repo. This page describes
             what that posture means in practice — for buyers in regulated
             industries and for everyone else — and is explicit about the

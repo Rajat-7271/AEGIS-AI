@@ -11,12 +11,12 @@ import Link from 'next/link';
  */
 
 export const metadata: Metadata = {
-  title: 'Press — AiSOC',
+  title: 'Press — AEGIS AI',
   description:
     'Press, analyst, and speaking enquiries for AiSOC — the open-source AI Security Operations Center. Direct email and links to the public artefacts you can quote without asking.',
   alternates: { canonical: '/press' },
   openGraph: {
-    title: 'AiSOC — press kit',
+    title: 'AEGIS AI — press kit',
     description:
       'Direct contact, brand assets, and links to every public artefact you can quote.',
     type: 'article',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 const QUOTE_LINES = [
-  'AiSOC is an MIT-licensed AI Security Operations Center: a self-hostable agent loop, a click-and-connect connector catalogue, and a public benchmark — released under MIT so any team can run, audit, and modify the full stack.',
+  'AEGIS AI is an MIT-licensed AI Security Operations Center: a self-hostable agent loop, a click-and-connect connector catalogue, and a public benchmark — released under MIT so any team can run, audit, and modify the full stack.',
 ];
 
 const QUOTABLE_ARTEFACTS: Array<{ label: string; href: string }> = [

@@ -93,7 +93,7 @@ export function StartHero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-gray-300 md:text-xl">
-            AiSOC ships four named agents — Detect, Triage, Hunt, and
+            AEGIS AI ships four named agents — Detect, Triage, Hunt, and
             Respond — wired to a 200-incident eval harness, a pre-seeded
             LockBit 3.0 investigation, and 26 click-and-connect security
             sources. Pick how you want to start: every option lands you in a
@@ -105,7 +105,7 @@ export function StartHero() {
               identity, cloud, insider) are capabilities of Triage, never
               first-class names here. */}
           <ul
-            aria-label="The four AiSOC agents"
+            aria-label="The four AEGIS AI agents"
             className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4"
           >
             {[
@@ -241,7 +241,7 @@ export function StartHero() {
 function DemoScreencast() {
   return (
     <aside
-      aria-label="AiSOC deployment walkthrough"
+      aria-label="AEGIS AI deployment walkthrough"
       className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
     >
       <a

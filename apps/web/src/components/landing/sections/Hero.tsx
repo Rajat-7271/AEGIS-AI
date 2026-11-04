@@ -190,7 +190,7 @@ export function Hero() {
               </div>
               <Image
                 src="/screenshots/dashboard.png"
-                alt="The AiSOC dashboard on a live core stack: an operations funnel over real counts, pipeline health per stage, and a mean time to resolve that reads not measured because no case has been closed."
+                alt="The AEGIS AI dashboard on a live core stack: an operations funnel over real counts, pipeline health per stage, and a mean time to resolve that reads not measured because no case has been closed."
                 width={1440}
                 height={900}
                 priority

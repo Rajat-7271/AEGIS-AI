@@ -79,17 +79,17 @@ const Footer = dynamic(
 const siteUrl = getPublicSiteUrl();
 
 export const metadata: Metadata = {
-  // Use `absolute` so the root layout's `template: '%s | AiSOC'` does not
-  // append a redundant " | AiSOC" to a title that already leads with the
+  // Use `absolute` so the root layout's `template: '%s | AEGIS AI'` does not
+  // append a redundant " | AEGIS AI" to a title that already leads with the
   // brand.
-  title: { absolute: 'AiSOC — open-source AI Security Operations Center' },
-  description: `AiSOC is an MIT-licensed, agentic SOC: four specialised agents (Detect, Triage, Hunt, Respond), ${CONNECTOR_COUNT} first-party connectors, ${EXECUTABLE_DETECTION_COUNT} executable detection rules and a replayable decision ledger. One command brings up the whole pipeline with a local model and a live CISA feed — no API keys of any kind.`,
+  title: { absolute: 'AEGIS AI — AI Security Operations Center' },
+  description: `AEGIS AI is an MIT-licensed, agentic SOC: four specialised agents (Detect, Triage, Hunt, Respond), ${CONNECTOR_COUNT} first-party connectors, ${EXECUTABLE_DETECTION_COUNT} executable detection rules and a replayable decision ledger. One command brings up the whole pipeline with a local model and a live CISA feed — no API keys of any kind.`,
   alternates: { canonical: '/landing' },
   openGraph: {
-    title: 'AiSOC — open-source AI Security Operations Center',
+    title: 'AEGIS AI — AI Security Operations Center',
     description: `Four agents, ${CONNECTOR_COUNT} connectors, ${EXECUTABLE_DETECTION_COUNT} executable detections and a replayable ledger. Runs the whole pipeline with no API keys. MIT-licensed, self-hosted.`,
     url: `${siteUrl}/landing`,
-    siteName: 'AiSOC',
+    siteName: 'AEGIS AI',
     type: 'website',
     locale: 'en_US',
     images: [
@@ -97,13 +97,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: `AiSOC — open-source AI SOC with four specialised agents and ${CONNECTOR_COUNT} connectors`,
+        alt: `AEGIS AI — AI SOC with four specialised agents and ${CONNECTOR_COUNT} connectors`,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AiSOC — open-source AI Security Operations Center',
+    title: 'AEGIS AI — AI Security Operations Center',
     description: `Four agents. ${CONNECTOR_COUNT} connectors. ${EXECUTABLE_DETECTION_COUNT} executable detections. A replayable decision ledger. No API keys required. MIT-licensed.`,
     images: ['/og-image.png'],
   },
@@ -112,8 +112,8 @@ export const metadata: Metadata = {
 const productJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'AiSOC',
-  alternateName: ['AI SOC', 'AiSOC Platform', 'Agentic SOC'],
+  name: 'AEGIS AI',
+  alternateName: ['AEGIS', 'AEGIS SOC', 'AEGIS AI Platform'],
   applicationCategory: 'SecurityApplication',
   applicationSubCategory: 'Security Operations Center',
   operatingSystem: 'Linux, macOS, Docker',
@@ -122,7 +122,7 @@ const productJsonLd = {
   downloadUrl: 'https://github.com/beenuar/AiSOC',
   installUrl: docs('quickstart'),
   releaseNotes: 'https://github.com/beenuar/AiSOC/releases',
-  description: `AiSOC is an MIT-licensed agentic Security Operations Center: four specialised agents (Detect, Triage, Hunt, Respond), ${CONNECTOR_COUNT} first-party connectors, ${EXECUTABLE_DETECTION_COUNT} executable detection rules, and a core profile that brings the whole pipeline up with no credentials of any kind.`,
+  description: `AEGIS AI is an MIT-licensed agentic Security Operations Center: four specialised agents (Detect, Triage, Hunt, Respond), ${CONNECTOR_COUNT} first-party connectors, ${EXECUTABLE_DETECTION_COUNT} executable detection rules, and a core profile that brings the whole pipeline up with no credentials of any kind.`,
   featureList: [
     'Four specialised agents: Detect, Triage, Hunt, Respond',
     `${CONNECTOR_COUNT} first-party connectors across EDR, SIEM, cloud, IAM, SaaS, VCS, network`,
@@ -150,7 +150,7 @@ const faqJsonLd = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'Is AiSOC really open source?',
+      name: 'Is AEGIS AI really open source?',
       acceptedAnswer: {
         '@type': 'Answer',
         text:
@@ -204,7 +204,7 @@ const faqJsonLd = {
     },
     {
       '@type': 'Question',
-      name: 'How is AiSOC kept secure and up to date?',
+      name: 'How is AEGIS AI kept secure and up to date?',
       acceptedAnswer: {
         '@type': 'Answer',
         text:

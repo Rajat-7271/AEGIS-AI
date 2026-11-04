@@ -16,11 +16,11 @@ import { CONNECTOR_COUNT } from '@/data/connectorCount';
  */
 
 export const metadata: Metadata = {
-  title: 'Pricing — AiSOC',
+  title: 'Pricing — AEGIS AI',
   description: `Three tiers — Community (free, self-host the full ${CONNECTOR_COUNT}-connector stack), Team (managed waitlist), and Enterprise (sovereign + air-gap + 24×7). MIT-licensed, no enterprise binary, no closed components.`,
   alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'AiSOC pricing — free to self-host, pay only when we host',
+    title: 'AEGIS AI pricing — free to self-host, pay only when we host',
     description:
       'Community / Team / Enterprise tiers with the procurement-side answers (residency, SLA, audit posture) up front.',
     type: 'article',
@@ -116,7 +116,7 @@ const FAQS: Array<{ q: string; a: string }> = [
     a: 'You supply the API key for OpenAI, Anthropic, Azure OpenAI, Bedrock, or a private LiteLLM gateway, and we point your tenant at it. Your prompts go directly to your provider — we are not in that traffic path, and your provider\'s data-handling policy applies.',
   },
   {
-    q: 'Can you host AiSOC in a sovereign-cloud region (e.g. AWS GovCloud, Azure Germany)?',
+    q: 'Can you host AEGIS AI in a sovereign-cloud region (e.g. AWS GovCloud, Azure Germany)?',
     a: 'Yes — the Enterprise tier covers this. We use the same Terraform modules the open-source distribution ships, pointed at the region you require. Compliance posture is what your auditor signs off on (we surface the controls; we are not yet the audited entity).',
   },
   {

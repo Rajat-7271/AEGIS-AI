@@ -52,7 +52,7 @@ export function DemoBanner({ demoMode }: DemoBannerProps = {}) {
         rel="noopener noreferrer"
         className="underline underline-offset-2 hover:text-amber-100 transition-colors"
       >
-        Self-host AiSOC
+        Self-host AEGIS AI
       </a>
     </div>
   );

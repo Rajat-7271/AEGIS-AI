@@ -178,7 +178,7 @@ export function TeamAnalyticsView() {
           <EmptyState
             icon={EmptyStateIcons.search}
             title="No analyst performance data"
-            description="AiSOC does not yet measure per-analyst cases closed, resolution time or accuracy, so there is nothing to rank. This view is a placeholder for that measurement rather than a report of it."
+            description="AEGIS AI does not yet measure per-analyst cases closed, resolution time or accuracy, so there is nothing to rank. This view is a placeholder for that measurement rather than a report of it."
           />
         ) : sorted.length === 0 ? (
           <EmptyState

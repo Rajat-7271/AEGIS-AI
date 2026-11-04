@@ -18,12 +18,12 @@ import { docs } from '@/lib/docs';
 export const metadata: Metadata = {
   title: 'Public benchmark scoreboard',
   description:
-    'A reproducible regression harness over the AiSOC substrate. Four CI gates over a 200-incident synthetic dataset (MITRE / completeness / response quality) plus a 1,000-alert noisy stream (alert reduction). Per-template macros, per-case means, alert-reduction %, the 2026 KPI bar, and a fixed-dataset community leaderboard. The page documents what each metric measures and what it does not.',
+    'A reproducible regression harness over the AEGIS AI substrate. Four CI gates over a 200-incident synthetic dataset (MITRE / completeness / response quality) plus a 1,000-alert noisy stream (alert reduction). Per-template macros, per-case means, alert-reduction %, the 2026 KPI bar, and a fixed-dataset community leaderboard. The page documents what each metric measures and what it does not.',
   alternates: { canonical: '/benchmark' },
   openGraph: {
-    title: 'AiSOC public benchmark scoreboard',
+    title: 'AEGIS AI public benchmark scoreboard',
     description:
-      'Regression-gate harness over the AiSOC substrate plus a fixed-dataset community leaderboard. Open dataset, open harness, CI-enforced.',
+      'Regression-gate harness over the AEGIS AI substrate plus a fixed-dataset community leaderboard. Open dataset, open harness, CI-enforced.',
     type: 'article',
   },
 };
@@ -97,7 +97,7 @@ export default async function BenchmarkPage() {
             Public benchmark scoreboard
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-gray-400">
-            A deterministic regression harness over the AiSOC substrate &mdash;
+            A deterministic regression harness over the AEGIS AI substrate &mdash;
             the keyword extractors, the in-harness fusion grouping (a four-tier
             scheme implemented inside the test, which groups on different
             dimensions from{' '}

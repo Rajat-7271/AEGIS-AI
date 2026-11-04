@@ -126,7 +126,7 @@ export default function AiEstateView() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-100">AI estate</h1>
         <p className="text-sm text-gray-500 mt-1">
-          What AiSOC has observed running, not what was registered. The interesting row is the one nobody
+          What AEGIS AI has observed running, not what was registered. The interesting row is the one nobody
           declared.
         </p>
       </div>
@@ -172,7 +172,7 @@ export default function AiEstateView() {
           </div>
         ) : !data?.items?.length ? (
           <div className="p-8 text-center text-sm text-gray-500">
-            No AI assets observed yet. AiSOC builds this list from AI runtime telemetry, endpoint process
+            No AI assets observed yet. AEGIS AI builds this list from AI runtime telemetry, endpoint process
             activity and provider audit logs — if none of those is connected, this stays empty whatever is
             running.
           </div>

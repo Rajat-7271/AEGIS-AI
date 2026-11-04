@@ -934,10 +934,10 @@ function CaseWorkspaceSession({ caseId }: { caseId: string }) {
                 caseRecord.status,
                 ...(caseRecord.status === "closed"
                   ? REOPEN_TARGETS
-                  : CASE_STATUS_TRANSITIONS[caseRecord.status]),
+                  : (CASE_STATUS_TRANSITIONS[caseRecord.status] ?? [])),
               ].map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
+                  {STATUS_LABEL[s] ?? s}
                 </option>
               ))}
             </select>
@@ -1167,7 +1167,7 @@ function CaseWorkspaceSession({ caseId }: { caseId: string }) {
               updated_at: caseRecord.updatedAt,
               due_at: caseRecord.dueAt,
             }}
-            eyebrow="Ask AiSOC about this case"
+            eyebrow="Ask AEGIS AI about this case"
           />
 
           {/* Depth 9.4 — one action opens a Slack or Teams channel for this case

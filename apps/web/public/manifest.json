@@ -1,7 +1,7 @@
 {
-  "name": "AiSOC Responder",
-  "short_name": "AiSOC",
-  "description": "On-call responder PWA for AiSOC — open-source AI SOC. Triage entity-risk alerts, approve agent actions, manage cases, and search across connected SIEMs from your phone. 16 click-and-connect sources, confidence scoring, and detection drift tracking.",
+  "name": "AEGIS AI Responder",
+  "short_name": "AEGIS AI",
+  "description": "On-call responder PWA for AEGIS AI — AI-powered SOC. Triage entity-risk alerts, approve agent actions, manage cases, and search across connected SIEMs from your phone. 16 click-and-connect sources, confidence scoring, and detection drift tracking.",
   "id": "/responder",
   "start_url": "/responder",
   "scope": "/",

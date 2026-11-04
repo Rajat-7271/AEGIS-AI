@@ -30,6 +30,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Menu, X } from 'lucide-react';
+import { AegisMark } from '@/components/layout/AegisLogo';
 import { GithubMark } from './icons';
 import { docs } from '@/lib/docs';
 import { cn } from '@/lib/utils';
@@ -92,17 +93,13 @@ export function StickyNav() {
       >
         <Link
           href="/landing"
-          aria-label="AiSOC home"
-          className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-velvet-emerald-mint focus-visible:ring-offset-2 focus-visible:ring-offset-velvet-surface-base"
+          aria-label="AEGIS AI home"
+          className="flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-velvet-emerald-mint focus-visible:ring-offset-2 focus-visible:ring-offset-velvet-surface-base"
         >
-          <span
-            aria-hidden="true"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-velvet-emerald-cta text-xs font-bold text-velvet-content-primary shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)] motion-safe:shadow-glow-emerald-sm"
-          >
-            Ai
-          </span>
-          <span className="font-velvet-display text-base font-normal tracking-tight text-velvet-content-primary">
-            AiSOC
+          <AegisMark size={30} />
+          <span className="font-velvet-display text-base tracking-tight flex items-baseline gap-1">
+            <span className="text-white font-bold">AEGIS</span>
+            <span className="text-brand-400 font-bold">AI</span>
           </span>
         </Link>
 

@@ -11,12 +11,12 @@ import type { Metadata } from 'next';
  */
 
 export const metadata: Metadata = {
-  title: 'Privacy — AiSOC',
+  title: 'Privacy — AEGIS AI',
   description:
     'What we collect, why we collect it, and how to delete it — split between the self-hosted distribution (nothing) and the managed waitlist + marketing site (identity, traffic, and waitlist data).',
   alternates: { canonical: '/privacy' },
   openGraph: {
-    title: 'AiSOC privacy policy',
+    title: 'AEGIS AI privacy policy',
     description:
       'Self-hosted: we never see your data. Managed waitlist: identity + traffic + waitlist data. No third-party ad networks.',
     type: 'article',
@@ -29,7 +29,7 @@ const SECTIONS: Array<{ heading: string; body: string[] }> = [
   {
     heading: 'Self-hosted distribution',
     body: [
-      'The MIT-licensed AiSOC distribution runs entirely inside your environment. There is no phone-home, no telemetry endpoint, no opt-in analytics SDK, and no anonymous usage report shipped from your cluster back to us. When `AISOC_AIRGAPPED=true` the platform refuses to make outbound calls of any kind — including to LLM providers — so an air-gapped deployment can demonstrate the no-egress property by inspecting its own network.',
+      'The MIT-licensed AEGIS AI distribution runs entirely inside your environment. There is no phone-home, no telemetry endpoint, no opt-in analytics SDK, and no anonymous usage report shipped from your cluster back to us. When `AISOC_AIRGAPPED=true` the platform refuses to make outbound calls of any kind — including to LLM providers — so an air-gapped deployment can demonstrate the no-egress property by inspecting its own network.',
       'You configure your own LLM provider (OpenAI, Anthropic, Azure, Bedrock, or a private gateway). Their privacy policy governs the prompts you choose to send them — we are not a party to that traffic.',
     ],
   },
@@ -49,7 +49,7 @@ const SECTIONS: Array<{ heading: string; body: string[] }> = [
   {
     heading: 'Children',
     body: [
-      'AiSOC is a B2B security product. We do not direct it at children under 16 and do not knowingly collect data from them.',
+      'AEGIS AI is a B2B security product. We do not direct it at children under 16 and do not knowingly collect data from them.',
     ],
   },
   {

@@ -961,7 +961,7 @@ export function AlertDetailView({ alertId }: { alertId: string }) {
                 iocs: alert.iocs,
                 created_at: alert.createdAt,
               }}
-              eyebrow="Ask AiSOC about this alert"
+              eyebrow="Ask AEGIS AI about this alert"
             />
 
             <Section title="Description">

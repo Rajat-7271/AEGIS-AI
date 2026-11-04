@@ -12,12 +12,12 @@ import Link from 'next/link';
  */
 
 export const metadata: Metadata = {
-  title: 'Contact — AiSOC',
+  title: 'Contact — AEGIS AI',
   description:
-    'How to reach AiSOC: managed waitlist, sovereign / air-gap deployment quotes, security disclosures, and community support — each via the channel that gets the fastest reply.',
+    'How to reach AEGIS AI: managed waitlist, sovereign / air-gap deployment quotes, security disclosures, and community support — each via the channel that gets the fastest reply.',
   alternates: { canonical: '/contact' },
   openGraph: {
-    title: 'Contact AiSOC',
+    title: 'Contact AEGIS AI',
     description:
       'Managed waitlist · sovereign deploy · security disclosures · community.',
     type: 'article',
@@ -34,13 +34,13 @@ const CHANNELS: ContactChannel[] = [
   {
     heading: 'Managed waitlist',
     body:
-      "You'd rather we host AiSOC than run it yourself. We open new managed-tier seats in waves; the waitlist tells you where you are in the queue.",
+      "You'd rather we host AEGIS AI than run it yourself. We open new managed-tier seats in waves; the waitlist tells you where you are in the queue.",
     cta: { label: 'Join the waitlist', href: '/waitlist' },
   },
   {
     heading: 'Sovereign or air-gap deployment',
     body:
-      'You want AiSOC inside your VPC, an air-gapped network, or a sovereign-cloud region with custom data-residency requirements. We quote these individually.',
+      'You want AEGIS AI inside your VPC, an air-gapped network, or a sovereign-cloud region with custom data-residency requirements. We quote these individually.',
     cta: {
       label: 'hello@tryaisoc.com',
       href: 'mailto:hello@tryaisoc.com?subject=AiSOC%20sovereign%20deployment',

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import packageJson from '../../../package.json';
 import { LiveQueueBadge } from './LiveQueueBadge';
+import { AegisMark } from './AegisLogo';
 import { useBrandLogo, useBranding } from '@/hooks/useBranding';
 import { authApi } from '@/lib/api';
 
@@ -452,9 +453,7 @@ export function Sidebar() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoSrc} alt="" className="w-full h-full object-contain" />
           ) : (
-            <span className="text-brand-400">
-              <ShieldIcon />
-            </span>
+            <AegisMark size={20} />
           )}
         </div>
         <div>
@@ -463,11 +462,10 @@ export function Sidebar() {
               {branding.product_name}
             </span>
           ) : (
-            <>
-              <span className="text-fg-primary font-bold text-base tracking-tight">Ai</span>
-              <span className="text-brand-400 font-bold text-base tracking-tight">SOC</span>
-              <p className="text-xs text-fg-subtle -mt-0.5">open-source</p>
-            </>
+            <div className="flex items-baseline gap-1">
+              <span className="text-white font-bold text-base tracking-tight">AEGIS</span>
+              <span className="text-brand-400 font-bold text-base tracking-tight">AI</span>
+            </div>
           )}
         </div>
         {/* No status pill here. There is no data source in this file, so the

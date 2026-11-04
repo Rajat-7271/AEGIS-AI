@@ -166,7 +166,7 @@ export function Pillars() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-velvet-emerald-mint">
-            What makes AiSOC different
+            What makes AEGIS AI different
           </p>
           <h2
             id="pillars-heading"

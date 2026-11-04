@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
+import { AegisMark } from '@/components/layout/AegisLogo';
 import { isAuthenticated, getProfile, clearSession } from '@/lib/responder/auth';
 import {
   registerServiceWorker,
@@ -215,23 +216,11 @@ export function ResponderShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-900 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.75}
-                  d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-                />
-              </svg>
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+              <AegisMark size={20} />
             </div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold">AiSOC Responder</div>
+              <div className="text-sm font-semibold">AEGIS AI Responder</div>
               {profileName ? (
                 <div className="text-[10px] uppercase tracking-wider text-zinc-500 truncate max-w-[140px]">
                   {profileName}

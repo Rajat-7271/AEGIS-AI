@@ -28,25 +28,25 @@ const siteUrl = getPublicSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  applicationName: 'AiSOC',
+  applicationName: 'AEGIS AI',
   title: {
-    default: 'AiSOC — Open-Source AI Security Operations Center',
-    template: '%s | AiSOC',
+    default: 'AEGIS AI — AI Security Operations Center',
+    template: '%s | AEGIS AI',
   },
   description:
-    'AiSOC is a free, self-hostable AI-powered Security Operations Center (SOC). Real-time threat detection, alert fusion, purple-team exercises, MITRE ATT&CK-aware autonomous investigation, and detection-as-code — MIT-licensed and community-driven.',
+    'AEGIS AI is an AI-powered Security Operations Center (SOC). Real-time threat detection, alert fusion, purple-team exercises, MITRE ATT&CK-aware autonomous investigation, and detection-as-code — MIT-licensed.',
   keywords: [...DISCOVERY_KEYWORDS],
-  authors: [{ name: 'AiSOC Community', url: 'https://github.com/beenuar/AiSOC' }],
-  creator: 'AiSOC Community',
-  publisher: 'AiSOC',
+  authors: [{ name: 'AEGIS AI Community', url: 'https://github.com/beenuar/AiSOC' }],
+  creator: 'AEGIS AI Community',
+  publisher: 'AEGIS AI',
   category: 'cybersecurity',
   classification: 'Security Software',
   openGraph: {
-    title: 'AiSOC — Free, Open-Source AI Security Operations Center',
+    title: 'AEGIS AI — AI Security Operations Center',
     description:
       'Self-hostable AI SOC with real-time threat detection, alert fusion, purple-team drills, MITRE ATT&CK investigation, and detection-as-code. MIT-licensed.',
     type: 'website',
-    siteName: 'AiSOC',
+    siteName: 'AEGIS AI',
     url: siteUrl,
     locale: 'en_US',
     images: [
@@ -54,16 +54,16 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'AiSOC — open-source AI SOC platform for security operations teams',
+        alt: 'AEGIS AI — AI SOC platform for security operations teams',
         type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AiSOC — Free Open-Source AI SOC Platform',
+    title: 'AEGIS AI — AI SOC Platform',
     description:
-      'AI-powered SOC: threat detection, alert fusion, purple team, MITRE ATT&CK mapping, detection-as-code, and eval harness in CI. Self-host for free.',
+      'AI-powered SOC: threat detection, alert fusion, purple team, MITRE ATT&CK mapping, detection-as-code, and eval harness in CI.',
     site: '@aisoc_dev',
     creator: '@aisoc_dev',
   },
@@ -78,7 +78,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    title: 'AiSOC',
+    title: 'AEGIS AI',
     statusBarStyle: 'black-translucent',
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
@@ -96,11 +96,11 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'Organization',
-      name: 'AiSOC',
+      name: 'AEGIS AI',
       url: siteUrl,
       logo: `${siteUrl}/favicon.svg`,
       description:
-        'Community-driven, MIT-licensed AI security operations platform with a public demo and self-host path.',
+        'AI security operations platform with a public demo and self-host path.',
       sameAs: ['https://github.com/beenuar/AiSOC'],
       contactPoint: {
         '@type': 'ContactPoint',
@@ -110,8 +110,8 @@ const jsonLd = {
     },
     {
       '@type': 'SoftwareApplication',
-      name: 'AiSOC',
-      alternateName: ['AI SOC', 'AiSOC Platform', 'Open Source SOC'],
+      name: 'AEGIS AI',
+      alternateName: ['AEGIS', 'AEGIS SOC', 'AEGIS AI Platform'],
       applicationCategory: 'SecurityApplication',
       applicationSubCategory: 'Security Operations Center',
       operatingSystem: 'Linux, macOS, Docker',
@@ -149,9 +149,9 @@ const jsonLd = {
     },
     {
       '@type': 'WebSite',
-      name: 'AiSOC',
+      name: 'AEGIS AI',
       url: siteUrl,
-      description: 'Open-source AI-powered Security Operations Center',
+      description: 'AI-powered Security Operations Center',
       potentialAction: {
         '@type': 'SearchAction',
         target: `${siteUrl}/search?q={search_term_string}`,

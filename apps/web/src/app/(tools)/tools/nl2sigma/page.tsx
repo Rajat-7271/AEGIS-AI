@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "../../../../lib/site";
 import { Nl2SigmaTool } from "./Nl2SigmaTool";
 
 export const metadata: Metadata = {
-  title: "Natural language to Sigma rule generator | AiSOC",
+  title: "Natural language to Sigma rule generator | AEGIS AI",
   description:
     "Describe a threat in plain English and get a Sigma detection rule plus Splunk SPL, Microsoft Sentinel KQL, and Elastic ES|QL equivalents. Free, in-browser, open source.",
   alternates: { canonical: `${getPublicSiteUrl()}/tools/nl2sigma` },
   openGraph: {
-    title: "Natural language to Sigma rule generator | AiSOC",
+    title: "Natural language to Sigma rule generator | AEGIS AI",
     description: "Plain English → Sigma + SPL + KQL + ES|QL. Free & open source.",
     url: `${getPublicSiteUrl()}/tools/nl2sigma`,
   },
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "AiSOC Natural Language to Sigma",
+  name: "AEGIS AI Natural Language to Sigma",
   applicationCategory: "SecurityApplication",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

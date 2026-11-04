@@ -33,13 +33,13 @@ vi.mock('next/link', () => ({
 const { state } = vi.hoisted(() => ({
   state: {
     response: {
-      product_name: 'AiSOC',
+      product_name: 'AEGIS AI',
       primary_color: '#2563EB',
-      accent_color: '#7C3AED',
+      accent_color: '#3B82F6',
       support_email: null,
       support_url: null,
-      sender_name: 'AiSOC',
-      footer_text: 'AiSOC',
+      sender_name: 'AEGIS AI',
+      footer_text: 'AEGIS AI',
       logo_url: null,
       org_id: null,
       is_white_labelled: false,
@@ -77,7 +77,7 @@ afterEach(() => {
 describe('the console tab title', () => {
   it("replaces the platform name with the organisation's", async () => {
     state.response = { ...state.response, product_name: 'Acme Shield', is_white_labelled: true };
-    document.title = 'Honeytokens | AiSOC';
+    document.title = 'Honeytokens | AEGIS AI';
 
     mountConsole();
 
@@ -87,13 +87,13 @@ describe('the console tab title', () => {
   });
 
   it('leaves an unbranded deployment alone', async () => {
-    state.response = { ...state.response, product_name: 'AiSOC', is_white_labelled: false };
-    document.title = 'Honeytokens | AiSOC';
+    state.response = { ...state.response, product_name: 'AEGIS AI', is_white_labelled: false };
+    document.title = 'Honeytokens | AEGIS AI';
 
     mountConsole();
 
     // The negative control. Rewriting unconditionally would be invisible
     // today and a silent corruption the moment the platform default moves.
-    await waitFor(() => expect(document.title).toBe('Honeytokens | AiSOC'));
+    await waitFor(() => expect(document.title).toBe('Honeytokens | AEGIS AI'));
   });
 });

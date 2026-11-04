@@ -32,10 +32,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  if (!post) return { title: 'Post not found — AiSOC' };
+  if (!post) return { title: 'Post not found — AEGIS AI' };
   const fm = post.frontmatter;
   return {
-    title: `${fm.title} — AiSOC blog`,
+    title: `${fm.title} — AEGIS AI blog`,
     description: fm.description,
     alternates: { canonical: `/blog/${slug}` },
     openGraph: {

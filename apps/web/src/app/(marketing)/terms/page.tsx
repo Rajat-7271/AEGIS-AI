@@ -10,12 +10,12 @@ import type { Metadata } from 'next';
  */
 
 export const metadata: Metadata = {
-  title: 'Terms — AiSOC',
+  title: 'Terms — AEGIS AI',
   description:
     'Terms of service for AiSOC: MIT licence governs the open-source distribution; additional terms cover the marketing site, the managed waitlist, and the (waitlisted) managed tier.',
   alternates: { canonical: '/terms' },
   openGraph: {
-    title: 'AiSOC terms of service',
+    title: 'AEGIS AI terms of service',
     description:
       'MIT-licensed distribution + waitlist + managed-tier terms, plain English, in one page.',
     type: 'article',
@@ -28,7 +28,7 @@ const SECTIONS: Array<{ heading: string; body: string[] }> = [
   {
     heading: 'Open-source distribution',
     body: [
-      'The AiSOC source tree is released under the MIT licence — the canonical version lives at github.com/beenuar/AiSOC/blob/main/LICENSE. The licence text is the binding instrument. These terms do not modify, restrict, or replace it.',
+      'The AEGIS AI source tree is released under the MIT licence — the canonical version lives at github.com/beenuar/AiSOC/blob/main/LICENSE. The licence text is the binding instrument. These terms do not modify, restrict, or replace it.',
     ],
   },
   {

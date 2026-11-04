@@ -10,14 +10,14 @@ import { listCustomers } from '@/lib/customers';
  */
 
 export const metadata: Metadata = {
-  title: 'Case studies — AiSOC',
+  title: 'Case studies — AEGIS AI',
   description:
-    'Published AiSOC case studies. Each one is an MDX file in the repository, written from numbers the team running it reported.',
+    'Published AEGIS AI case studies. Each one is an MDX file in the repository, written from numbers the team running it reported.',
   alternates: { canonical: '/customers' },
   openGraph: {
-    title: 'Case studies — AiSOC',
+    title: 'Case studies — AEGIS AI',
     description:
-      'Published AiSOC case studies, each contributed as a file in the repository.',
+      'Published AEGIS AI case studies, each contributed as a file in the repository.',
     type: 'website',
   },
 };
@@ -38,7 +38,7 @@ export default function CustomersIndexPage() {
           </span>
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-white md:text-5xl">
             {hasStudies
-              ? 'Teams running AiSOC in production.'
+              ? 'Teams running AEGIS AI in production.'
               : 'No case studies published yet.'}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-400">
@@ -113,7 +113,7 @@ export default function CustomersIndexPage() {
           ) : (
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-10">
               <p className="max-w-2xl text-sm leading-relaxed text-gray-400">
-                AiSOC is an open-source project, so the deployments we know
+                AEGIS AI is an open-source project, so the deployments we know
                 about are the ones people tell us about. If you are running it,
                 a case study is a pull request adding one file under{' '}
                 <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-gray-200">
@@ -142,7 +142,7 @@ export default function CustomersIndexPage() {
 
           <div className="mt-12 rounded-2xl border border-brand-500/20 bg-brand-500/[0.04] p-6">
             <h3 className="text-base font-semibold tracking-tight text-white">
-              Running AiSOC in production?
+              Running AEGIS AI in production?
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-300">
               We&apos;d love to publish your numbers. Open an issue on{' '}

@@ -33,8 +33,8 @@ import { join } from 'node:path';
 const dashboard = readFileSync(
   join(__dirname, 'DashboardView.tsx'),
   'utf8',
-);
-const efficiency = readFileSync(join(__dirname, 'EfficiencyReport.tsx'), 'utf8');
+).replace(/\r\n/g, '\n');
+const efficiency = readFileSync(join(__dirname, 'EfficiencyReport.tsx'), 'utf8').replace(/\r\n/g, '\n');
 
 /** The empty state of the tactics panel, as written in the source. */
 function tacticsPanelEmptyState(): string {

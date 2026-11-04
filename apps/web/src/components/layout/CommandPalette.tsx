@@ -142,7 +142,7 @@ export function CommandPalette() {
       items: [
         {
           id: 'action:copilot',
-          label: 'Ask AiSOC Copilot',
+          label: 'Ask AEGIS AI Copilot',
           hint: 'Open the floating Copilot dock',
           shortcut: ['⌘', 'J'],
           keywords: ['ai', 'copilot', 'assistant', 'investigate'],
@@ -238,7 +238,7 @@ export function CommandPalette() {
             className="relative w-full max-w-xl rounded-xl border border-gray-700/70 bg-[#0d121b] shadow-2xl shadow-black/50 overflow-hidden"
           >
             <Command
-              label="AiSOC command palette"
+              label="AEGIS AI command palette"
               loop
               className="flex flex-col"
             >

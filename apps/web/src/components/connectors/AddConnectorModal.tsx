@@ -689,7 +689,7 @@ function OAuthPanel({
           </p>
           <p className="text-xs text-gray-400 mt-1 leading-relaxed">
             Recommended. We&apos;ll redirect you to {entry.connector_name} to grant access, then
-            store the rotated tokens in the AiSOC vault. No long-lived secrets to paste.
+            store the rotated tokens in the AEGIS AI vault. No long-lived secrets to paste.
           </p>
         </div>
         {appView && !showRegisterForm && (
@@ -1190,7 +1190,7 @@ function VerifyStep({
             <p className="text-xs text-gray-400 mt-1 leading-relaxed">
               {arrived ? (
                 <>
-                  AiSOC received the first event from{' '}
+                  AEGIS AI received the first event from{' '}
                   <span className="text-gray-200">{connector.name}</span>. The connector is
                   healthy and on its normal poll cadence.
                 </>
@@ -1203,7 +1203,7 @@ function VerifyStep({
                 </>
               ) : (
                 <>
-                  AiSOC is polling <span className="text-gray-200">{connector.name}</span> on
+                  AEGIS AI is polling <span className="text-gray-200">{connector.name}</span> on
                   its configured cadence. The first batch usually lands within a minute or two.
                 </>
               )}
@@ -1515,7 +1515,7 @@ export function AddConnectorModal({
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {step === 'pick'
-                      ? 'Pick a security tool to connect. Credentials are encrypted with the AiSOC vault.'
+                      ? 'Pick a security tool to connect. Credentials are encrypted with the AEGIS AI vault.'
                       : step === 'configure'
                         ? 'Credentials are tested against the upstream API and only saved on success.'
                         : 'Watching for the first event to land. This is normally seconds for high-volume sources.'}

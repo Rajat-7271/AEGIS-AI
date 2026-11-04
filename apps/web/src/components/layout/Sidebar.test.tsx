@@ -31,8 +31,8 @@ describe('Sidebar', () => {
     render(<Sidebar />);
 
     // Brand
-    expect(screen.getByText('Ai')).toBeInTheDocument();
-    expect(screen.getByText('SOC')).toBeInTheDocument();
+    expect(screen.getByText('AEGIS')).toBeInTheDocument();
+    expect(screen.getByText('AI')).toBeInTheDocument();
 
     // Section headings — Dashboard sits in an unlabelled lead section,
     // everything else is grouped under one of these four titles.

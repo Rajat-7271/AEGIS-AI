@@ -15,6 +15,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { AegisMark } from '@/components/layout/AegisLogo';
 import {
   API_BASE,
   authApi,
@@ -221,28 +222,16 @@ async function landingRoute(requested: string): Promise<string> {
           <div className="flex flex-col items-center text-center mb-10">
             <Link
               href="/landing"
-              className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center mb-5 hover:bg-indigo-500 transition"
-              aria-label="Back to AiSOC home"
+              className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-5 hover:border-zinc-700 transition"
+              aria-label="Back to AEGIS AI home"
             >
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.75}
-                  d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-                />
-              </svg>
+              <AegisMark size={32} />
             </Link>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Sign in to AiSOC
+              Sign in to AEGIS AI
             </h1>
             <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
-              Open-source AI SOC console. Sign in with your tenant&rsquo;s
+              AI SOC console. Sign in with your tenant&rsquo;s
               account.
             </p>
           </div>
@@ -531,7 +520,7 @@ async function landingRoute(requested: string): Promise<string> {
 
       <div className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 text-center">
         <p className="text-[10px] text-zinc-700 uppercase tracking-widest">
-          AiSOC · MIT-licensed · Open-source AI SOC
+          AEGIS AI · MIT-licensed · AI SOC
         </p>
       </div>
     </div>

@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "../../../../lib/site";
 import { CoverageTool } from "./CoverageTool";
 
 export const metadata: Metadata = {
-  title: "MITRE ATT&CK coverage grader for Sigma rules | AiSOC",
+  title: "MITRE ATT&CK coverage grader for Sigma rules | AEGIS AI",
   description:
     "Paste your Sigma detection rules and get a free MITRE ATT&CK coverage grade (A–F), a per-tactic heatmap, and your top uncovered high-prevalence techniques. In-browser, open source.",
   alternates: { canonical: `${getPublicSiteUrl()}/tools/coverage` },
   openGraph: {
-    title: "MITRE ATT&CK coverage grader | AiSOC",
+    title: "MITRE ATT&CK coverage grader | AEGIS AI",
     description: "Grade your detection coverage A–F and see your top uncovered techniques. Free & open source.",
     url: `${getPublicSiteUrl()}/tools/coverage`,
   },
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "AiSOC ATT&CK Coverage Grader",
+  name: "AEGIS AI ATT&CK Coverage Grader",
   applicationCategory: "SecurityApplication",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

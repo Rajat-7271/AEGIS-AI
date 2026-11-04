@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getPublicSiteUrl } from "../../../lib/site";
 
 export const metadata: Metadata = {
-  title: "Free SOC tools — detection translator, ATT&CK coverage grader, noise calculator | AiSOC",
+  title: "Free SOC tools — detection translator, ATT&CK coverage grader, noise calculator | AEGIS AI",
   description:
     "Free, open-source tools for security analysts: translate detection rules across Sigma/SPL/KQL/ES|QL, grade your ATT&CK coverage, generate Sigma from plain English, and calculate alert-noise savings. Runs in your browser.",
   alternates: { canonical: `${getPublicSiteUrl()}/tools` },

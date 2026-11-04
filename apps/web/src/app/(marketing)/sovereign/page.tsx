@@ -39,12 +39,12 @@ import Link from 'next/link';
  */
 
 export const metadata: Metadata = {
-  title: 'Sovereign + air-gap deployment — AiSOC',
+  title: 'Sovereign + air-gap deployment — AEGIS AI',
   description:
     'AiSOC runs anywhere: air-gapped, on-prem, hybrid, public cloud, or managed SaaS — with cloud LLM APIs, a local Ollama sidecar, or a bring-your-own LLM endpoint. EU, US, India, or custom data residency.',
   alternates: { canonical: '/sovereign' },
   openGraph: {
-    title: 'AiSOC runs where you do — sovereign by default',
+    title: 'AEGIS AI runs where you do — sovereign by default',
     description:
       'Air-gapped, on-prem, hybrid, public cloud, managed SaaS · cloud LLM, local Ollama, or BYO endpoint · EU / US / India / custom residency.',
     type: 'article',
@@ -215,7 +215,7 @@ export default function SovereignPage() {
             </span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-            AiSOC runs where you do.
+            AEGIS AI runs where you do.
             <br />
             <span className="text-brand-300">Sovereign by default.</span>
           </h1>
@@ -370,10 +370,10 @@ export default function SovereignPage() {
             technical controls (RBAC, multi-tenant RLS, immutable audit
             ledger, encrypted credential vault, evidence dashboards) that
             help <span className="italic">you</span> meet your audit
-            obligations under each framework. AiSOC the platform is{' '}
+            obligations under each framework. AEGIS AI the platform is{' '}
             <span className="italic">not</span> itself a SOC 2 / ISO 27001
             / GDPR / DPDP certified entity — the Managed SaaS row carries
-            the live audit-track status. If you need AiSOC-the-product to
+            the live audit-track status. If you need AEGIS AI-the-product to
             be in scope of your auditor’s testing, talk to us about the
             sovereign deployment.
           </p>

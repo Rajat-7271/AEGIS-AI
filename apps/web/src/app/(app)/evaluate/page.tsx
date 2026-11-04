@@ -3,7 +3,7 @@ import { ReplayEvaluationView } from '@/components/evaluations/ReplayEvaluationV
 export const metadata = {
   title: 'Evaluate on your history',
   description:
-    "Measure AiSOC triage against your own analysts' past decisions, on your own closed findings.",
+    "Measure AEGIS AI triage against your own analysts' past decisions, on your own closed findings.",
 };
 
 // Every read here is tenant-scoped and credential-backed, and a run in flight

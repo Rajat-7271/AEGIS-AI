@@ -67,7 +67,7 @@ export function Problem() {
             Your SOC is drowning in alerts.
           </h2>
           <p className="mt-4 text-base leading-relaxed text-velvet-content-secondary sm:text-lg">
-            Three problems compound every shift. AiSOC was built to dissolve
+            Three problems compound every shift. AEGIS AI was built to dissolve
             them, not paper over them.
           </p>
         </div>

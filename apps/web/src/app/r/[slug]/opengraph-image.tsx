@@ -4,7 +4,7 @@ import { fetchPublicReplay } from "../../../lib/replay";
 
 // Dynamic OG image for public replay unfurls on X / LinkedIn / Slack.
 export const runtime = "nodejs";
-export const alt = "AiSOC investigation replay";
+export const alt = "AEGIS AI investigation replay";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

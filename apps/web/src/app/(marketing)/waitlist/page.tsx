@@ -173,7 +173,7 @@ export default function WaitlistPage() {
             </span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
-            Run AiSOC as a managed service —
+            Run AEGIS AI as a managed service —
             <br />
             <span className="text-brand-300">invite-only beta.</span>
           </h1>
@@ -334,7 +334,7 @@ export default function WaitlistPage() {
                 <p className="text-xs text-gray-500">
                   We store this in our own database, not a marketing
                   SaaS. The team that reads it is the same team that
-                  builds AiSOC.
+                  builds AEGIS AI.
                 </p>
                 <button
                   type="submit"

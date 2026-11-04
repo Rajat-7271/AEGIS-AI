@@ -37,15 +37,15 @@ export async function generateMetadata({
   const { slug } = await params;
   const study = getCustomerBySlug(slug);
   if (!study) {
-    return { title: 'Customer not found — AiSOC' };
+    return { title: 'Customer not found — AEGIS AI' };
   }
   const fm = study.frontmatter;
   return {
-    title: `${fm.title} — AiSOC customer story`,
+    title: `${fm.title} — AEGIS AI customer story`,
     description: fm.challenge,
     alternates: { canonical: `/customers/${slug}` },
     openGraph: {
-      title: `${fm.title} — AiSOC customer story`,
+      title: `${fm.title} — AEGIS AI customer story`,
       description: fm.challenge,
       type: 'article',
       images: fm.logo ? [{ url: fm.logo }] : undefined,

@@ -15,12 +15,12 @@ import { CONNECTOR_COUNT } from '@/data/connectorCount';
  */
 
 export const metadata: Metadata = {
-  title: 'About — AiSOC',
+  title: 'About — AEGIS AI',
   description:
-    'AiSOC is an MIT-licensed open-source AI Security Operations Center maintained by an independent community. Self-host the full stack or sign up for the managed waitlist at tryaisoc.com.',
+    'AEGIS AI is an MIT-licensed open-source AI Security Operations Center maintained by an independent community. Self-host the full stack or sign up for the managed waitlist at tryaisoc.com.',
   alternates: { canonical: '/about' },
   openGraph: {
-    title: 'About AiSOC — open-source AI SOC',
+    title: 'About AEGIS AI — open-source AI SOC',
     description:
       'Independent, MIT-licensed, community-maintained. No private fork, no enterprise binary, no closed components.',
     type: 'article',
@@ -36,7 +36,7 @@ const FACTS: Array<{ label: string; value: string; href?: string }> = [
   },
   {
     label: 'Maintainers',
-    value: 'AiSOC contributors',
+    value: 'AEGIS AI contributors',
     href: 'https://github.com/beenuar/AiSOC/graphs/contributors',
   },
   {
@@ -63,7 +63,7 @@ export default function AboutPage() {
             About
           </span>
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-white md:text-5xl">
-            AiSOC is what a SOC looks like when the agent is the
+            AEGIS AI is what a SOC looks like when the agent is the
             product.
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-gray-400">

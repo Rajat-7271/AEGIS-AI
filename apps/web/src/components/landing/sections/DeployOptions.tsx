@@ -168,7 +168,7 @@ export function DeployOptions() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-velvet-emerald-mint">
-            Run AiSOC where your data is allowed to live
+            Run AEGIS AI where your data is allowed to live
           </p>
           <h2
             id="deploy-heading"

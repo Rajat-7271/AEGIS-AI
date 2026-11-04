@@ -4,9 +4,9 @@ import Link from "next/link";
 import { getPublicSiteUrl } from "../../../lib/site";
 
 export const metadata: Metadata = {
-  title: "Threat Intel Mesh — the network that makes every AiSOC smarter",
+  title: "Threat Intel Mesh — the network that makes every AEGIS AI smarter",
   description:
-    "AiSOC's opt-in, privacy-preserving Federated Threat Intel Mesh: self-hosted instances share hashed IOC sightings and aggregate verdict signatures. Live network stats.",
+    "AEGIS AI's opt-in, privacy-preserving Federated Threat Intel Mesh: self-hosted instances share hashed IOC sightings and aggregate verdict signatures. Live network stats.",
   alternates: { canonical: `${getPublicSiteUrl()}/mesh` },
 };
 
@@ -46,7 +46,7 @@ export default async function MeshPage() {
     <main style={{ maxWidth: 960, margin: "0 auto", padding: "56px 24px" }}>
       <h1 style={{ fontSize: 38, fontWeight: 800, margin: 0 }}>The Threat Intel Mesh</h1>
       <p style={{ color: "#8b93b7", fontSize: 18, marginTop: 12, maxWidth: 680 }}>
-        Every AiSOC install can make every other install smarter — without revealing its data. Instances opt in to gossip{" "}
+        Every AEGIS AI install can make every other install smarter — without revealing its data. Instances opt in to gossip{" "}
         <strong>hashed</strong> IOC sightings and <strong>aggregate</strong> verdict signatures through a lightweight,
         open-source hub. No raw indicators, no entities, no tenant data ever leave your perimeter.
       </p>

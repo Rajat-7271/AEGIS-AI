@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "../../../../lib/site";
 import { TranslateTool } from "./TranslateTool";
 
 export const metadata: Metadata = {
-  title: "Detection rule translator — Sigma ↔ SPL ↔ KQL ↔ ES|QL ↔ YARA-L | AiSOC",
+  title: "Detection rule translator — Sigma ↔ SPL ↔ KQL ↔ ES|QL ↔ YARA-L | AEGIS AI",
   description:
     "Free, in-browser detection-rule translator. Paste a Sigma, Splunk SPL, Microsoft Sentinel KQL, Elastic ES|QL, or Chronicle YARA-L rule and get every other dialect at once. No login, no upload, open source.",
   alternates: { canonical: `${getPublicSiteUrl()}/tools/translate` },
   openGraph: {
-    title: "Detection rule translator — Sigma ↔ SPL ↔ KQL ↔ ES|QL | AiSOC",
+    title: "Detection rule translator — Sigma ↔ SPL ↔ KQL ↔ ES|QL | AEGIS AI",
     description: "Translate detection rules across every major SIEM dialect, in your browser. Free & open source.",
     url: `${getPublicSiteUrl()}/tools/translate`,
   },

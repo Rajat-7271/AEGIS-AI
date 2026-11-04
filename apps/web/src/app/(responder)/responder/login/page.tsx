@@ -12,6 +12,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { AegisMark } from '@/components/layout/AegisLogo';
 import { passkeyApi } from '@/lib/api';
 import {
   saveSession,
@@ -105,23 +106,11 @@ function ResponderLoginInner() {
       <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
         {/* Brand mark */}
         <div className="flex flex-col items-center text-center mb-12">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center mb-5">
-            <svg
-              className="w-9 h-9 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.75}
-                d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-              />
-            </svg>
+          <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-5">
+            <AegisMark size={36} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            AiSOC Responder
+            AEGIS AI Responder
           </h1>
           <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
             Tap to sign in with your phone&rsquo;s passkey. No passwords. No
@@ -231,7 +220,7 @@ function ResponderLoginInner() {
 
       <div className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 text-center">
         <p className="text-[10px] text-zinc-700 uppercase tracking-widest">
-          AiSOC · MIT-licensed AI SOC
+          AEGIS AI · MIT-licensed AI SOC
         </p>
       </div>
     </div>

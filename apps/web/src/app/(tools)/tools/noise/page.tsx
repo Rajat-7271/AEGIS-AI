@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "../../../../lib/site";
 import { NoiseTool } from "./NoiseTool";
 
 export const metadata: Metadata = {
-  title: "Alert noise & analyst-hours-saved calculator | AiSOC",
+  title: "Alert noise & analyst-hours-saved calculator | AEGIS AI",
   description:
     "Estimate how many false-positive alerts you could auto-suppress and how many analyst hours you'd save, based on the AiSOC verdict engine's published suppression rate. Free, in-browser.",
   alternates: { canonical: `${getPublicSiteUrl()}/tools/noise` },
   openGraph: {
-    title: "Alert noise calculator | AiSOC",
+    title: "Alert noise calculator | AEGIS AI",
     description: "Estimate FP suppression and analyst hours saved. Free & open source.",
     url: `${getPublicSiteUrl()}/tools/noise`,
   },
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "AiSOC Alert Noise Calculator",
+  name: "AEGIS AI Alert Noise Calculator",
   applicationCategory: "SecurityApplication",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

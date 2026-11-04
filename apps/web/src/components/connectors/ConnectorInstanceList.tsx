@@ -429,7 +429,7 @@ export function ConnectorInstanceList({
         // `h3` skips a level and fails the axe-core heading-order gate.
         headingLevel="h2"
         title="No connectors yet"
-        description="Connect your first security tool to start ingesting alerts. Credentials are encrypted at rest with the AiSOC vault."
+        description="Connect your first security tool to start ingesting alerts. Credentials are encrypted at rest with the AEGIS AI vault."
         action={
           <button
             type="button"

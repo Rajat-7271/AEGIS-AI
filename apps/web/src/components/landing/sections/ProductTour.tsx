@@ -155,7 +155,7 @@ export function ProductTour() {
             shot={{
               src: '/screenshots/ai-triage-verdict.png',
               route: 'localhost:3000/alerts',
-              alt: 'The AiSOC alerts queue with the Investigation Rail open on an alert, showing an automated triage verdict of true positive at confidence 80 out of 100, groundedness not assessed, and the local model rationale in full.',
+              alt: 'The AEGIS AI alerts queue with the Investigation Rail open on an alert, showing an automated triage verdict of true positive at confidence 80 out of 100, groundedness not assessed, and the local model rationale in full.',
             }}
           />
         </figure>
@@ -174,7 +174,7 @@ export function ProductTour() {
               shot={{
                 src: '/screenshots/threat-intel-kev.png',
                 route: 'localhost:3000/threat-intel',
-                alt: 'The AiSOC Threat Intelligence page listing CVE entries sourced from the CISA Known Exploited Vulnerabilities catalogue, with 1,725 indicators collected and 100 shown.',
+                alt: 'The AEGIS AI Threat Intelligence page listing CVE entries sourced from the CISA Known Exploited Vulnerabilities catalogue, with 1,725 indicators collected and 100 shown.',
               }}
             />
             <div className="mt-6">
@@ -195,7 +195,7 @@ export function ProductTour() {
               shot={{
                 src: '/screenshots/attack-graph-core-degraded.png',
                 route: 'localhost:3000/graph',
-                alt: 'The AiSOC Attack Graph page reporting that it could not load the view, naming the failure as API 503 Service Unavailable on /api/v1/graph, with a retry button.',
+                alt: 'The AEGIS AI Attack Graph page reporting that it could not load the view, naming the failure as API 503 Service Unavailable on /api/v1/graph, with a retry button.',
               }}
             />
             <div className="mt-6">
@@ -218,7 +218,7 @@ export function ProductTour() {
             shot={{
               src: '/screenshots/soc-operations.png',
               route: 'localhost:3000/dashboards/operations',
-              alt: 'The AiSOC SOC operations dashboard against a tenant with no connectors, stating that nothing is feeding the pipeline yet so an empty alert queue is expected, with every pipeline stage reporting its backlog and error rate.',
+              alt: 'The AEGIS AI SOC operations dashboard against a tenant with no connectors, stating that nothing is feeding the pipeline yet so an empty alert queue is expected, with every pipeline stage reporting its backlog and error rate.',
             }}
           />
           <Caption

@@ -14,13 +14,13 @@ import { type Branding, brandingApi } from '@/lib/api';
  * every page load flash a nameless product.
  */
 export const DEFAULT_BRANDING: Branding = {
-  product_name: 'AiSOC',
+  product_name: 'AEGIS AI',
   primary_color: '#2563EB',
-  accent_color: '#7C3AED',
+  accent_color: '#3B82F6',
   support_email: null,
   support_url: null,
-  sender_name: 'AiSOC',
-  footer_text: 'AiSOC — open-source AI Security Operations Center.',
+  sender_name: 'AEGIS AI',
+  footer_text: 'AEGIS AI — AI-powered Security Operations Center.',
   logo_url: null,
   org_id: null,
   is_white_labelled: false,

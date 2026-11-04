@@ -32,9 +32,9 @@ import { isDemoMode } from '@/lib/demoMode';
  */
 
 export const metadata: Metadata = {
-  title: '404 — page not found · AiSOC',
+  title: '404 — page not found · AEGIS AI',
   description:
-    'That URL is not part of the AiSOC site. Jump back to the homepage, open the dashboard, or pick one of the popular destinations below.',
+    'That URL is not part of the AEGIS AI site. Jump back to the homepage, open the dashboard, or pick one of the popular destinations below.',
   // Tell crawlers we know this is a 404 surface; do not let them index it.
   robots: { index: false, follow: false },
 };

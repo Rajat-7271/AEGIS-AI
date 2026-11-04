@@ -44,7 +44,7 @@ interface QA {
 
 const FAQS: ReadonlyArray<QA> = [
   {
-    q: 'Is AiSOC really open source?',
+    q: 'Is AEGIS AI really open source?',
     a:
       'Yes — the agent, the connectors, the detection rules, the benchmark dataset, and every piece of infrastructure code are MIT-licensed. There is no private fork.',
   },
@@ -74,7 +74,7 @@ const FAQS: ReadonlyArray<QA> = [
       'No. An action is proposed, approved by someone who holds the required permission and who is not the person who requested it, executed, and then verified by probing the vendor rather than by reading an HTTP 200. Risk, reversibility and approval tier are declared per capability, and a capability whose effect cannot be verified is not eligible for automatic execution. Without vendor credentials an executor returns "simulated" and says so.',
   },
   {
-    q: 'How is AiSOC kept secure and up to date?',
+    q: 'How is AEGIS AI kept secure and up to date?',
     a:
       'Every pull request runs a CI-gated security audit (pip-audit + pnpm audit) that blocks the merge on any unresolved CVE, alongside CodeQL static analysis with a gate that fails on an open alert at any severity and refuses to pass on an analysis that belongs to a different commit. The audit policy lives in scripts/security_audit.py.',
   },
@@ -91,7 +91,7 @@ const FAQS: ReadonlyArray<QA> = [
   {
     q: 'Why not just use an existing AI SOC vendor?',
     a:
-      "Use whichever tools fit your risk and procurement model. AiSOC's contribution is making the agent itself open, the decisions step-by-step auditable, and the benchmark reproducible — three guarantees closed-source platforms typically do not offer.",
+      "Use whichever tools fit your risk and procurement model. AEGIS AI's contribution is making the agent itself open, the decisions step-by-step auditable, and the benchmark reproducible — three guarantees closed-source platforms typically do not offer.",
   },
 ];
 

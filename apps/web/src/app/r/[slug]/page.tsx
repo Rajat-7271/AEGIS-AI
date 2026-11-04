@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   const replay = result.replay;
   const s = replay.snapshot;
-  const title = `${replay.title} · AiSOC investigation replay`;
+  const title = `${replay.title} · AEGIS AI investigation replay`;
   const description = `Verdict: ${s.verdict.replace(/_/g, " ")} · investigated in ${(s.elapsedMs / 1000).toFixed(
     0,
   )}s across ${s.stepCount} steps and ${s.toolCallCount} tool calls. Watch the agent reason through it step-by-step.`;

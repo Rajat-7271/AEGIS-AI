@@ -3,11 +3,11 @@ import { ResponderShell } from '@/components/responder/ResponderShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Responder | AiSOC',
-    template: '%s | AiSOC Responder',
+    default: 'Responder | AEGIS AI',
+    template: '%s | AEGIS AI Responder',
   },
   description:
-    'Mobile-first AiSOC responder. Triage alerts, approve agent actions, page on-call — all from your phone.',
+    'Mobile-first AEGIS AI responder. Triage alerts, approve agent actions, page on-call — all from your phone.',
 };
 
 export const viewport: Viewport = {

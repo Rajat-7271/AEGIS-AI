@@ -185,7 +185,7 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-velvet-border pt-8 sm:flex-row sm:items-center">
           <p className="text-xs text-velvet-content-tertiary">
-            © 2024–present AiSOC contributors · MIT-licensed · v{VERSION}
+            © 2024–present AEGIS AI contributors · MIT-licensed · v{VERSION}
           </p>
           <ul className="flex items-center gap-3">
             {SOCIAL_LINKS.map(({ label, href, Icon }) => (
@@ -194,7 +194,7 @@ export function Footer() {
                   href={href}
                   rel="noreferrer"
                   target="_blank"
-                  aria-label={`AiSOC on ${label}`}
+                  aria-label={`AEGIS AI on ${label}`}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-velvet-border text-velvet-content-tertiary transition-colors duration-200 hover:border-velvet-emerald/40 hover:text-velvet-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-velvet-emerald-mint focus-visible:ring-offset-2 focus-visible:ring-offset-velvet-surface-base"
                 >
                   <Icon className="h-4 w-4" />
