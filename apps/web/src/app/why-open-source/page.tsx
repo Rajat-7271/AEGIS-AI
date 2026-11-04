@@ -83,7 +83,7 @@ const CONTRASTS: readonly Contrast[] = [
     ],
   },
   {
-    label: 'AiSOC',
+    label: 'AEGIS AI',
     points: [
       'Agent runs on the buyer infrastructure. Incident data, by default, does not leave the buyer network.',
       'Every prompt, response, tool call, and decision is written to the Investigation Ledger and replayable per case.',
@@ -155,7 +155,7 @@ export default function WhyOpenSourcePage() {
             triage queue being kept for regulated ones.
           </p>
           <p>
-            AiSOC takes the opposite approach: the agent is in the repo, the
+            AEGIS AI takes the opposite approach: the agent is in the repo, the
             substrate eval is a CI gate, data stays in the buyer network by
             default, and the MIT licence is permanent.
           </p>
@@ -247,10 +247,10 @@ export default function WhyOpenSourcePage() {
       <section className="px-6 pb-16">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-semibold tracking-tight">
-            How AiSOC differs from the common patterns
+            How AEGIS AI differs from the common patterns
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-gray-400">
-            The two non-AiSOC columns describe common patterns in the AI SOC
+            The two non-AEGIS AI columns describe common patterns in the AI SOC
             market, not specific vendors. Counter-examples are welcome via
             issue or pull request.
           </p>
@@ -299,7 +299,7 @@ export default function WhyOpenSourcePage() {
             What the licence does and does not allow
           </h2>
           <p>
-            Open source is overloaded as a term. AiSOC ships under MIT with no
+            Open source is overloaded as a term. AEGIS AI ships under MIT with no
             CLA, and the project commitment is to keep the core under MIT.
             What that means in practice:
           </p>
@@ -313,7 +313,7 @@ export default function WhyOpenSourcePage() {
             <li className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
               <span className="font-semibold text-gray-200">No telemetry.</span>{' '}
               Self-hosted deployments emit no analytics back to the project.
-              The only network calls AiSOC initiates are the ones the
+              The only network calls AEGIS AI initiates are the ones the
               operator configured (LLM provider, threat intelligence feed,
               integrations).
             </li>
@@ -377,7 +377,7 @@ export default function WhyOpenSourcePage() {
           <ul className="space-y-3">
             <li className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
               <span className="font-semibold text-gray-200">
-                AiSOC does not claim better agent accuracy than every vendor.
+                AEGIS AI does not claim better agent accuracy than every vendor.
               </span>{' '}
               The project ships a public, reproducible eval harness over the
               substrate. The{' '}
@@ -408,7 +408,7 @@ export default function WhyOpenSourcePage() {
               The agent sends prompts to whichever LLM endpoint is
               configured. The Investigation Ledger logs every prompt, so
               what leaves the network is auditable, but the trust boundary
-              is the configured LLM provider, not AiSOC. A future
+              is the configured LLM provider, not AEGIS AI. A future
               local-inference mode is on the roadmap.
             </li>
           </ul>

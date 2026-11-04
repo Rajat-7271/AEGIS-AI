@@ -118,7 +118,7 @@ export default function NotFoundPage() {
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-gray-400">
             This usually means a link is out of date, a route was retired,
-            or the URL has a typo. AiSOC is still live — pick one of the
+            or the URL has a typo. AEGIS AI is still live — pick one of the
             destinations below, or jump back to the homepage.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

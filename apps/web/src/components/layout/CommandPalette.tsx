@@ -322,7 +322,7 @@ export function CommandPalette() {
                     select
                   </span>
                 </div>
-                <span className="hidden sm:inline">AiSOC · ⌘K to toggle</span>
+                <span className="hidden sm:inline">AEGIS AI · ⌘K to toggle</span>
               </div>
             </Command>
           </motion.div>

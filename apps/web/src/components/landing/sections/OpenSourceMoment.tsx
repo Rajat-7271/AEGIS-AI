@@ -162,7 +162,7 @@ export function OpenSourceMoment() {
                     {'\n'}
                     <span className="select-none text-velvet-content-tertiary">$ </span>
                     <span className="text-velvet-emerald-mint">cd</span>{' '}
-                    <span className="text-velvet-content-primary">AiSOC</span>
+                    <span className="text-velvet-content-primary">AEGIS AI</span>
                     {'\n'}
                     <span className="select-none text-velvet-content-tertiary">$ </span>
                     <span className="text-velvet-emerald-mint">make</span>{' '}

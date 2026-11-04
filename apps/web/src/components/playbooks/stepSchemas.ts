@@ -177,7 +177,7 @@ const PARALLEL_JOINS: readonly FieldOption[] = [
 const OSQUERY_BACKENDS: readonly FieldOption[] = [
   { value: 'osctrl', label: 'osctrl' },
   { value: 'fleetdm', label: 'FleetDM' },
-  { value: 'aisoc_direct', label: 'AiSOC direct' },
+  { value: 'aisoc_direct', label: 'AEGIS AI direct' },
 ];
 
 const AV_SCAN_TYPES: readonly FieldOption[] = [
@@ -363,7 +363,7 @@ export const STEP_SCHEMAS: Record<StepType, StepSchema> = {
         label: 'Blocklist entry title',
         kind: 'string',
         placeholder: 'C2 infrastructure — campaign RAVEN',
-        help: 'Shown in the vendor console. Defaults to "AiSOC — blocked <type>: <indicator>".',
+        help: 'Shown in the vendor console. Defaults to "AEGIS AI — blocked <type>: <indicator>".',
       },
     ],
   },
@@ -583,7 +583,7 @@ export const STEP_SCHEMAS: Record<StepType, StepSchema> = {
     execution: 'governed',
     label: 'Live query',
     description:
-      'Run an allowlisted osquery query across hosts through osctrl, FleetDM or the AiSOC agent. The query itself is a template ID, not free SQL, so a playbook cannot ask an endpoint an arbitrary question. Dispatched through the action registry, which is where the three backend clients live \u2014 the engine used to import them from a service its own image does not contain, so every live query raised.',
+      'Run an allowlisted osquery query across hosts through osctrl, FleetDM or the AEGIS AI agent. The query itself is a template ID, not free SQL, so a playbook cannot ask an endpoint an arbitrary question. Dispatched through the action registry, which is where the three backend clients live \u2014 the engine used to import them from a service its own image does not contain, so every live query raised.',
     accent: '#2dd4bf',
     bgColor: '#123333',
     icon: '🔎',
@@ -936,7 +936,7 @@ export const STEP_SCHEMAS: Record<StepType, StepSchema> = {
         kind: 'string',
         required: true,
         placeholder: 'Credential access on web-prod-04',
-        help: 'The step target. Splunk records it as "AiSOC Alert — <title>" unless overridden below.',
+        help: 'The step target. Splunk records it as "AEGIS AI Alert — <title>" unless overridden below.',
       },
       {
         key: 'severity',
@@ -957,7 +957,7 @@ export const STEP_SCHEMAS: Record<StepType, StepSchema> = {
         label: 'Exact title (optional)',
         kind: 'string',
         placeholder: 'SOC-2291 credential access',
-        help: 'Recorded verbatim, without the "AiSOC Alert — " prefix.',
+        help: 'Recorded verbatim, without the "AEGIS AI Alert — " prefix.',
       },
     ],
   },

@@ -124,7 +124,7 @@ export function RetroHuntSettingsPanel() {
         <span>
           <span className="text-sm font-medium">Also sweep my connected SIEMs</span>
           <span className="mt-0.5 block text-sm text-muted-foreground">
-            Separate from the switch above because it is a separate cost: sweeping the AiSOC lake
+            Separate from the switch above because it is a separate cost: sweeping the AEGIS AI lake
             is free to you, and sweeping a connected SIEM may bill you per query.
           </span>
         </span>

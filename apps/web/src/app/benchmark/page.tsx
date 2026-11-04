@@ -58,7 +58,7 @@ export default async function BenchmarkPage() {
   const ic = report.suites.investigation_completeness;
   const rq = report.suites.response_quality;
   const expectedOutput = `============================================================================
-  AiSOC Pillar-1 Eval - 200-incident synthetic benchmark
+  AEGIS AI Pillar-1 Eval - 200-incident synthetic benchmark
 ============================================================================
   [${mt?.passed ? 'PASS' : 'FAIL'}] mitre_accuracy               accuracy               ${fmtScore(mt?.value)}  (target >= ${fmtScore(mt?.target, 2)})
   [${ar?.passed ? 'PASS' : 'FAIL'}] alert_reduction              reduction_ratio        ${fmtScore(ar?.value)}  (target >= ${fmtScore(ar?.target, 2)})
@@ -409,7 +409,7 @@ export default async function BenchmarkPage() {
                 &ldquo;Public eval harness&rdquo; means this harness, not a
                 third-party leaderboard.
               </span>{' '}
-              No outside body grades AiSOC. The dataset, the code, and the
+              No outside body grades AEGIS AI. The dataset, the code, and the
               gates are open and CI-enforced, and anyone can run, audit, or
               extend the harness.
             </li>
@@ -446,7 +446,7 @@ export default async function BenchmarkPage() {
               href="/landing"
               className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
             >
-              Back to AiSOC
+              Back to AEGIS AI
             </Link>
           </div>
         </div>

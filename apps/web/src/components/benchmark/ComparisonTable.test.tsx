@@ -11,7 +11,7 @@ describe('ComparisonTable', () => {
   it('renders the AiSOC row plus both competitor categories', () => {
     render(<ComparisonTable />);
 
-    expect(screen.getByText('AiSOC')).toBeInTheDocument();
+    expect(screen.getByText('AEGIS AI')).toBeInTheDocument();
     expect(screen.getByText('Closed-source AI SOC')).toBeInTheDocument();
     expect(screen.getByText('Closed-source SOAR')).toBeInTheDocument();
   });

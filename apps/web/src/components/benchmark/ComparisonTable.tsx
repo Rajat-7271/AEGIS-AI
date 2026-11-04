@@ -26,7 +26,7 @@ interface Vendor {
  */
 const VENDORS: Vendor[] = [
   {
-    name: 'AiSOC',
+    name: 'AEGIS AI',
     type: 'open',
     reduction: '33.3% (real correlation key, fixed noisy stream)',
     mitre: '97% (substrate regression gate)',
@@ -83,7 +83,7 @@ export function ComparisonTable() {
         </thead>
         <tbody className="divide-y divide-white/5">
           {VENDORS.map((vendor) => {
-            const isUs = vendor.name === 'AiSOC';
+            const isUs = vendor.name === 'AEGIS AI';
             return (
               <tr
                 key={vendor.name}

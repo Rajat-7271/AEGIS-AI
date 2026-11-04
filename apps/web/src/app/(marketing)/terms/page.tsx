@@ -12,7 +12,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Terms — AEGIS AI',
   description:
-    'Terms of service for AiSOC: MIT licence governs the open-source distribution; additional terms cover the marketing site, the managed waitlist, and the (waitlisted) managed tier.',
+    'Terms of service for AEGIS AI: MIT licence governs the open-source distribution; additional terms cover the marketing site, the managed waitlist, and the (waitlisted) managed tier.',
   alternates: { canonical: '/terms' },
   openGraph: {
     title: 'AEGIS AI terms of service',

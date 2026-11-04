@@ -43,7 +43,7 @@ const CHANNELS: ContactChannel[] = [
       'You want AEGIS AI inside your VPC, an air-gapped network, or a sovereign-cloud region with custom data-residency requirements. We quote these individually.',
     cta: {
       label: 'hello@tryaisoc.com',
-      href: 'mailto:hello@tryaisoc.com?subject=AiSOC%20sovereign%20deployment',
+      href: 'mailto:hello@tryaisoc.com?subject=AEGIS%20AI%20sovereign%20deployment',
     },
   },
   {

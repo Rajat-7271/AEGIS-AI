@@ -18,7 +18,7 @@ export function getPublicSiteUrl(): string {
 /** Meta keywords for cyber/SOC discovery (deployment-neutral). */
 export const DISCOVERY_KEYWORDS: readonly string[] = [
   // Brand
-  "AiSOC",
+  "AEGIS AI",
   "AI SOC",
   // Core value prop
   "open source SOC",

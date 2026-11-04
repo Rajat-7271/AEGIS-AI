@@ -183,7 +183,7 @@ function TypeBadge({ type }: { type: string }) {
 function VerifiedBadge() {
   return (
     <span
-      title="Verified by AiSOC team"
+      title="Verified by AEGIS AI team"
       className="inline-flex items-center gap-0.5 rounded border border-emerald-700/60 bg-emerald-900/30 px-1.5 py-0.5 text-xs font-medium text-emerald-300"
     >
       Verified
@@ -895,10 +895,10 @@ export function MarketplaceView() {
         <div className="min-w-[280px] flex-1">
           <h1 className="text-2xl font-bold text-zinc-100">Marketplace</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Browse and install detection rules, response playbooks, and plugins shipped with AiSOC. Every entry is generated directly from the
+            Browse and install detection rules, response playbooks, and plugins shipped with AEGIS AI. Every entry is generated directly from the
             repo&rsquo;s <code className="text-zinc-300">detections/</code>,{' '}
             <code className="text-zinc-300">playbooks/</code> and{' '}
-            <code className="text-zinc-300">plugins/</code> trees, so what you see here is what your AiSOC instance has on disk.
+            <code className="text-zinc-300">plugins/</code> trees, so what you see here is what your AEGIS AI instance has on disk.
           </p>
           <p className="mt-2 text-sm text-zinc-400">
             <span className="font-medium text-amber-300">On disk is not the same as running.</span>{' '}
@@ -1058,7 +1058,7 @@ export function MarketplaceView() {
             content. Users opt into imported/beta/community explicitly. */}
         <div
           className="flex gap-1 rounded-lg border border-zinc-700 bg-zinc-800 p-1"
-          title="Stable = native AiSOC content. Imported = upstream rules (SigmaHQ, Splunk, Chronicle, CAR), parseable but not fixture-tested. Beta = working but partial. Community = third-party."
+          title="Stable = native AEGIS AI content. Imported = upstream rules (SigmaHQ, Splunk, Chronicle, CAR), parseable but not fixture-tested. Beta = working but partial. Community = third-party."
         >
           {(['all', 'stable', 'beta', 'imported', 'community'] as const).map((t) => {
             const count = tierCounts[t];

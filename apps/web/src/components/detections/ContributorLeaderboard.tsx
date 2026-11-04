@@ -32,7 +32,7 @@ const BADGE_STYLES: Record<Contributor['badge'], { bg: string; text: string; bor
 // corpus — the reason it reads the artefact is that both figures move.
 const CORE_CONTRIBUTORS: Contributor[] = [
   {
-    name: 'AiSOC',
+    name: 'AEGIS AI',
     rules: EXECUTABLE_DETECTION_COUNT,
     categories: Object.keys(DETECTION_CATEGORIES),
     badge: 'platinum',

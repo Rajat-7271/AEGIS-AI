@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "AiSOC Detection Rule Translator",
+  name: "AEGIS AI Detection Rule Translator",
   applicationCategory: "SecurityApplication",
   operatingSystem: "Web",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

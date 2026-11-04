@@ -155,7 +155,7 @@ function HeroVisual() {
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-velvet-emerald text-[11px] font-bold text-velvet-content-primary">
             A
           </span>
-          AiSOC Copilot
+          AEGIS AI Copilot
           <span className="ml-auto text-[10px] font-medium uppercase tracking-wider text-emerald-300">
             ⌘K
           </span>

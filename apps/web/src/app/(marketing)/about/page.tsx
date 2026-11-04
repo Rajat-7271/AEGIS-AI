@@ -94,7 +94,7 @@ export default function AboutPage() {
             . Sovereign and air-gapped deployments are quoted
             individually —{' '}
             <a
-              href="mailto:hello@tryaisoc.com?subject=AiSOC%20sovereign%20deployment"
+              href="mailto:hello@tryaisoc.com?subject=AEGIS%20AI%20sovereign%20deployment"
               className="text-brand-300 underline decoration-brand-500/40 underline-offset-2"
             >
               hello@tryaisoc.com

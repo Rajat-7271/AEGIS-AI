@@ -44,7 +44,7 @@ export default function CustomersIndexPage() {
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-400">
             {hasStudies
               ? 'Each case study below is a single MDX file in the repository. The challenge, the before/after numbers, and the analyst quote come from the team that ran it — no marketing rewrite, no unverifiable vendor metrics.'
-              : 'This page lists case studies contributed as files in the repository, written from numbers the team running AiSOC reported. Nobody has published one yet, so rather than fill the space we are saying so.'}
+              : 'This page lists case studies contributed as files in the repository, written from numbers the team running AEGIS AI reported. Nobody has published one yet, so rather than fill the space we are saying so.'}
           </p>
         </div>
       </section>

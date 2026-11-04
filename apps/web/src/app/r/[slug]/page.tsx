@@ -14,10 +14,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const result = await fetchPublicReplay(slug);
   if (result.kind === "unavailable") {
-    return { title: "Replay temporarily unavailable · AiSOC" };
+    return { title: "Replay temporarily unavailable · AEGIS AI" };
   }
   if (result.kind === "missing") {
-    return { title: "Replay not found · AiSOC" };
+    return { title: "Replay not found · AEGIS AI" };
   }
   const replay = result.replay;
   const s = replay.snapshot;
@@ -40,7 +40,7 @@ function ReplayUnavailable({ status }: { status: number | null }) {
     <main style={{ background: "#0b1020", minHeight: "100vh", color: "#e6e9f5", padding: "48px 24px" }}>
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <Link href="/landing" style={{ color: "#8b93b7", textDecoration: "none", fontSize: 14 }}>
-          ← AiSOC
+          ← AEGIS AI
         </Link>
         <h1 style={{ fontSize: 26, fontWeight: 800, margin: "24px 0 8px" }}>Replay temporarily unavailable</h1>
         <p style={{ color: "#8b93b7", fontSize: 15, lineHeight: 1.6 }}>
@@ -67,7 +67,7 @@ export default async function ReplayPage({ params }: PageProps) {
     <main style={{ background: "#0b1020", minHeight: "100vh", color: "#e6e9f5", padding: "48px 24px" }}>
       <div style={{ maxWidth: 1040, margin: "0 auto" }}>
         <Link href="/landing" style={{ color: "#8b93b7", textDecoration: "none", fontSize: 14 }}>
-          ← AiSOC
+          ← AEGIS AI
         </Link>
         <header style={{ margin: "16px 0 32px" }}>
           <div style={{ color: "#8b93b7", fontSize: 13, textTransform: "uppercase", letterSpacing: 1 }}>
@@ -85,7 +85,7 @@ export default async function ReplayPage({ params }: PageProps) {
         <footer style={{ marginTop: 48, borderTop: "1px solid #232b4d", paddingTop: 20, color: "#64748b", fontSize: 13 }}>
           Entity names, IPs, and identities are redacted. This is a read-only snapshot of an{" "}
           <a href="https://github.com/beenuar/AiSOC" style={{ color: "#8b93b7" }}>
-            open-source AiSOC
+            open-source AEGIS AI
           </a>{" "}
           investigation. Reproduce the demo with <code>npx aisoc triage --demo</code>.
         </footer>

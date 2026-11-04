@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const fromL = FORMAT_LABELS[parsed.from];
   const toL = FORMAT_LABELS[parsed.to];
   const title = `${fromL} to ${toL} — free detection rule converter | AEGIS AI`;
-  const description = `Convert ${fromL} detection rules to ${toL} instantly and for free, in your browser. Open source, no login. Part of AiSOC.`;
+  const description = `Convert ${fromL} detection rules to ${toL} instantly and for free, in your browser. Open source, no login. Part of AEGIS AI.`;
   const url = `${getPublicSiteUrl()}/tools/translate/${pair}`;
   return { title, description, alternates: { canonical: url }, openGraph: { title, description, url } };
 }

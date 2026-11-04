@@ -40,7 +40,7 @@ export default function ToolsIndex() {
       <p style={{ color: "#8b93b7", fontSize: 17, marginTop: 12, maxWidth: 640 }}>
         No login, no upload, no catch. Everything runs in your browser and is open source. Part of{" "}
         <a href="https://github.com/beenuar/AiSOC" style={{ color: "#c4cae0" }}>
-          AiSOC
+          AEGIS AI
         </a>
         .
       </p>

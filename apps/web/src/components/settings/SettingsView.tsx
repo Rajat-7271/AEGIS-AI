@@ -326,7 +326,7 @@ const TABS: { id: TabId; label: string; description: string }[] = [
   {
     id: 'notifications',
     label: 'Notifications',
-    description: 'How and when AiSOC should ping you.',
+    description: 'How and when AEGIS AI should ping you.',
   },
   {
     id: 'appearance',
@@ -337,7 +337,7 @@ const TABS: { id: TabId; label: string; description: string }[] = [
     id: 'deployment',
     label: 'Deployment & AI',
     description:
-      'Live air-gap policy and LLM provider snapshot for this AiSOC pod.',
+      'Live air-gap policy and LLM provider snapshot for this AEGIS AI pod.',
   },
   {
     id: 'audit',
@@ -879,7 +879,7 @@ function IntegrationsPanel() {
     <div>
       <PanelHeader
         title="Integrations"
-        description="Manage the connectors that stream telemetry into AiSOC."
+        description="Manage the connectors that stream telemetry into AEGIS AI."
         action={
           <Link
             href="/connectors/new"
@@ -914,7 +914,7 @@ function IntegrationsPanel() {
         ) : connectors.length === 0 ? (
           <EmptyState
             title="No connectors yet"
-            description="Add your first integration to start streaming events into AiSOC."
+            description="Add your first integration to start streaming events into AEGIS AI."
             action={
               <Link
                 href="/connectors/new"
@@ -1288,7 +1288,7 @@ function NotificationsPanel() {
     <div>
       <PanelHeader
         title="Notifications"
-        description="How AiSOC pings you when things happen."
+        description="How AEGIS AI pings you when things happen."
       />
       <div className="space-y-3 px-6 py-5">
         <Toggle
@@ -1393,7 +1393,7 @@ function AppearancePanel() {
     <div>
       <PanelHeader
         title="Appearance"
-        description="Tune how AiSOC looks and animates on this device."
+        description="Tune how AEGIS AI looks and animates on this device."
       />
       <div className="space-y-5 px-6 py-5">
         {/* Theme */}
@@ -1538,7 +1538,7 @@ function DeploymentAIPanel() {
     <div>
       <PanelHeader
         title="Deployment & AI"
-        description="Air-gap policy, LLM provider snapshot, and per-tenant BYOK overrides for this AiSOC pod."
+        description="Air-gap policy, LLM provider snapshot, and per-tenant BYOK overrides for this AEGIS AI pod."
       />
       <div className="space-y-5 px-6 py-5">
         {isLoading && !airgap.data && !llm.data ? (
@@ -2074,7 +2074,7 @@ function BYOKCard({
               )}
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Per-tenant override for this AiSOC workspace. The platform
+              Per-tenant override for this AEGIS AI workspace. The platform
               uses these settings instead of the pod-level defaults.
             </p>
           </div>
@@ -2453,7 +2453,7 @@ function AboutPanel() {
   return (
     <div>
       <PanelHeader
-        title="About AiSOC"
+        title="About AEGIS AI"
         description="Open-source SOC platform — community-built, MIT licensed."
       />
       <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
@@ -2464,7 +2464,7 @@ function AboutPanel() {
       </div>
       <div className="border-t border-gray-800 px-6 py-5 text-sm text-gray-400">
         <p>
-          AiSOC is community-driven. Issues, ideas, and PRs welcome on GitHub.
+          AEGIS AI is community-driven. Issues, ideas, and PRs welcome on GitHub.
           See the{' '}
           <a
             className="text-blue-400 hover:text-blue-300"

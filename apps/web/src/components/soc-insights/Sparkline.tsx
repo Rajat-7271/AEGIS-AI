@@ -1,10 +1,9 @@
 /**
  * Inline-SVG sparkline (T3.1).
  *
- * Deliberately dependency-free — we render a single polyline normalised
- * into a fixed 100×30 viewbox so the SVG is responsive without needing
- * a chart library. The tile cards constrain the width via Tailwind,
- * so the line stays sharp regardless of breakpoint.
+ * Deliberately dependency-free — renders a polyline normalised into a
+ * fixed 100×30 viewbox so the SVG is responsive without needing a chart
+ * library. Enhanced with subtle area gradient fill and crisp strokes.
  *
  * The points are values from the aggregator endpoint (24 buckets,
  * oldest → newest). Zero or one points renders a flat baseline so the
@@ -12,12 +11,15 @@
  */
 'use client';
 
+import { useId } from 'react';
+
 interface SparklineProps {
   points: number[];
   /** Width in px when rendered inline. The viewbox stays fixed at 100×30. */
   width?: number;
   height?: number;
   className?: string;
+  color?: string;
 }
 
 const VIEWBOX_WIDTH = 100;
@@ -28,8 +30,12 @@ export function Sparkline({
   width = 96,
   height = 28,
   className,
+  color = 'currentColor',
 }: SparklineProps) {
+  const gradientId = useId();
   const path = pointsToPath(points);
+  const hasSeries = points && points.length > 1;
+  const areaPoints = hasSeries ? `0,${VIEWBOX_HEIGHT} ${path} ${VIEWBOX_WIDTH},${VIEWBOX_HEIGHT}` : '';
 
   return (
     <svg
@@ -41,11 +47,25 @@ export function Sparkline({
       className={className}
       preserveAspectRatio="none"
     >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+
+      {hasSeries && (
+        <polygon
+          points={areaPoints}
+          fill={`url(#${gradientId})`}
+        />
+      )}
+
       <polyline
         points={path}
         fill="none"
-        stroke="currentColor"
-        strokeWidth={1.4}
+        stroke={color}
+        strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

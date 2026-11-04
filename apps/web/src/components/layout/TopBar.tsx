@@ -84,7 +84,7 @@ export function TopBar({ demoOffset = false }: TopBarProps) {
           .split('-')
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(' ')
-      : 'AiSOC';
+      : 'AEGIS AI';
     return { title, description: '' };
   })();
 

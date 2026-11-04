@@ -100,7 +100,7 @@ const DEMO_RULES: DetectionRule[] = [
     id: 'rule-003',
     name: 'AWS GuardDuty High-Severity Finding',
     description:
-      'Forwards GuardDuty findings of severity 7+ into AiSOC as alerts and links them to the affected resource.',
+      'Forwards GuardDuty findings of severity 7+ into AEGIS AI as alerts and links them to the affected resource.',
     language: 'eql',
     body: SAMPLE_EQL,
     enabled: false,

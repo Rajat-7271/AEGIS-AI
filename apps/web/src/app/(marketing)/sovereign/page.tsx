@@ -41,7 +41,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Sovereign + air-gap deployment — AEGIS AI',
   description:
-    'AiSOC runs anywhere: air-gapped, on-prem, hybrid, public cloud, or managed SaaS — with cloud LLM APIs, a local Ollama sidecar, or a bring-your-own LLM endpoint. EU, US, India, or custom data residency.',
+    'AEGIS AI runs anywhere: air-gapped, on-prem, hybrid, public cloud, or managed SaaS — with cloud LLM APIs, a local Ollama sidecar, or a bring-your-own LLM endpoint. EU, US, India, or custom data residency.',
   alternates: { canonical: '/sovereign' },
   openGraph: {
     title: 'AEGIS AI runs where you do — sovereign by default',
@@ -128,7 +128,7 @@ const DEPLOYMENT_MODES: DeploymentMode[] = [
     residency: 'EU · US · India',
     controlsAligned: 'SOC 2 (in progress) · GDPR (target)',
     artefact: 'tryaisoc.com',
-    artefactHref: 'mailto:hello@tryaisoc.com?subject=AiSOC%20managed%20waitlist',
+    artefactHref: 'mailto:hello@tryaisoc.com?subject=AEGIS%20AI%20managed%20waitlist',
   },
 ];
 
@@ -228,7 +228,7 @@ export default function SovereignPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
-              href="mailto:hello@tryaisoc.com?subject=AiSOC%20sovereign%20deployment"
+              href="mailto:hello@tryaisoc.com?subject=AEGIS%20AI%20sovereign%20deployment"
               className="inline-flex items-center gap-2 rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-400"
             >
               Talk to us about sovereign deployment
@@ -563,7 +563,7 @@ export default function SovereignPage() {
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <a
-              href="mailto:hello@tryaisoc.com?subject=AiSOC%20sovereign%20deployment"
+              href="mailto:hello@tryaisoc.com?subject=AEGIS%20AI%20sovereign%20deployment"
               className="inline-flex items-center gap-2 rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-400"
             >
               Email hello@tryaisoc.com

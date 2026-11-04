@@ -155,7 +155,7 @@ function PostFooter({ post }: { post: BlogPost }) {
           Keep reading
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-gray-400">
-          More long-form writing on the AiSOC architecture and operating
+          More long-form writing on the AEGIS AI architecture and operating
           model. The full archive is on the{' '}
           <Link
             href="/blog"

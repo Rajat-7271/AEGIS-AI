@@ -101,7 +101,7 @@ const TIERS: ReadonlyArray<Tier> = [
     ],
     cta: {
       label: 'Talk to us',
-      href: 'mailto:hello@tryaisoc.com?subject=AiSOC%20enterprise%20enquiry',
+      href: 'mailto:hello@tryaisoc.com?subject=AEGIS%20AI%20enterprise%20enquiry',
     },
   },
 ];

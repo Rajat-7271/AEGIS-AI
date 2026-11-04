@@ -40,7 +40,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         }}
       >
         <div style={{ display: "flex", height: 8, width: "100%", background: "#7b2bbe", position: "absolute", top: 0, left: 0 }} />
-        <div style={{ fontSize: 32, fontWeight: 700 }}>AiSOC · investigation replay</div>
+        <div style={{ fontSize: 32, fontWeight: 700 }}>AEGIS AI · investigation replay</div>
         <div style={{ fontSize: 26, color: "#8b93b7", marginTop: 12 }}>{title.slice(0, 64)}</div>
         <div style={{ fontSize: 84, fontWeight: 800, color: verdictColor(verdict), marginTop: 40, textTransform: "uppercase" }}>
           {verdict.replace(/_/g, " ")}

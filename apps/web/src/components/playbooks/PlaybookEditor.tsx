@@ -424,7 +424,7 @@ export function PlaybookEditor({ playbookId }: PlaybookEditorProps) {
                 name: s.name,
               })),
             }}
-            eyebrow="Ask AiSOC about this playbook"
+            eyebrow="Ask AEGIS AI about this playbook"
           />
         </div>
       ) : null}

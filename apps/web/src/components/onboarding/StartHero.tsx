@@ -338,7 +338,7 @@ function HeroVisual() {
       >
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-400">
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-500 text-[11px] font-bold text-white">A</span>
-          AiSOC Agent
+          AEGIS AI Agent
           <span className="ml-auto text-[10px] font-medium uppercase tracking-wider text-emerald-300">streaming</span>
         </div>
         <p className="text-sm leading-relaxed text-gray-200">

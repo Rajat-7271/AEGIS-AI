@@ -46,7 +46,7 @@ export function OpenSource() {
                 Built in the open.
               </h2>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-gray-400">
-                AiSOC is a single-edition open-source project. There are no
+                AEGIS AI is a single-edition open-source project. There are no
                 separate &ldquo;community&rdquo; and &ldquo;enterprise&rdquo; builds, no
                 runtime fees and no per-seat licensing.
               </p>

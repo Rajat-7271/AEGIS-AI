@@ -13,7 +13,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Press — AEGIS AI',
   description:
-    'Press, analyst, and speaking enquiries for AiSOC — the open-source AI Security Operations Center. Direct email and links to the public artefacts you can quote without asking.',
+    'Press, analyst, and speaking enquiries for AEGIS AI — the open-source AI Security Operations Center. Direct email and links to the public artefacts you can quote without asking.',
   alternates: { canonical: '/press' },
   openGraph: {
     title: 'AEGIS AI — press kit',

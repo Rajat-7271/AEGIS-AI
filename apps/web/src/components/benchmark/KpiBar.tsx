@@ -96,7 +96,7 @@ export function KpiBar({ report }: KpiBarProps) {
             2026 published KPI bar
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-gray-400">
-            The four buyer-side targets AiSOC commits to. The two derivable
+            The four buyer-side targets AEGIS AI commits to. The two derivable
             from the open harness are checked live below; the other two are
             tenant-runtime metrics surfaced in the in-app SLA dashboard.
           </p>
