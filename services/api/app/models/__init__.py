@@ -49,6 +49,7 @@ from app.models.responder import (
     PasskeyCredential,
 )
 from app.models.saved_hunt import SavedHunt
+from app.models.saved_search import SavedSearch
 from app.models.saved_view import SavedView
 from app.models.scim import ScimGroup, ScimGroupMember, ScimToken, ScimUser
 from app.models.tenant import ApiKey, Tenant, User
@@ -120,6 +121,7 @@ __all__ = [
     "ReportArtefact",
     "ReportTemplate",
     "SavedHunt",
+    "SavedSearch",
     "SavedView",
     "ThreatActor",
     "ThreatIntelFeed",

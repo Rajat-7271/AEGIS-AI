@@ -44,6 +44,7 @@ from app.api.v1.endpoints import (
     graph,
     graph_ws,
     health,
+    hunt,
     hunt_reports,
     hunts,
     identity_graph,
@@ -321,6 +322,10 @@ api_router.include_router(hunts.router)
 # shared (every analyst in the tenant sees every saved hunt). Distinct from
 # /hunts (above), which is the heavyweight detection-engineer hunt workbench.
 api_router.include_router(saved_hunts.router)
+
+# Federated Hunt & Saved Searches (/hunt/saved, /hunt/search)
+# Backs the Saved Searches panel and unified multi-backend search in apps/web HuntView.
+api_router.include_router(hunt.router)
 
 # Email-security + phishing-triage workflow (Tier 3)
 api_router.include_router(phishing.router)
