@@ -627,7 +627,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "https://aegis-ai-tawny.vercel.app",
     ]
+    CORS_ORIGIN_REGEX: str | None = r"^https:\/\/(aegis-ai|aegis-ai-[a-z0-9-]+)\.vercel\.app$"
 
     # Observability
     OTEL_ENDPOINT: str = ""
