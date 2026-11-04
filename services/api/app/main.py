@@ -844,14 +844,6 @@ def create_application() -> FastAPI:
             service_name="api",
             allow_credentials=True,
             default_origins=settings.CORS_ORIGINS,
-            allow_origin_regex=settings.CORS_ORIGIN_REGEX,
-            expose_headers=[
-                "Content-Disposition",
-                "Content-Length",
-                "Content-Type",
-                "X-Tenant-ID",
-                "X-Trace-Id",
-            ],
         ),
     )
 

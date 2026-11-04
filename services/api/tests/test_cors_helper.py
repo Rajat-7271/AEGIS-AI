@@ -25,17 +25,13 @@ than relying on integration coverage.
 
 from __future__ import annotations
 
-import re
-
 import pytest
 from app.core.cors import (
     DEFAULT_ALLOW_HEADERS,
     DEFAULT_ALLOW_METHODS,
-    DEFAULT_CORS_ORIGIN_REGEX,
     DEFAULT_CORS_ORIGINS,
     CORSConfigurationError,
     build_cors_kwargs,
-    resolve_cors_origin_regex,
     resolve_cors_origins,
 )
 
@@ -244,57 +240,3 @@ class TestBuildCorsKwargsProductionGuard:
         # downgrades, credentials stay enabled.
         assert kwargs["allow_origins"] == ["https://app.example.com"]
         assert kwargs["allow_credentials"] is True
-
-
-# ---------------------------------------------------------------------------
-# Vercel Production & Preview Origins (AEGIS AI)
-# ---------------------------------------------------------------------------
-
-
-class TestAegisAiCorsConfiguration:
-    """Verifies that the deployed production and preview Vercel frontends are permitted."""
-
-    def test_default_origins_includes_production_frontend(self) -> None:
-        assert "https://aegis-ai-tawny.vercel.app" in DEFAULT_CORS_ORIGINS
-
-    def test_default_origin_regex_matches_preview_deployments(self) -> None:
-        pattern = re.compile(DEFAULT_CORS_ORIGIN_REGEX)
-        # Production and preview URLs should match
-        assert pattern.fullmatch("https://aegis-ai-tawny.vercel.app")
-        assert pattern.fullmatch("https://aegis-ai.vercel.app")
-        assert pattern.fullmatch("https://aegis-ai-git-main-user.vercel.app")
-        assert pattern.fullmatch("https://aegis-ai-preview-42.vercel.app")
-
-        # Untrusted or arbitrary domains must NOT match
-        assert not pattern.fullmatch("https://evil.example.com")
-        assert not pattern.fullmatch("https://attacker.vercel.app")
-        assert not pattern.fullmatch("https://aegis-ai-tawny.vercel.app.attacker.com")
-        assert not pattern.fullmatch("http://aegis-ai.vercel.app")  # HTTPS only
-
-    def test_resolve_cors_origin_regex_env_priority(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("AISOC_CORS_ORIGIN_REGEX", r"^https:\/\/aegis-ai-custom\.vercel\.app$")
-        monkeypatch.setenv("CORS_ORIGIN_REGEX", r"^https:\/\/legacy\.vercel\.app$")
-        assert resolve_cors_origin_regex() == r"^https:\/\/aegis-ai-custom\.vercel\.app$"
-
-        monkeypatch.delenv("AISOC_CORS_ORIGIN_REGEX")
-        assert resolve_cors_origin_regex() == r"^https:\/\/legacy\.vercel\.app$"
-
-        monkeypatch.delenv("CORS_ORIGIN_REGEX")
-        assert resolve_cors_origin_regex(default=DEFAULT_CORS_ORIGIN_REGEX) == DEFAULT_CORS_ORIGIN_REGEX
-
-    def test_build_cors_kwargs_wires_allow_origin_regex(self) -> None:
-        kwargs = build_cors_kwargs(
-            service_name="api",
-            allow_credentials=True,
-            allow_origin_regex=DEFAULT_CORS_ORIGIN_REGEX,
-        )
-        assert kwargs["allow_origin_regex"] == DEFAULT_CORS_ORIGIN_REGEX
-
-    def test_allow_headers_includes_required_auth_and_tenant_headers(self) -> None:
-        # Starlette performs case-insensitive comparisons, so lowercased check is authoritative
-        lower_headers = [h.lower() for h in DEFAULT_ALLOW_HEADERS]
-        assert "authorization" in lower_headers
-        assert "content-type" in lower_headers
-        assert "x-tenant-id" in lower_headers
-        assert "x-trace-id" in lower_headers
-        assert "x-idempotency-key" in lower_headers

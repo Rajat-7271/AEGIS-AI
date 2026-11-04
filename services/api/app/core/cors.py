@@ -54,10 +54,7 @@ DEFAULT_CORS_ORIGINS: tuple[str, ...] = (
     "http://localhost:3001",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
-    "https://aegis-ai-tawny.vercel.app",
 )
-
-DEFAULT_CORS_ORIGIN_REGEX: str = r"^https:\/\/(aegis-ai|aegis-ai-[a-z0-9-]+)\.vercel\.app$"
 
 # Used when ``allow_credentials`` is True. The CORS spec refuses the response
 # if either of these is ``*`` while credentials are enabled, so we enumerate
@@ -70,29 +67,17 @@ DEFAULT_ALLOW_METHODS: tuple[str, ...] = (
     "PATCH",
     "DELETE",
     "OPTIONS",
-    "HEAD",
 )
 DEFAULT_ALLOW_HEADERS: tuple[str, ...] = (
     "Accept",
     "Accept-Language",
     "Authorization",
-    "Cache-Control",
+    "Content-Type",
     "Content-Language",
-    "Content-Type",
-    "Pragma",
-    "X-Idempotency-Key",
-    "X-Request-ID",
+    "X-Tenant-ID",
     "X-Requested-With",
-    "X-Tenant-ID",
-    "X-Tenant-Id",
     "X-Trace-Id",
-)
-DEFAULT_EXPOSE_HEADERS: tuple[str, ...] = (
-    "Content-Disposition",
-    "Content-Length",
-    "Content-Type",
-    "X-Tenant-ID",
-    "X-Trace-Id",
+    "X-Idempotency-Key",
 )
 
 _PRODUCTION_ENV_VALUES = frozenset({"production", "prod"})
@@ -118,21 +103,6 @@ def _is_production_environment() -> bool:
     return env_value in _PRODUCTION_ENV_VALUES
 
 
-def resolve_cors_origin_regex(
-    *,
-    default: str | None = None,
-) -> str | None:
-    """Resolve the CORS allow-origin regex from environment.
-
-    Priority: ``AISOC_CORS_ORIGIN_REGEX`` > ``CORS_ORIGIN_REGEX`` > ``default``.
-    """
-    for env_name in ("AISOC_CORS_ORIGIN_REGEX", "CORS_ORIGIN_REGEX"):
-        regex = (os.getenv(env_name) or "").strip()
-        if regex:
-            return regex
-    return default
-
-
 def resolve_cors_origins(
     *,
     default: Iterable[str] | None = None,
@@ -156,7 +126,6 @@ def build_cors_kwargs(
     service_name: str,
     allow_credentials: bool = True,
     default_origins: Iterable[str] | None = None,
-    allow_origin_regex: str | None = None,
     allow_methods: Iterable[str] | None = None,
     allow_headers: Iterable[str] | None = None,
     expose_headers: Iterable[str] | None = None,
@@ -214,16 +183,12 @@ def build_cors_kwargs(
         methods = list(allow_methods) if allow_methods is not None else ["*"]
         headers = list(allow_headers) if allow_headers is not None else ["*"]
 
-    origin_regex = resolve_cors_origin_regex(default=allow_origin_regex)
-
     kwargs: dict[str, object] = {
         "allow_origins": origins,
         "allow_credentials": allow_credentials,
         "allow_methods": methods,
         "allow_headers": headers,
     }
-    if origin_regex is not None:
-        kwargs["allow_origin_regex"] = origin_regex
     if expose_headers is not None:
         kwargs["expose_headers"] = list(expose_headers)
 
@@ -241,9 +206,6 @@ __all__ = [
     "DEFAULT_ALLOW_HEADERS",
     "DEFAULT_ALLOW_METHODS",
     "DEFAULT_CORS_ORIGINS",
-    "DEFAULT_CORS_ORIGIN_REGEX",
-    "DEFAULT_EXPOSE_HEADERS",
     "build_cors_kwargs",
-    "resolve_cors_origin_regex",
     "resolve_cors_origins",
 ]
