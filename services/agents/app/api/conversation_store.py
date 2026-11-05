@@ -59,6 +59,7 @@ async def _pool() -> asyncpg.Pool:
     global _POOL
     if _POOL is not None:
         return _POOL
+    dsn = os.environ.get("DATABASE_URL", "").strip()
     if not dsn:
         raise ConversationStoreUnavailable("DATABASE_URL is not set.")
     _POOL = await asyncpg.create_pool(dsn=_normalise_dsn(dsn), min_size=1, max_size=4, command_timeout=10)
@@ -132,20 +133,12 @@ async def list_conversations(*, tenant_id: uuid.UUID, limit: int = 20) -> list[C
 
 
 async def get_conversation(*, tenant_id: uuid.UUID, conversation_id: str) -> Conversation | None:
-    """Return the conversation, or None if this tenant does not have it.
-
-    The `tenant_id` predicate is what makes "does not exist" and "belongs to
-    somebody else" the same answer. Before this, an id was enough.
-    """
+    """Return the conversation, or None if this tenant does not have it."""
     try:
         parsed = uuid.UUID(conversation_id)
     except ValueError:
         return None
     if not os.environ.get("DATABASE_URL", "").strip():
-        try:
-            parsed = uuid.UUID(conversation_id)
-        except ValueError:
-            return None
         async with _MEMORY_LOCK:
             return _MEMORY_CONVERSATIONS.get(str(tenant_id), {}).get(str(parsed))
     pool = await _pool()
@@ -161,7 +154,6 @@ async def get_conversation(*, tenant_id: uuid.UUID, conversation_id: str) -> Con
             parsed,
         )
     return _row_to_conversation(row) if row else None
-
 
 async def append_messages(
     *,
