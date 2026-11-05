@@ -172,7 +172,7 @@ function buildDemoReply(prompt: string): CopilotMessage {
 
 // ─── Markdown-ish renderer (lightweight) ─────────────────────────────────────
 
-function renderRichText(content: string): React.ReactNode {
+export function renderCopilotRichText(content: string): React.ReactNode {
   // Very small subset: **bold**, `code`, # headings, > blockquote, - lists,
   // and pipe tables. Good enough for assistant replies without pulling in
   // a full markdown library.
@@ -694,7 +694,7 @@ export function CopilotView() {
                       )}
                     >
                       {m.role === 'assistant' ? (
-                        renderRichText(m.content)
+                        renderCopilotRichText(m.content)
                       ) : (
                         <p className="whitespace-pre-wrap text-sm text-slate-100">
                           {m.content}
