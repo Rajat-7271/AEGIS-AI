@@ -20,6 +20,7 @@ saved when it was not.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import uuid
@@ -33,6 +34,12 @@ import structlog
 logger = structlog.get_logger()
 
 _POOL: asyncpg.Pool | None = None
+
+# No-database deployments keep conversations in process memory. The outer
+# key is the tenant UUID, so one tenant can never read another tenant's turns.
+# This is intentionally temporary: restarts and separate workers do not share it.
+_MEMORY_CONVERSATIONS: dict[str, dict[str, "Conversation"]] = {}
+_MEMORY_LOCK = asyncio.Lock()
 
 
 class ConversationStoreUnavailable(RuntimeError):
@@ -52,13 +59,8 @@ async def _pool() -> asyncpg.Pool:
     global _POOL
     if _POOL is not None:
         return _POOL
-    dsn = os.environ.get("DATABASE_URL", "").strip()
     if not dsn:
-        raise ConversationStoreUnavailable(
-            "DATABASE_URL is not set, so copilot conversations cannot be stored. They used "
-            "to live in a process-local dict shared by every tenant; refusing is the "
-            "correct behaviour now."
-        )
+        raise ConversationStoreUnavailable("DATABASE_URL is not set.")
     _POOL = await asyncpg.create_pool(dsn=_normalise_dsn(dsn), min_size=1, max_size=4, command_timeout=10)
     return _POOL
 
@@ -107,6 +109,11 @@ def _row_to_conversation(row: asyncpg.Record) -> Conversation:
 
 
 async def list_conversations(*, tenant_id: uuid.UUID, limit: int = 20) -> list[Conversation]:
+    if not os.environ.get("DATABASE_URL", "").strip():
+        async with _MEMORY_LOCK:
+            rows = list(_MEMORY_CONVERSATIONS.get(str(tenant_id), {}).values())
+            rows.sort(key=lambda item: item.updated_at, reverse=True)
+            return rows[: max(1, min(limit, 200))]
     pool = await _pool()
     async with pool.acquire() as conn, conn.transaction():
         await _scoped(conn, tenant_id)
@@ -134,6 +141,13 @@ async def get_conversation(*, tenant_id: uuid.UUID, conversation_id: str) -> Con
         parsed = uuid.UUID(conversation_id)
     except ValueError:
         return None
+    if not os.environ.get("DATABASE_URL", "").strip():
+        try:
+            parsed = uuid.UUID(conversation_id)
+        except ValueError:
+            return None
+        async with _MEMORY_LOCK:
+            return _MEMORY_CONVERSATIONS.get(str(tenant_id), {}).get(str(parsed))
     pool = await _pool()
     async with pool.acquire() as conn, conn.transaction():
         await _scoped(conn, tenant_id)
@@ -164,6 +178,34 @@ async def append_messages(
     and write back — and the second write would silently drop the first one's
     turn.
     """
+    if not os.environ.get("DATABASE_URL", "").strip():
+        async with _MEMORY_LOCK:
+            tenant_key = str(tenant_id)
+            conversations = _MEMORY_CONVERSATIONS.setdefault(tenant_key, {})
+            parsed: uuid.UUID | None = None
+            if conversation_id:
+                try:
+                    parsed = uuid.UUID(conversation_id)
+                except ValueError:
+                    parsed = None
+            existing = conversations.get(str(parsed)) if parsed else None
+            if existing is not None:
+                conversation = Conversation(
+                    id=existing.id,
+                    title=existing.title,
+                    messages=[*existing.messages, *new_messages],
+                    updated_at=datetime.now(UTC).isoformat(),
+                )
+            else:
+                conversation = Conversation(
+                    id=str(uuid.uuid4()),
+                    title=title,
+                    messages=list(new_messages),
+                    updated_at=datetime.now(UTC).isoformat(),
+                )
+            conversations[conversation.id] = conversation
+            return conversation
+
     pool = await _pool()
     payload = json.dumps(new_messages)
     now = datetime.now(UTC)
