@@ -19,6 +19,7 @@ import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { copilotApi, type CopilotMessage } from '@/lib/api';
 import { canUseDemoData } from '@/lib/demoFallback';
+import { renderCopilotRichText } from '@/components/copilot/CopilotView';
 
 const QUICK_PROMPTS = [
   'Summarize critical alerts in the last 24h.',
@@ -260,7 +261,7 @@ export function CopilotDock() {
                             : 'bg-slate-800/70 text-slate-100 ring-1 ring-slate-700/60',
                         )}
                       >
-                        {m.content}
+                        {m.role === 'assistant' ? renderCopilotRichText(m.content) : m.content}
                         {m.suggestions && m.suggestions.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {m.suggestions.map((s, idx) =>
