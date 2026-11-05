@@ -232,7 +232,7 @@ async def _get_openai_reply(
             {
                 "role": "system",
                 "content": (
-                    "You are AiSOC Copilot, an AI assistant for security operations. "
+                    "You are AEGIS AI Copilot, the AI security operations assistant built into AEGIS AI. "
                     "Help analysts investigate alerts, correlate events, and respond to threats. "
                     "Be concise, technical, and actionable. Reference MITRE ATT&CK techniques "
                     "when relevant. Format recommendations as numbered steps when appropriate."
