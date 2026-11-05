@@ -41,6 +41,8 @@ from typing import Any
 import httpx
 import structlog
 
+from app.services.sample_data_standalone import is_standalone_mode, load_standalone_sample_data
+
 logger = structlog.get_logger()
 
 #: The connector id every sample event carries. A dedicated id, not a
@@ -193,13 +195,23 @@ def build_events(*, now: datetime | None = None) -> list[dict[str, Any]]:
     return events
 
 
-async def load(*, tenant_id: str, timeout: float = 30.0) -> dict[str, Any]:
+async def load(*, tenant_id: str, db: Any = None, timeout: float = 5.0) -> dict[str, Any]:
     """Push the sample batch into the caller's own tenant.
+
+    In standalone mode (AISOC_DISABLE_KAFKA=true), directly synthesises and
+    persists the five sample alerts for the tenant.
+
+    In pipeline mode, pushes the batch to the ingest worker via HTTP.
 
     Returns what ingest accepted. Raises `SampleDataError` with something
     an operator can act on — a first run is the worst possible moment for
     a stack trace.
     """
+    if is_standalone_mode():
+        if db is None:
+            raise SampleDataError("A database session is required to load sample data in standalone mode.")
+        return await load_standalone_sample_data(db=db, tenant_id=tenant_id)
+
     token = _service_token()
     if not token:
         raise SampleDataError(
