@@ -30,7 +30,7 @@ from .prompt_sanitizer import (
     sanitize_iterable_of_strings,
     sanitize_text,
 )
-from .state import ForensicFindings, InvestigatorState, StepKind
+from .state import ForensicFindings, InvestigatorState, StepKind, llm_response_diagnostics
 from .tools import sha256_of
 
 logger = structlog.get_logger()
@@ -128,6 +128,7 @@ async def _llm_forensic(state: InvestigatorState) -> dict[str, Any]:
             cost_usd=cost_usd,
             cost_source=cost_source,
             resolved_model=resolved_model,
+            diagnostics=llm_response_diagnostics(response),
         )
         json_match = re.search(r"\{[\s\S]*\}", content)
         if json_match:
