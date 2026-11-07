@@ -280,6 +280,18 @@ async def _check_vocabularies(conn, table: str) -> dict[str, list[str]]:
 
 async def _seed_row(conn, table: str, tenant: uuid.UUID, enum_labels: dict[str, list[str]], nonce: str) -> None:
     """Insert one row owned by ``tenant``, filling only what the schema demands."""
+    if table == "tenant_admin_invitations":
+        await conn.execute(
+            """
+            INSERT INTO tenant_admin_invitations (tenant_id, user_id, token_hash, expires_at)
+            VALUES ($1, $2, $3, now() + interval '1 hour')
+            """,
+            tenant,
+            uuid.uuid4(),
+            uuid.uuid4().hex + uuid.uuid4().hex,
+        )
+        return
+
     cols = await conn.fetch(
         """
         SELECT column_name, data_type, udt_name, character_maximum_length
