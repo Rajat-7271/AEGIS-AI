@@ -270,7 +270,7 @@ class TestTheLedgerWritesIt:
         # The verdict remains at seq 1, leaving escalation's seq >= 2 free.
         verdict = [(sql, args) for sql, args in executed if "'triage_verdict'" in sql]
         assert len(verdict) == 1
-        assert verdict[0][1][3] == 1
+        assert "$3, 1, now(), 'triage_verdict'" in verdict[0][0]
 
 
     @pytest.mark.asyncio
