@@ -161,6 +161,48 @@ class TestItUsesTheRealPipeline:
             await sample_data.load(tenant_id="00000000-0000-0000-0000-000000000001")
 
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("accepted", "rejected"),
+        [(3, 2), (5, 1)],
+    )
+    async def test_partial_or_inconsistent_ingest_acknowledgement_is_not_success(
+        self, monkeypatch, accepted, rejected
+    ) -> None:  # noqa: ANN001
+        import httpx
+
+        monkeypatch.setenv("AISOC_SERVICE_TOKEN", "test-token-not-a-secret")
+        monkeypatch.setenv("INGEST_SERVICE_URL", "http://ingest.invalid")
+
+        async def respond(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"accepted": accepted, "rejected": rejected})
+
+        transport = httpx.MockTransport(respond)
+        original_client = httpx.AsyncClient
+        monkeypatch.setattr(sample_data.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+
+        with pytest.raises(sample_data.SampleDataError, match="Sample data may be incomplete"):
+            await sample_data.load(tenant_id="00000000-0000-0000-0000-000000000001")
+
+    @pytest.mark.asyncio
+    async def test_complete_ingest_acknowledgement_returns_success(self, monkeypatch) -> None:  # noqa: ANN001
+        import httpx
+
+        monkeypatch.setenv("AISOC_SERVICE_TOKEN", "test-token-not-a-secret")
+        monkeypatch.setenv("INGEST_SERVICE_URL", "http://ingest.invalid")
+
+        async def respond(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"accepted": len(sample_data.SCENARIOS), "rejected": 0})
+
+        transport = httpx.MockTransport(respond)
+        original_client = httpx.AsyncClient
+        monkeypatch.setattr(sample_data.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+
+        result = await sample_data.load(tenant_id="00000000-0000-0000-0000-000000000001")
+        assert result["accepted"] == len(sample_data.SCENARIOS)
+        assert result["rejected"] == 0
+
+
 class TestTheEndpointContract:
     def test_sample_data_does_not_clear_first_run(self) -> None:
         """The property that matters most.
