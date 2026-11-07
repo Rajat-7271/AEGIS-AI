@@ -42,6 +42,7 @@ from app.context.dispositions import basis as disposition_basis
 from app.context.dispositions import render_for_prompt as render_dispositions
 from app.context.identity import basis as identity_basis
 from app.context.identity import render_for_prompt as render_identity
+from app.context import vendor_evidence as vendor_evidence_module
 from app.context.knowledge_base import citation_basis, unresolvable_citations
 from app.context.knowledge_base import render_for_prompt as render_runbooks
 from app.context.organisation_memory import render_for_prompt
@@ -238,9 +239,18 @@ def _build_alert_context(state: InvestigationState, *, nonce: str) -> str:
     # it just placed, which is the one thing holding the fence together.
     runbooks = render_runbooks(state.knowledge_base, nonce=nonce)
 
-    if not preamble and not runbooks:
+    # Vendor descriptions can contain attacker-controlled fields. The renderer
+    # places their nonce fence, so do not sanitize the completed block again.
+    vendor = vendor_evidence_module.render_for_prompt(_vendor_evidence_of(state), nonce=nonce)
+
+    if not preamble and not runbooks and not vendor:
         return telemetry
-    return "\n\n".join([*preamble, *([runbooks] if runbooks else []), telemetry])
+    return "\n\n".join([*preamble, *([runbooks] if runbooks else []), *([vendor] if vendor else []), telemetry])
+
+
+def _vendor_evidence_of(state: Any) -> Any:
+    """Return transient vendor evidence, including for older state objects."""
+    return getattr(state, "vendor_evidence", None)
 
 
 def _close_truncated_json(fragment: str) -> str:
@@ -531,18 +541,11 @@ async def run_auto_triage(state: InvestigationState) -> InvestigationState:
             cited=unresolvable,
         )
 
-    # Depth plan 1.3, third leg. A rationale crediting a tool with a result it
-    # never returned, which is the same defect as citing a runbook nobody
-    # retrieved and as asserting an indicator the evidence does not contain —
-    # a claim whose provenance resolves to nothing.
-    #
-    # `called_tools` is empty and that is the point rather than a shortcut:
-    # this path is a single `safe_ainvoke` with no tool channel, so the
-    # Investigation Ledger holds no `tool_call` row for this run and can hold
-    # none. Every tool result in this rationale therefore came from the
-    # evidence or from the model, and in both cases the verdict is resting on
-    # something that did not happen.
-    fabricated_tools = unverified_tool_claims(rationale, called_tools=())
+    # A rationale may credit only vendor reads that actually executed and
+    # returned evidence. Failed or unattempted reads are deliberately excluded.
+    evidence = _vendor_evidence_of(state)
+    called_tools = evidence.executed_capabilities if evidence is not None else ()
+    fabricated_tools = unverified_tool_claims(rationale, called_tools=called_tools)
 
     state.add_finding(f"Auto-triage: verdict={verdict}, confidence={confidence:.2f}, latency={elapsed_ms}ms")
     state.add_finding(f"Auto-triage rationale: {rationale}")
