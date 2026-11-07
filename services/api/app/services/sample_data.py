@@ -236,17 +236,33 @@ async def load(*, tenant_id: str, timeout: float = 30.0) -> dict[str, Any]:
     if response.status_code >= 400:
         raise SampleDataError(f"Ingest refused the sample batch with HTTP {response.status_code}: {response.text[:300]}")
 
-    body = response.json() if response.content else {}
-    accepted = int(body.get("accepted", 0))
+    try:
+        body = response.json()
+        if not isinstance(body, dict):
+            raise ValueError("ingest response is not an object")
+        accepted = int(body.get("accepted", 0))
+        rejected = int(body.get("rejected", 0))
+    except (ValueError, TypeError) as exc:
+        raise SampleDataError(
+            "Ingest returned an invalid acknowledgement for the sample batch. "
+            "Check the ingest service logs before retrying."
+        ) from exc
+
+    if accepted <= 0:
+        raise SampleDataError(
+            "Ingest accepted zero sample events. Check ingest authentication, "
+            "tenant scoping, and the batch rejection logs before retrying."
+        )
+
     logger.info(
         "sample_data.loaded",
         tenant_id=tenant_id,
         accepted=accepted,
-        rejected=body.get("rejected", 0),
+        rejected=rejected,
     )
     return {
         "accepted": accepted,
-        "rejected": int(body.get("rejected", 0)),
+        "rejected": rejected,
         "scenarios": [
             {
                 "key": s.key,
