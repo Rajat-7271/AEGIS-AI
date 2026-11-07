@@ -254,6 +254,13 @@ async def load(*, tenant_id: str, timeout: float = 30.0) -> dict[str, Any]:
             "tenant scoping, and the batch rejection logs before retrying."
         )
 
+    if accepted != len(events) or rejected != 0:
+        raise SampleDataError(
+            f"Ingest acknowledged {accepted} of {len(events)} sample events "
+            f"({rejected} rejected). Sample data may be incomplete; inspect "
+            "the ingest rejection logs before retrying."
+        )
+
     logger.info(
         "sample_data.loaded",
         tenant_id=tenant_id,
