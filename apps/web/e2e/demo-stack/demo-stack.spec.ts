@@ -79,6 +79,31 @@ test("the API is reachable from the console's own origin", async ({ request }) =
   expect([200, 401, 403]).toContain(response.status());
 });
 
+test("the browser can make a real same-origin case API request", async ({ page }) => {
+  // APIRequestContext probes do not prove that a Chromium page can reach the
+  // same-origin proxy. Execute the request in the actual browser context.
+  // No page.route() mocks are installed in this live-stack project.
+  await page.goto(`${WEB}/dashboard`, { waitUntil: "domcontentloaded" });
+
+  const result = await page.evaluate(async () => {
+    const response = await fetch("/api/v1/cases?page_size=1", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    const body = await response.text();
+    return { status: response.status, contentType, body };
+  });
+
+  expect([200, 401, 403], `browser proxy returned ${result.status}: ${result.body.slice(0, 250)}`).toContain(result.status);
+  // A successful API call must return JSON, not a Next.js HTML fallback
+  // that happens to carry a 200 status.
+  if (result.status === 200) {
+    expect(result.contentType).toMatch(/application\\/json/i);
+    expect(() => JSON.parse(result.body)).not.toThrow();
+  }
+});
+
 test("the case list resolves to rows or a real empty state, never an endless skeleton", async ({ page }) => {
   await page.goto(`${WEB}/cases`, { waitUntil: "domcontentloaded" });
 
