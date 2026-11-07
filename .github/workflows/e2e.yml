@@ -25,7 +25,6 @@ on:
       - "packages/ui/**"
       - "packages/types/**"
       - ".github/workflows/e2e.yml"
-      - ".github/workflows/migration-frontend-e2e.yml"
   push:
     branches: [main, migration/upstream-parity]
     paths:
