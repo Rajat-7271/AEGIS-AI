@@ -69,6 +69,16 @@ async def _invitation_target(
     invitation = (
         await db.execute(
             select(TenantAdminInvitation).where(
+                # Resolve the supplied tenant slug before reading the bearer
+                # credential. This keeps the invitation lookup tenant-scoped
+                # even though the caller is not authenticated yet.
+                TenantAdminInvitation.tenant_id
+                == select(Tenant.id)
+                .where(
+                    Tenant.slug == tenant_slug,
+                    Tenant.is_active.is_(True),
+                )
+                .scalar_subquery(),
                 TenantAdminInvitation.token_hash == token_hash,
                 TenantAdminInvitation.expires_at > func.now(),
                 TenantAdminInvitation.consumed_at.is_(None),
