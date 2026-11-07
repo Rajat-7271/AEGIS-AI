@@ -41,6 +41,7 @@ from typing import Any
 
 import pytest
 from app.context import vendor_evidence as ve
+from app.models.state import InvestigationState
 
 TENANT = "11111111-1111-1111-1111-111111111111"
 
@@ -53,6 +54,27 @@ def _alert(**fields: Any) -> dict[str, Any]:
     }
     base.update(fields)
     return base
+
+
+def test_vendor_evidence_is_transient_and_not_serialized() -> None:
+    """The dataclass is needed during triage but must not leak into state dumps."""
+    evidence = ve.VendorEvidence(
+        reads=[
+            ve.VendorRead(
+                capability="get_host",
+                target="host-1",
+                purpose="host record",
+                executed=True,
+                status="ok",
+                summary="isolated",
+            )
+        ]
+    )
+    state = InvestigationState(incident_id=uuid.uuid4(), tenant_id=uuid.uuid4())
+    state.vendor_evidence = evidence
+
+    assert state.vendor_evidence is evidence
+    assert "vendor_evidence" not in state.to_dict()
 
 
 # ── planning: deterministic, bounded, and not model-chosen ────────────────
