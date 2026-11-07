@@ -141,7 +141,7 @@ class InvestigationState(BaseModel):
     # Bounded vendor evidence fetched before auto-triage. Kept as the
     # dataclass so fabricated-tool-claim checks can inspect only reads that
     # actually executed; this field is transient context, not persisted state.
-    vendor_evidence: Any = None
+    vendor_evidence: Any = Field(default=None, exclude=True)
 
     # Findings accumulated during investigation
     findings: list[str] = Field(default_factory=list)
