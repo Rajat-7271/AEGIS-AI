@@ -99,7 +99,7 @@ test("the browser can make a real same-origin case API request", async ({ page }
   // A successful API call must return JSON, not a Next.js HTML fallback
   // that happens to carry a 200 status.
   if (result.status === 200) {
-    expect(result.contentType).toMatch(/application\\/json/i);
+    expect(result.contentType.toLowerCase()).toContain("application/json");
     expect(() => JSON.parse(result.body)).not.toThrow();
   }
 });
