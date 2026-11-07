@@ -6,6 +6,8 @@ on:
     paths:
       - "services/agents/app/tools/mitre_full.py"
       - "services/agents/tests/test_mitre_corpus_provenance.py"
+      - "services/agents/app/investigator/responder_agent.py"
+      - "services/agents/tests/test_responder_safe_fallback.py"
       - "services/agents/pyproject.toml"
       - "services/agents/poetry.lock"
       - ".github/workflows/upstream-parity.yml"
@@ -38,5 +40,5 @@ jobs:
         run: python -m pip install poetry
       - name: Install locked agent dependencies
         run: poetry install --with dev --no-root
-      - name: Test MITRE corpus provenance
-        run: poetry run pytest tests/test_mitre_corpus_provenance.py -q
+      - name: Test MITRE corpus provenance and safe responder fallback
+        run: poetry run pytest tests/test_mitre_corpus_provenance.py tests/test_responder_safe_fallback.py -q
