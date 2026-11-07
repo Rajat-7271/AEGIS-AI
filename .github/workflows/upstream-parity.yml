@@ -8,6 +8,11 @@ on:
       - "services/agents/tests/test_mitre_corpus_provenance.py"
       - "services/agents/app/investigator/responder_agent.py"
       - "services/agents/tests/test_responder_safe_fallback.py"
+      - "services/agents/app/context/vendor_evidence.py"
+      - "services/agents/app/models/state.py"
+      - "services/agents/app/workers/fused_alert_consumer.py"
+      - "services/agents/app/agents/auto_triage_agent.py"
+      - "services/agents/tests/test_vendor_evidence.py"
       - "services/agents/pyproject.toml"
       - "services/agents/poetry.lock"
       - ".github/workflows/upstream-parity.yml"
@@ -16,6 +21,13 @@ on:
     paths:
       - "services/agents/app/tools/mitre_full.py"
       - "services/agents/tests/test_mitre_corpus_provenance.py"
+      - "services/agents/app/investigator/responder_agent.py"
+      - "services/agents/tests/test_responder_safe_fallback.py"
+      - "services/agents/app/context/vendor_evidence.py"
+      - "services/agents/app/models/state.py"
+      - "services/agents/app/workers/fused_alert_consumer.py"
+      - "services/agents/app/agents/auto_triage_agent.py"
+      - "services/agents/tests/test_vendor_evidence.py"
       - "services/agents/pyproject.toml"
       - "services/agents/poetry.lock"
       - ".github/workflows/upstream-parity.yml"
@@ -39,4 +51,4 @@ jobs:
       - name: Install locked agent dependencies
         run: poetry install --with dev --no-root
       - name: Test MITRE corpus provenance and safe responder fallback
-        run: poetry run pytest tests/test_mitre_corpus_provenance.py tests/test_responder_safe_fallback.py -q
+        run: poetry run pytest tests/test_mitre_corpus_provenance.py tests/test_responder_safe_fallback.py tests/test_vendor_evidence.py -q
