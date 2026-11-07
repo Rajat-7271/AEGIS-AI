@@ -126,6 +126,41 @@ class TestItUsesTheRealPipeline:
         assert "make up" in message, "the error does not say how to fix it"
 
 
+    @pytest.mark.asyncio
+    async def test_ingest_zero_accepted_is_not_reported_as_success(self, monkeypatch) -> None:  # noqa: ANN001
+        import httpx
+
+        monkeypatch.setenv("AISOC_SERVICE_TOKEN", "test-token-not-a-secret")
+        monkeypatch.setenv("INGEST_SERVICE_URL", "http://ingest.invalid")
+
+        async def respond(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"accepted": 0, "rejected": 5})
+
+        transport = httpx.MockTransport(respond)
+        original_client = httpx.AsyncClient
+        monkeypatch.setattr(sample_data.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+
+        with pytest.raises(sample_data.SampleDataError, match="zero sample events"):
+            await sample_data.load(tenant_id="00000000-0000-0000-0000-000000000001")
+
+    @pytest.mark.asyncio
+    async def test_ingest_invalid_acknowledgement_is_actionable(self, monkeypatch) -> None:  # noqa: ANN001
+        import httpx
+
+        monkeypatch.setenv("AISOC_SERVICE_TOKEN", "test-token-not-a-secret")
+        monkeypatch.setenv("INGEST_SERVICE_URL", "http://ingest.invalid")
+
+        async def respond(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, text="not-json")
+
+        transport = httpx.MockTransport(respond)
+        original_client = httpx.AsyncClient
+        monkeypatch.setattr(sample_data.httpx, "AsyncClient", lambda **kwargs: original_client(transport=transport, **kwargs))
+
+        with pytest.raises(sample_data.SampleDataError, match="invalid acknowledgement"):
+            await sample_data.load(tenant_id="00000000-0000-0000-0000-000000000001")
+
+
 class TestTheEndpointContract:
     def test_sample_data_does_not_clear_first_run(self) -> None:
         """The property that matters most.
