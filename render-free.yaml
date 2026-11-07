@@ -58,15 +58,11 @@ services:
       # Set DATABASE_URL and DATABASE_MIGRATION_URL as secrets in the dashboard.
       # DATABASE_URL must use Supabase's session-pooler (port 5432):
       #   postgresql+asyncpg://postgres.[REF]:[PASS]@aws-0-[region].pooler.supabase.com:5432/postgres?sslmode=require
-      # DATABASE_MIGRATION_URL: use an IPv4-reachable Supabase session-pooler
-      # endpoint (port 5432) when deploying from Render Free, as described in
-      # docs/deployment/free-tier-vercel-render-supabase.md. Supabase direct
-      # db.[REF].supabase.co endpoints may be IPv6-only and unreachable from
-      # IPv4-only Render egress. Do not copy the direct-host example here.
-      # IMPORTANT: verify that the migration role has the required DDL
-      # privileges and that the pooler supports the migration tool's session
-      # behavior in an isolated environment before enabling migrations.
-      # Supply credentials only through Render secret environment variables.
+      # For DATABASE_MIGRATION_URL on Render Free, use the IPv4-compatible
+      # Supabase session pooler on port 5432 rather than an IPv6-only direct
+      # host. See docs/deployment/free-tier-vercel-render-supabase.md.
+      # Before migration, test owner-role DDL privileges and session support
+      # on an isolated database. Set connection secrets in Render's dashboard.
       - key: AISOC_ALLOW_CLEARTEXT_DB
         value: "0"    # Supabase enforces TLS — do NOT set this to 1
       - key: DATABASE_POOL_SIZE
