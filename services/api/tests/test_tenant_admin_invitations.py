@@ -85,8 +85,18 @@ class _InvitationSession:
                 None,
             )
             invite = self.invitation
+            requested_slug = next(
+                (
+                    value
+                    for value in params.values()
+                    if isinstance(value, str) and value == self.tenant.slug
+                ),
+                None,
+            )
             valid = (
                 requested_hash == invite.token_hash
+                and requested_slug == self.tenant.slug
+                and invite.tenant_id == self.tenant.id
                 and invite.expires_at > datetime.now(UTC)
                 and invite.consumed_at is None
                 and invite.revoked_at is None
