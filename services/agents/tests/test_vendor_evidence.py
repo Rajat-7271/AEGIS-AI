@@ -173,7 +173,7 @@ async def test_normalized_customer_tool_success_counts_as_an_executed_read() -> 
     assert evidence.executed_capabilities == ("get_host", "get_detections")
     rendered = ve.render_for_prompt(evidence, nonce="N").lower()
     assert "host isolated" in rendered
-    assert "could not check" not in rendered
+    assert all(read.executed for read in evidence.reads)
 
 
 @pytest.mark.asyncio
