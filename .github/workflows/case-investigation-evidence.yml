@@ -37,4 +37,6 @@ jobs:
       - name: Install locked API dependencies
         run: poetry install --with dev --no-root
       - name: Test investigation evidence preservation
+        env:
+          PYTHONPATH: .
         run: poetry run pytest tests/test_case_investigation_evidence.py -q
