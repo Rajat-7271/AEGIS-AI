@@ -1,0 +1,46 @@
+name: Temporary OpenAPI regeneration for migration branch
+
+on:
+  push:
+    branches: [migration/upstream-parity]
+    paths:
+      - ".github/workflows/openapi-sync-migration.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: migration/upstream-parity
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+      - name: Install lockfile-aligned OpenAPI dependencies
+        run: >-
+          pip install --quiet
+          "fastapi==0.141.1" uvicorn "pydantic[email]==2.14.0"
+          "pydantic-settings==2.15.0" "sqlalchemy[asyncio]" asyncpg structlog
+          "PyJWT>=2.8,<3" "cryptography>=46,<51" "passlib[bcrypt]"
+          tenacity pyyaml prometheus-client neo4j redis celery aiofiles aiokafka
+          boto3 clickhouse-driver opentelemetry-sdk opentelemetry-api
+          opentelemetry-exporter-otlp-proto-grpc
+          "opentelemetry-instrumentation-fastapi"
+          "strawberry-graphql[fastapi]" httpx email-validator
+          "sqlglot>=30,<31"
+      - name: Regenerate schema and commit only the generated document
+        run: |
+          python scripts/export_openapi.py
+          git config user.name "Beenu Arora"
+          git config user.email "beenu@cyble.com"
+          git add docs/openapi.yaml
+          if git diff --cached --quiet; then
+            echo "OpenAPI document already matches the lockfile-aligned generator."
+            exit 0
+          fi
+          git commit -m "docs: regenerate OpenAPI schema with locked dependencies"
+          git push origin HEAD:migration/upstream-parity
