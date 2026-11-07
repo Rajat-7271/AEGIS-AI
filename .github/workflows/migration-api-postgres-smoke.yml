@@ -25,9 +25,11 @@ jobs:
       - name: Start disposable database and API
         run: |
           set -euo pipefail
+          db_password="$(openssl rand -hex 24)"
+          api_secret="$(openssl rand -hex 32)"
           docker network create aegis-smoke-net
           docker run -d --name aegis-smoke-postgres --network aegis-smoke-net \
-            -e POSTGRES_USER=aegis -e POSTGRES_PASSWORD=smoke-only-password \
+            -e POSTGRES_USER=aegis -e POSTGRES_PASSWORD="$db_password" \
             -e POSTGRES_DB=aegis_smoke \
             --health-cmd 'pg_isready -U aegis -d aegis_smoke' \
             --health-interval 2s --health-retries 30 postgres:16-alpine
@@ -38,8 +40,8 @@ jobs:
           test "$(docker inspect -f '{{.State.Health.Status}}' aegis-smoke-postgres)" = healthy
           docker run -d --name aegis-smoke-api --network aegis-smoke-net \
             -e ENVIRONMENT=test \
-            -e SECRET_KEY=ci-isolated-secret-key-at-least-32-characters \
-            -e DATABASE_URL=postgresql+asyncpg://aegis:smoke-only-password@aegis-smoke-postgres:5432/aegis_smoke \
+            -e SECRET_KEY="$api_secret" \
+            -e DATABASE_URL="postgresql+asyncpg://aegis:${db_password}@aegis-smoke-postgres:5432/aegis_smoke" \
             -e AISOC_WAR_ROOM_SYNC_ENABLED=false \
             -e OAUTH_REFRESH_WORKER_ENABLED=false \
             -e WEEKLY_DIGEST_WORKER_ENABLED=false \
