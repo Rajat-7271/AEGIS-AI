@@ -5,6 +5,43 @@ info:
     detection, investigation, and response.
   version: 0.1.0
 paths:
+  /api/v1/auth/invitations/validate:
+    post:
+      tags:
+      - auth
+      summary: Validate Admin Invitation
+      description: Validate a bearer invite without disclosing the invited account.
+      operationId: validate_admin_invitation_api_v1_auth_invitations_validate_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: boolean
+                type: object
+                title: Response Validate Admin Invitation Api V1 Auth Invitations
+                  Validate Post
+  /api/v1/auth/invitations/redeem:
+    post:
+      tags:
+      - auth
+      summary: Redeem Admin Invitation
+      description: Atomically consume an invite and activate only its bound initial
+        admin.
+      operationId: redeem_admin_invitation_api_v1_auth_invitations_redeem_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: boolean
+                type: object
+                title: Response Redeem Admin Invitation Api V1 Auth Invitations Redeem
+                  Post
   /api/v1/auth/login:
     post:
       tags:
@@ -2097,6 +2134,7 @@ paths:
       tags:
       - cases
       summary: Download investigation PDF report
+      description: Render the agents' HTML investigation report as a PDF in the API.
       operationId: case_investigation_pdf_api_v1_cases__case_id__investigations__run_id__report_pdf_get
       security:
       - HTTPBearer: []
@@ -2738,18 +2776,16 @@ paths:
       tags:
       - connectors
       summary: Update Connector
-      description: 'Update a connector''s configuration or state.
+      description: 'Update a connector''s configuration, credentials, or enabled state.
 
 
-        The PATCH semantics here are deliberately conservative: only fields
+        Secret values are merged with the existing decrypted set and re-encrypted
 
-        the caller actually supplies are touched. Notably, sending an empty
+        before the database update. Blank submitted values are ignored, so callers
 
-        ``auth_config`` dict will overwrite all secrets — the wizard must
+        can replace one credential without clearing the others. The response
 
-        therefore omit the field entirely when the operator hasn''t re-typed
-
-        credentials.'
+        model intentionally never includes ``auth_config``.'
       operationId: update_connector_api_v1_connectors__connector_id__patch
       security:
       - HTTPBearer: []
@@ -6203,6 +6239,52 @@ paths:
           content:
             application/json:
               schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/playbook-steps/alert-response-simulation:
+    post:
+      tags:
+      - playbooks
+      summary: Safely simulate a deterministic alert response proposal
+      description: 'Run the supported alert proposal only through Actions'' forced
+        dry-run route.
+
+
+        The tenant and investigation run are checked against the persisted alert
+
+        before asking Actions to simulate. No credentials are loaded or forwarded.'
+      operationId: simulate_alert_response_api_v1_playbook_steps_alert_response_simulation_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: x-aisoc-service-token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Aisoc-Service-Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertResponseSimulationRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Simulate Alert Response Api V1 Playbook Steps Alert
+                  Response Simulation Post
         '422':
           description: Validation Error
           content:
@@ -23505,6 +23587,44 @@ components:
       - created_at
       - updated_at
       title: AlertResponse
+    AlertResponseSimulationRequest:
+      properties:
+        alert_id:
+          type: string
+          format: uuid
+          title: Alert Id
+        run_id:
+          type: string
+          format: uuid
+          title: Run Id
+        tenant_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Tenant Id
+        capability:
+          type: string
+          title: Capability
+        target:
+          type: string
+          maxLength: 512
+          title: Target
+        confidence:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            minimum: 0.0
+          - type: 'null'
+          title: Confidence
+      type: object
+      required:
+      - alert_id
+      - run_id
+      - capability
+      - target
+      title: AlertResponseSimulationRequest
+      description: A deterministic triage proposal to preview against its source alert.
     AlertSnoozeRequest:
       properties:
         duration_minutes:
@@ -26223,13 +26343,9 @@ components:
 
         ``auth_config`` is intentionally **omitted**. Even decrypted credentials
 
-        should never round-trip back to the wizard — the user typed them once
+        should never round-trip back to the console — the user enters a replacement
 
-        and they belong inside the vault from then on. Wizard-driven re-edit
-
-        flows reset specific secret fields rather than reading the existing
-
-        ones.
+        when needed, and blank replacement fields preserve the vault-held value.
 
 
         ``connector_config`` *is* included because it holds non-secret runtime
@@ -41184,10 +41300,14 @@ components:
           title: Is Enabled
         auth_config:
           anyOf:
-          - additionalProperties: true
-            type: object
+          - {}
           - type: 'null'
+          additionalProperties:
+            type: string
+          type: object
           title: Auth Config
+          description: Partial secret-field replacements. Blank values preserve the
+            stored credentials.
         connector_config:
           anyOf:
           - additionalProperties: true
