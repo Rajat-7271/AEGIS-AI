@@ -14,11 +14,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import AuthUser, DBSession, get_current_user
-
-__all__ = ["router", "get_current_user"]
 from app.core.config import settings
 from app.core.role_grants import wildcard_roles as WILDCARD_ROLES
-from app.db.rls import set_rls_context
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -27,10 +24,13 @@ from app.core.security import (
     token_is_revoked,
     verify_password,
 )
+from app.db.rls import set_rls_context
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
 from app.services.login_throttle import client_ip, get_login_throttle
 from app.services.waitlist import get_signup_rate_limiter
+
+__all__ = ["router", "get_current_user"]
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,16 @@ async def _invitation_target(
     invitation = (
         await db.execute(
             select(TenantAdminInvitation).where(
+                # Resolve the supplied tenant slug before reading the bearer
+                # credential. This keeps the invitation lookup tenant-scoped
+                # even though the caller is not authenticated yet.
+                TenantAdminInvitation.tenant_id
+                == select(Tenant.id)
+                .where(
+                    Tenant.slug == tenant_slug,
+                    Tenant.is_active.is_(True),
+                )
+                .scalar_subquery(),
                 TenantAdminInvitation.token_hash == token_hash,
                 TenantAdminInvitation.expires_at > func.now(),
                 TenantAdminInvitation.consumed_at.is_(None),

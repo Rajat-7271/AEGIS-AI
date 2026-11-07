@@ -12,14 +12,13 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from fastapi import HTTPException
-from fastapi.requests import Request
-from sqlalchemy import delete
-
 from app.api.v1.endpoints import auth
 from app.core.security import verify_password
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
+from fastapi import HTTPException
+from fastapi.requests import Request
+from sqlalchemy import delete
 
 _RAW_TOKEN = "a" * 43
 
@@ -85,8 +84,18 @@ class _InvitationSession:
                 None,
             )
             invite = self.invitation
+            requested_slug = next(
+                (
+                    value
+                    for value in params.values()
+                    if isinstance(value, str) and value == self.tenant.slug
+                ),
+                None,
+            )
             valid = (
                 requested_hash == invite.token_hash
+                and requested_slug == self.tenant.slug
+                and invite.tenant_id == self.tenant.id
                 and invite.expires_at > datetime.now(UTC)
                 and invite.consumed_at is None
                 and invite.revoked_at is None
@@ -371,6 +380,10 @@ def test_postgres_concurrent_invitation_redemption_is_single_use() -> None:
                         preferences={},
                     )
                 )
+                # Flush the referenced rows explicitly: these fixtures
+                # intentionally use scalar foreign keys rather than ORM
+                # relationships, so unit-of-work ordering is not implied.
+                await session.flush()
                 session.add(
                     TenantAdminInvitation(
                         id=invite_id,

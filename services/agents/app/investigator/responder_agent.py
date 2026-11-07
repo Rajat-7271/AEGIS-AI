@@ -130,18 +130,26 @@ async def _llm_responder(state: InvestigatorState) -> dict[str, Any]:
 
     state.log_decision(
         agent="ResponderAgent",
-        decision="default_high_risk_plan",
-        reason="LLM unavailable; falling back to conservative high-risk containment template",
-        confidence=0.3,
+        decision="no_automated_action_plan",
+        reason=(
+            "LLM unavailable; no containment, eradication, or recovery action "
+            "can be justified from an unavailable response assessment. "
+            "An analyst must review the available evidence and choose next steps."
+        ),
+        confidence=0.0,
     )
     return {
         "recommended_actions": [],
-        "containment_steps": ["Isolate affected systems immediately."],
-        "eradication_steps": ["Remove identified malicious artefacts."],
-        "recovery_steps": ["Restore from last known good backup."],
-        "estimated_effort_hours": 8.0,
-        "risk_level": "high",
-        "summary": "Automated response plan generation was not available.",
+        "containment_steps": [],
+        "eradication_steps": [],
+        "recovery_steps": [],
+        "estimated_effort_hours": 0.0,
+        "risk_level": "unknown",
+        "summary": (
+            "Automated response planning was unavailable. No response action is "
+            "recommended; an analyst must review the evidence before authorizing "
+            "containment, eradication, or recovery."
+        ),
     }
 
 

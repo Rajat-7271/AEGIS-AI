@@ -172,7 +172,10 @@ class TestTheLedgerWritesIt:
     double that accepted any INSERT would reproduce the bug happily."""
 
     @staticmethod
-    async def _run(exchanges: list[dict[str, Any]] | None) -> list[tuple[str, tuple]]:
+    async def _run(
+        exchanges: list[dict[str, Any]] | None,
+        vendor_reads: list[dict[str, Any]] | None = None,
+    ) -> list[tuple[str, tuple]]:
         from app.investigator import ledger as ledger_module
 
         executed: list[tuple[str, tuple]] = []
@@ -233,8 +236,42 @@ class TestTheLedgerWritesIt:
                 confidence=0.9,
                 rationale="because",
                 llm_exchanges=exchanges,
+                vendor_reads=vendor_reads,
             )
         return executed
+
+    @pytest.mark.asyncio
+    async def test_vendor_reads_use_negative_slots_before_triage_and_escalation(self) -> None:
+        reads = [
+            {
+                "capability": "get_host",
+                "target": "host-1",
+                "executed": True,
+                "status": "ok",
+                "summary": "endpoint reports isolated",
+                "elapsed_ms": 42,
+            },
+            {
+                "capability": "get_detections",
+                "target": "host-1",
+                "executed": False,
+                "status": "timeout",
+                "summary": "vendor did not answer",
+                "elapsed_ms": 5000,
+            },
+        ]
+        executed = await self._run([], reads)
+        tool_rows = [(sql, args) for sql, args in executed if "'tool_call'" in sql]
+        assert len(tool_rows) == 2
+        assert [args[3] for _, args in tool_rows] == [-2, -1]
+        assert all(args[4] == "auto_triage:vendor_evidence" for _, args in tool_rows)
+        assert json.loads(tool_rows[0][1][6]) == reads[0]
+        assert json.loads(tool_rows[1][1][6]) == reads[1]
+        # The verdict remains at seq 1, leaving escalation's seq >= 2 free.
+        verdict = [(sql, args) for sql, args in executed if "'triage_verdict'" in sql]
+        assert len(verdict) == 1
+        assert "$3, 1, now(), 'triage_verdict'" in verdict[0][0]
+
 
     @pytest.mark.asyncio
     async def test_the_verdict_insert_names_both_hash_columns(self) -> None:

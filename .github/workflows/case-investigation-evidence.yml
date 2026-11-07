@@ -1,0 +1,42 @@
+name: Case investigation evidence regression
+
+on:
+  pull_request:
+    branches: [release/public-mvp]
+    paths:
+      - "services/api/app/api/v1/endpoints/cases.py"
+      - "services/api/tests/test_case_investigation_evidence.py"
+      - "services/api/pyproject.toml"
+      - "services/api/poetry.lock"
+      - ".github/workflows/case-investigation-evidence.yml"
+  push:
+    branches: [migration/upstream-parity]
+    paths:
+      - "services/api/app/api/v1/endpoints/cases.py"
+      - "services/api/tests/test_case_investigation_evidence.py"
+      - "services/api/pyproject.toml"
+      - "services/api/poetry.lock"
+      - ".github/workflows/case-investigation-evidence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-regression:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        run: python -m pip install poetry
+      - name: Install locked API dependencies
+        run: poetry install --with dev --no-root
+      - name: Test investigation evidence preservation
+        env:
+          PYTHONPATH: .
+        run: poetry run pytest tests/test_case_investigation_evidence.py -q
