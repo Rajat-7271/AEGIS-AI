@@ -1052,9 +1052,22 @@ jobs:
 
       - name: Install tooling (awscli + postgres client)
         if: needs.changes.outputs.backup == 'true'
+        env:
+          POSTGRES_CONTAINER_ID: ${{ job.services.postgres.id }}
         run: |
           pip install --quiet awscli "cryptography>=46,<51"
-          sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+          # Use the fixture's clients so pg_dump emits SQL for its server version.
+          bin="$RUNNER_TEMP/postgres-client"
+          mkdir -p "$bin"
+          cat > "$bin/postgres-client" <<'SH'
+          #!/bin/sh
+          exec docker exec -i --env PGPASSWORD "$POSTGRES_CONTAINER_ID" "${0##*/}" "$@"
+          SH
+          chmod +x "$bin/postgres-client"
+          ln -s postgres-client "$bin/pg_dump"
+          ln -s postgres-client "$bin/psql"
+          echo "$bin" >> "$GITHUB_PATH"
+          echo "POSTGRES_CONTAINER_ID=$POSTGRES_CONTAINER_ID" >> "$GITHUB_ENV"
 
       # The S3 endpoint is a fixture: what this job tests is backup.sh and
       # restore.sh, not the object store. It still has to be a real S3 server,
@@ -1269,7 +1282,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        from_ref: ['v7.3.1', 'v7.5.0']
+        include:
+          - from_ref: v7.3.1
+            upstream_commit: abff3d06cfb2bc93fb6442fe54a88e876768d0a1
+          - from_ref: v7.5.0
+            upstream_commit: c00088fc426873529a2be4ae6e8e2039170cac20
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:16
@@ -1322,14 +1339,18 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Install the released schema (${{ matrix.from_ref }})
+        env:
+          UPSTREAM_COMMIT: ${{ matrix.upstream_commit }}
         run: |
           set -euo pipefail
+          # Forks may lack the release tags. Fetch the pinned upstream commit.
+          git fetch --no-tags --depth=1 https://github.com/beenuar/AiSOC.git "$UPSTREAM_COMMIT"
           # `git checkout <ref> -- <path>` only overwrites paths present in
           # <ref>; it will NOT delete files added since. rm -rf first so the
           # migrations dir exactly matches the released set (otherwise HEAD's
           # newer files leak in and pass 1 silently becomes a fresh apply).
           rm -rf services/api/migrations
-          git checkout "${{ matrix.from_ref }}" -- services/api/migrations
+          git checkout "$UPSTREAM_COMMIT" -- services/api/migrations
           echo "migration files at ${{ matrix.from_ref }}: $(ls services/api/migrations/*.sql | wc -l)"
           ( cd services/api && python -m app.scripts.run_migrations )
 
