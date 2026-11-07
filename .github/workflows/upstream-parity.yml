@@ -1,0 +1,42 @@
+name: Upstream parity focused checks
+
+on:
+  push:
+    branches: [migration/upstream-parity]
+    paths:
+      - "services/agents/app/tools/mitre_full.py"
+      - "services/agents/tests/test_mitre_corpus_provenance.py"
+      - "services/agents/pyproject.toml"
+      - "services/agents/poetry.lock"
+      - ".github/workflows/upstream-parity.yml"
+  pull_request:
+    branches: [release/public-mvp]
+    paths:
+      - "services/agents/app/tools/mitre_full.py"
+      - "services/agents/tests/test_mitre_corpus_provenance.py"
+      - "services/agents/pyproject.toml"
+      - "services/agents/poetry.lock"
+      - ".github/workflows/upstream-parity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mitre-provenance:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/agents
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+          cache: poetry
+          cache-dependency-path: services/agents/poetry.lock
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install locked agent dependencies
+        run: poetry install --with dev --no-root
+      - name: Test MITRE corpus provenance
+        run: poetry run pytest tests/test_mitre_corpus_provenance.py -q
