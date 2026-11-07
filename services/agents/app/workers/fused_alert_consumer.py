@@ -1435,6 +1435,11 @@ class FusedAlertTriageWorker:
             rationale=rationale,
             findings=list(state.findings),
             proposed_actions=recommendations,
+            vendor_reads=(
+                state.vendor_evidence.as_state()["reads"]
+                if getattr(state, "vendor_evidence", None) is not None
+                else None
+            ),
             auto_closed=state.status is AgentStatus.COMPLETED,
             iterations=state.iteration_count,
             tokens=tokens,
