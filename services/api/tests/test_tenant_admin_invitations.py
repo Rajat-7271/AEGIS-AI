@@ -371,6 +371,10 @@ def test_postgres_concurrent_invitation_redemption_is_single_use() -> None:
                         preferences={},
                     )
                 )
+                # Flush the referenced rows explicitly: these fixtures
+                # intentionally use scalar foreign keys rather than ORM
+                # relationships, so unit-of-work ordering is not implied.
+                await session.flush()
                 session.add(
                     TenantAdminInvitation(
                         id=invite_id,
