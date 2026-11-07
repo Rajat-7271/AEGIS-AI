@@ -743,10 +743,14 @@ async def persist_auto_triage(
                         int(exchange.get("duration_ms") or 0),
                     )
 
-                # Persist each bounded vendor read as a real tool_call row in
-                # the same transaction as its triage verdict. Failed reads are
-                # retained as visibility gaps, not represented as clean results.
-                for offset, read in enumerate(vendor_reads or []):
+                # Vendor reads happened before the model call. Their
+                # negative sequence slots place them before llm_call (0) and
+                # triage_verdict (1), while leaving seq >= 2 untouched for
+                # run_escalation, which shares this deterministic run_id.
+                # For N reads, offsets map to -N ... -1 in plan order.
+                # Failed reads remain visibility gaps, not clean results.
+                reads = vendor_reads or []
+                for offset, read in enumerate(reads):
                     await conn.execute(
                         """
                         INSERT INTO investigation_events
@@ -759,7 +763,7 @@ async def persist_auto_triage(
                         uuid.uuid4(),
                         run_id,
                         tenant_id,
-                        2 + offset,
+                        offset - len(reads),
                         "auto_triage:vendor_evidence",
                         (
                             f"{read.get('capability')} {read.get('target')} -> "
