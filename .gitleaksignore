@@ -67,6 +67,9 @@ scripts/detection_specs_part2.py:jwt:1111
 # `AISOC_DISABLE_QDRANT`), not its value, which is the string "true".
 render.yaml:generic-api-key:78
 render.yaml:generic-api-key:132
+# Render free-tier manifest: the matched value is an environment-variable name
+# (AISOC_DISABLE_NEO4J), not a credential. Same YAML key/value pattern as above.
+render-free.yaml:generic-api-key:75
 
 # The disaster-recovery job's BACKUP_ENCRYPTION_KEY used to be a committed
 # 64-hex constant and needed an entry here. It is generated per run now, so
