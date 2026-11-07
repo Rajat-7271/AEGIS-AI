@@ -654,6 +654,8 @@ async def persist_auto_triage(
     """Durably record an auto-triage outcome (issue #571) in ONE transaction:
 
     * upsert the ``investigation_runs`` row (idempotent on ``id``),
+    * append bounded vendor-read outcomes at negative sequence slots (before
+      the model call at seq 0 and verdict at seq 1; escalation starts at seq 2),
     * append the verdict as an immutable ``investigation_events`` row (seq 1),
     * mark the run completed, and
     * write the disposition/verdict + rationale + recommendations back onto the
