@@ -254,3 +254,20 @@ def test_metrics_token_compare_is_constant_time(metrics_app, monkeypatch):
     client = TestClient(test_app)
     assert client.get("/metrics", headers={"Authorization": "Bearer abc123"}).status_code == 200
     assert client.get("/metrics", headers={"Authorization": "Bearer abc124"}).status_code == 401
+
+
+# Isolated API validation must be able to disable the war-room sync loop
+# without changing the default behavior of existing deployments.
+def test_war_room_sync_enabled_by_default(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("AISOC_WAR_ROOM_SYNC_ENABLED", raising=False)
+    assert _make_settings().AISOC_WAR_ROOM_SYNC_ENABLED is True
+
+
+def test_war_room_sync_can_be_disabled_via_environment(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AISOC_WAR_ROOM_SYNC_ENABLED", "false")
+    assert _make_settings().AISOC_WAR_ROOM_SYNC_ENABLED is False
+
+
+def test_war_room_sync_can_be_reenabled_via_environment(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AISOC_WAR_ROOM_SYNC_ENABLED", "true")
+    assert _make_settings().AISOC_WAR_ROOM_SYNC_ENABLED is True
