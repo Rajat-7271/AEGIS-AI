@@ -1,0 +1,88 @@
+name: Migration API PostgreSQL smoke
+
+on:
+  pull_request:
+    branches: [migration/upstream-parity]
+    paths:
+      - "services/api/**"
+      - ".github/workflows/migration-api-postgres-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-api-startup:
+    name: API startup with disposable PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Build exact API source
+        run: docker build --tag aegis-api-smoke:${{ github.sha }} services/api
+
+      - name: Start disposable database and API
+        run: |
+          set -euo pipefail
+          docker network create aegis-smoke-net
+          docker run -d --name aegis-smoke-postgres --network aegis-smoke-net \
+            -e POSTGRES_USER=aegis -e POSTGRES_PASSWORD=smoke-only-password \
+            -e POSTGRES_DB=aegis_smoke \
+            --health-cmd 'pg_isready -U aegis -d aegis_smoke' \
+            --health-interval 2s --health-retries 30 postgres:16-alpine
+          for i in $(seq 1 60); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' aegis-smoke-postgres)" = healthy ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect -f '{{.State.Health.Status}}' aegis-smoke-postgres)" = healthy
+          docker run -d --name aegis-smoke-api --network aegis-smoke-net \
+            -e ENVIRONMENT=test \
+            -e SECRET_KEY=ci-isolated-secret-key-at-least-32-characters \
+            -e DATABASE_URL=postgresql+asyncpg://aegis:smoke-only-password@aegis-smoke-postgres:5432/aegis_smoke \
+            -e AISOC_WAR_ROOM_SYNC_ENABLED=false \
+            -e OAUTH_REFRESH_WORKER_ENABLED=false \
+            -e WEEKLY_DIGEST_WORKER_ENABLED=false \
+            -e REPORT_SCHEDULER_ENABLED=false \
+            -e OUTBOUND_WEBHOOK_WORKER_ENABLED=false \
+            -e RETENTION_WORKER_ENABLED=false \
+            -e AISOC_DISABLE_NEO4J=true \
+            -e AISOC_DISABLE_CLICKHOUSE=true \
+            -e AISOC_DISABLE_KAFKA=true \
+            -e AISOC_DISABLE_QDRANT=true \
+            --entrypoint python aegis-api-smoke:${{ github.sha }} \
+            -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+      - name: Verify liveness and readiness over HTTP
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            if ! docker inspect -f '{{.State.Running}}' aegis-smoke-api | grep -q true; then
+              echo 'API exited before becoming ready'
+              docker logs aegis-smoke-api
+              exit 1
+            fi
+            if docker run --rm --network aegis-smoke-net --entrypoint python \
+              aegis-api-smoke:${{ github.sha }} \
+              -c 'import urllib.request; base="http://aegis-smoke-api:8000"; assert urllib.request.urlopen(base+"/livez",timeout=3).status==200; assert urllib.request.urlopen(base+"/readyz",timeout=3).status==200' \
+              >/dev/null 2>&1; then
+              echo 'API /livez and /readyz returned HTTP 200'
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'API did not become ready within 270 seconds'
+          docker logs aegis-smoke-api
+          exit 1
+
+      - name: Diagnostic logs
+        if: failure()
+        run: |
+          docker logs --tail 200 aegis-smoke-api || true
+          docker logs --tail 100 aegis-smoke-postgres || true
+
+      - name: Remove disposable containers
+        if: always()
+        run: |
+          docker rm -f aegis-smoke-api aegis-smoke-postgres || true
+          docker network rm aegis-smoke-net || true
