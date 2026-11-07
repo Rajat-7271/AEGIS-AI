@@ -11,9 +11,9 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
 from fastapi import HTTPException
 from fastapi.requests import Request
+import pytest
 from sqlalchemy import delete
 
 from app.api.v1.endpoints import auth
