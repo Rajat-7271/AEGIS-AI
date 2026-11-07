@@ -15,6 +15,38 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field, field_validator
 
 
+def llm_response_diagnostics(response: Any) -> dict[str, Any]:
+    """Return safe, bounded metadata that explains an empty/malformed LLM reply.
+
+    Never records raw headers, provider bodies, reasoning text, or secrets.
+    """
+    content = getattr(response, "content", None)
+    metadata = getattr(response, "response_metadata", None)
+    metadata = metadata if isinstance(metadata, dict) else {}
+    usage = getattr(response, "usage_metadata", None)
+    usage = usage if isinstance(usage, dict) else {}
+    raw_headers = metadata.get("headers")
+    raw_headers = raw_headers if isinstance(raw_headers, dict) else {}
+    headers = {str(k).lower(): str(v)[:256] for k, v in raw_headers.items()}
+    token_usage = metadata.get("token_usage")
+    token_usage = token_usage if isinstance(token_usage, dict) else {}
+    return {
+        "response_type": type(response).__name__,
+        "content_type": type(content).__name__,
+        "content_length": len(content) if isinstance(content, (str, list)) else None,
+        "content_empty": not bool(content),
+        "finish_reason": metadata.get("finish_reason") or metadata.get("stop_reason"),
+        "model_name": metadata.get("model_name") or metadata.get("model"),
+        "resolved_model": headers.get("x-litellm-model-name"),
+        "provider_call_id": headers.get("x-litellm-call-id"),
+        "usage_metadata": {k: usage[k] for k in ("input_tokens", "output_tokens", "total_tokens") if usage.get(k) is not None},
+        "token_usage": {k: token_usage[k] for k in ("prompt_tokens", "completion_tokens", "total_tokens") if token_usage.get(k) is not None},
+        "additional_kwargs_keys": sorted(getattr(response, "additional_kwargs", {}).keys())
+        if isinstance(getattr(response, "additional_kwargs", {}), dict) else [],
+        "response_metadata_keys": sorted(metadata.keys()),
+    }
+
+
 def _stable_hash(payload: Any) -> str:
     """Deterministic SHA-256 of an arbitrary JSON-serialisable payload.
 
