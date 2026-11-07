@@ -29,7 +29,7 @@ from app.prompt_serialization import summarize_structure_for_llm
 from .bundle_prompt import format_bundle_prompt_append
 from .limits import max_completion_tokens
 from .prompt_sanitizer import sanitize_text
-from .state import InvestigatorState, ReconFindings, StepKind
+from .state import InvestigatorState, ReconFindings, StepKind, llm_response_diagnostics
 from .tools import enrich_ioc, extract_iocs, map_to_mitre, sha256_of
 
 logger = structlog.get_logger()
@@ -207,6 +207,7 @@ async def _llm_recon(state: InvestigatorState) -> dict[str, Any]:
             cost_usd=cost_usd,
             cost_source=cost_source,
             resolved_model=resolved_model,
+            diagnostics=llm_response_diagnostics(response),
         )
         # Extract JSON from the response
         import re
