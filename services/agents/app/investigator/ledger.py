@@ -649,6 +649,7 @@ async def persist_auto_triage(
     ungrounded: bool | None = None,
     shadow: bool = False,
     llm_exchanges: list[dict[str, Any]] | None = None,
+    vendor_reads: list[dict[str, Any]] | None = None,
 ) -> bool:
     """Durably record an auto-triage outcome (issue #571) in ONE transaction:
 
@@ -740,6 +741,33 @@ async def persist_auto_triage(
                         exchange.get("input_hash"),
                         exchange.get("output_hash"),
                         int(exchange.get("duration_ms") or 0),
+                    )
+
+                # Persist each bounded vendor read as a real tool_call row in
+                # the same transaction as its triage verdict. Failed reads are
+                # retained as visibility gaps, not represented as clean results.
+                for offset, read in enumerate(vendor_reads or []):
+                    await conn.execute(
+                        """
+                        INSERT INTO investigation_events
+                          (id, run_id, tenant_id, seq, ts, kind, agent, summary,
+                           payload, duration_ms, created_at)
+                        VALUES
+                          ($1, $2, $3, $4, now(), 'tool_call', $5, $6, $7::jsonb, $8, now())
+                        ON CONFLICT (run_id, seq) DO NOTHING
+                        """,
+                        uuid.uuid4(),
+                        run_id,
+                        tenant_id,
+                        2 + offset,
+                        "auto_triage:vendor_evidence",
+                        (
+                            f"{read.get('capability')} {read.get('target')} -> "
+                            f"{'executed' if read.get('executed') else 'could not check'}"
+                            f" ({read.get('status')})"
+                        )[:8000],
+                        json.dumps(read, default=str),
+                        int(read.get("elapsed_ms") or 0),
                     )
 
                 verdict_event_id = uuid.uuid4()
