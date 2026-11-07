@@ -148,6 +148,42 @@ async def test_an_executed_read_is_evidence_and_is_counted_as_a_called_tool() ->
 
 
 @pytest.mark.asyncio
+async def test_normalized_customer_tool_success_counts_as_an_executed_read() -> None:
+    """The production adapter returns available/outcome rather than executed."""
+    evidence = await ve.collect(
+        _alert(hostname="i-0abc123"),
+        tenant_id=TENANT,
+        runner=_runner(
+            {
+                "get_host": {
+                    "available": True,
+                    "outcome": "ok",
+                    "summary": "host isolated by endpoint protection",
+                    "data": {"isolated": True},
+                }
+            }
+        ),
+    )
+    assert evidence.executed_capabilities == ("get_host",)
+    rendered = ve.render_for_prompt(evidence, nonce="N").lower()
+    assert "host isolated" in rendered
+    assert "could not check" not in rendered
+
+
+@pytest.mark.asyncio
+async def test_unavailable_customer_tool_does_not_count_as_executed() -> None:
+    evidence = await ve.collect(
+        _alert(hostname="i-0abc123"),
+        tenant_id=TENANT,
+        runner=_runner(
+            {"get_host": {"available": False, "outcome": "could_not_check", "reason": "No EDR connector"}}
+        ),
+    )
+    assert evidence.executed_capabilities == ()
+    assert "could not check" in ve.render_for_prompt(evidence, nonce="N").lower()
+
+
+@pytest.mark.asyncio
 async def test_a_failed_read_is_never_counted_as_a_called_tool() -> None:
     """The guard's question is whether a rationale credits a tool with a result.
 
