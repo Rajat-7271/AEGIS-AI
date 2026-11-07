@@ -260,15 +260,35 @@ async def collect(
             continue
 
         body = body if isinstance(body, dict) else {}
+        # The AEGIS customer-tools adapter exposes a normalized
+        # {available, outcome, summary, data} result, while older runners may
+        # return the raw {executed, status, detail} contract. Accept both,
+        # without ever treating an unavailable lookup as a successful read.
+        if "executed" in body:
+            executed = bool(body.get("executed"))
+            status = str(body.get("status") or ("ok" if executed else "unknown"))
+            summary = str(body.get("summary") or body.get("detail") or "").strip()
+            detail = {k: v for k, v in body.items() if k in {"result", "records", "count"}}
+        elif body.get("available") is True and body.get("outcome") == "ok":
+            executed = True
+            status = "ok"
+            summary = str(body.get("summary") or "").strip()
+            detail = {"result": body.get("data")} if isinstance(body.get("data"), dict) else {}
+        else:
+            executed = False
+            status = str(body.get("status") or body.get("outcome") or "unknown")
+            summary = str(body.get("reason") or body.get("detail") or body.get("summary") or "").strip()
+            detail = {}
+
         evidence.reads.append(
             VendorRead(
                 capability=capability,
                 target=target,
                 purpose=purpose,
-                executed=bool(body.get("executed")),
-                status=str(body.get("status") or ("ok" if body.get("executed") else "unknown")),
-                summary=str(body.get("summary") or body.get("detail") or "").strip(),
-                detail={k: v for k, v in body.items() if k in {"result", "records", "count"}},
+                executed=executed,
+                status=status,
+                summary=summary,
+                detail=detail,
                 elapsed_ms=int((time.monotonic() - started) * 1000),
             )
         )
