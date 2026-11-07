@@ -17,6 +17,15 @@
 - Avoid local Ollama weights, full-profile OpenSearch, Neo4j and ClickHouse initially. These are not part of the minimum SOC journey.
 - Do not assert that 9 GiB is sufficient until peak usage is measured.
 
+## Read-only Windows preflight
+From an isolated checkout of this PR branch, run in PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check_local_staging.ps1
+```
+
+This checks RAM, disk, WSL, Docker engine availability and common port listeners. It does not start containers, modify settings or connect to production. Review output locally before sharing; avoid pasting any secrets. The script has not been run on the user's Windows machine.
+
 ## Prerequisite read-only checks
 1. Windows: check installed RAM, available disk (allow for Docker images/volumes), CPU virtualization, WSL version and Docker Desktop availability.
 2. Repository: confirm the intended commit SHA and clean isolated checkout/worktree. Do not modify the original Windows repository.
