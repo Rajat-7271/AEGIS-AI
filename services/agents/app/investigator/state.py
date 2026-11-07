@@ -255,6 +255,7 @@ class InvestigatorState(BaseModel):
         latency_ms: int = 0,
         cost_usd: float | None = None,
         cost_source: str = "unpriced",
+        diagnostics: dict[str, Any] | None = None,
     ) -> str:
         """Record the literal LLM response. Returns the output hash.
 
@@ -274,6 +275,7 @@ class InvestigatorState(BaseModel):
             "cost_usd": cost_usd,
             "cost_source": cost_source,
             "prompt_hash": prompt_hash,
+            "diagnostics": diagnostics or {},
         }
         self.audit_log.append(
             AuditEntry(
