@@ -15,11 +15,15 @@ on:
       - "services/agents/app/agents/auto_triage_agent.py"
       - "services/agents/tests/test_vendor_evidence.py"
       - "services/agents/tests/test_auto_triage_ledger_records_the_prompt.py"
+      - "services/agents/tests/test_ledger_tenant.py"
+      - "services/agents/tests/test_response_simulation_ledger.py"
+      - "services/agents/tests/test_ledger_tenant.py"
+      - "services/agents/tests/test_response_simulation_ledger.py"
       - "services/agents/pyproject.toml"
       - "services/agents/poetry.lock"
       - ".github/workflows/upstream-parity.yml"
   pull_request:
-    branches: [release/public-mvp]
+    branches: [release/public-mvp, migration/upstream-parity]
     paths:
       - "services/agents/app/tools/mitre_full.py"
       - "services/agents/tests/test_mitre_corpus_provenance.py"
@@ -55,4 +59,4 @@ jobs:
       - name: Install locked agent dependencies
         run: poetry install --with dev --no-root
       - name: Test MITRE corpus provenance and safe responder fallback
-        run: poetry run pytest tests/test_mitre_corpus_provenance.py tests/test_responder_safe_fallback.py tests/test_vendor_evidence.py tests/test_auto_triage_ledger_records_the_prompt.py -q
+        run: poetry run pytest tests/test_mitre_corpus_provenance.py tests/test_responder_safe_fallback.py tests/test_vendor_evidence.py tests/test_auto_triage_ledger_records_the_prompt.py tests/test_ledger_tenant.py tests/test_response_simulation_ledger.py -q
