@@ -160,7 +160,13 @@ async def test_normalized_customer_tool_success_counts_as_an_executed_read() -> 
                     "outcome": "ok",
                     "summary": "host isolated by endpoint protection",
                     "data": {"isolated": True},
-                }
+                },
+                "get_detections": {
+                    "available": True,
+                    "outcome": "ok",
+                    "summary": "no previous detections",
+                    "data": {"records": []},
+                },
             }
         ),
     )
