@@ -458,7 +458,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("OUTBOUND_WEBHOOK_WORKER_ENABLED", "AISOC_OUTBOUND_WEBHOOK_WORKER_ENABLED"),
     )
 
-    RETENTION_WORKER_ENABLED: bool = Field(
+    # Keep the war-room sweep enabled by default for existing deployments.\n    # Isolated validation can set AISOC_WAR_ROOM_SYNC_ENABLED=false to avoid\n    # polling tenant rooms or dispatching updates to configured chat providers.\n    AISOC_WAR_ROOM_SYNC_ENABLED: bool = True\n\n    RETENTION_WORKER_ENABLED: bool = Field(
         default=False,
         validation_alias=AliasChoices("RETENTION_WORKER_ENABLED", "AISOC_RETENTION_WORKER_ENABLED"),
     )
