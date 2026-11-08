@@ -144,6 +144,35 @@ paths:
                 $ref: '#/components/schemas/UserMeResponse'
       security:
       - HTTPBearer: []
+  /api/v1/auth/me/change-password:
+    post:
+      tags:
+      - auth
+      summary: Change Own Password
+      description: 'Rotate the authenticated principal''s password without changing identity or role.
+
+
+        Existing sessions are revoked, including this session. The caller must sign in
+
+        again with the new password. Never accept a user ID from the request body.'
+      operationId: change_own_password_api_v1_auth_me_change_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
   /api/v1/auth/me/preferences:
     patch:
       tags:
@@ -35502,6 +35531,19 @@ components:
       - resolved
       - suppressed
       title: PostureSummary
+    PasswordChangeRequest:
+      properties:
+        current_password:
+          type: string
+          title: Current Password
+        new_password:
+          type: string
+          title: New Password
+      type: object
+      required:
+      - current_password
+      - new_password
+      title: PasswordChangeRequest
     PreferencesPatch:
       properties:
         preferences:
