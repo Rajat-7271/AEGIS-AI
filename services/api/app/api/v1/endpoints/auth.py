@@ -28,6 +28,7 @@ from app.db.rls import set_rls_context
 from app.models.account_email_change import AccountEmailChangeRequest
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
+from app.services.audit import emit_audit
 from app.services.account_email_confirmation import EmailChangeRejected, confirm_pending_email_change
 from app.services.account_email_delivery import verification_link
 from app.services.account_email_request import EmailChangeRequestRejected
@@ -599,6 +600,17 @@ async def request_own_email_change(
         raise HTTPException(status_code=503, detail="Email verification could not be delivered") from exc
     finally:
         await mailer.aclose()
+    await emit_audit(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        action="auth.email_change.requested",
+        resource="user",
+        resource_id=str(current_user.user_id),
+        changes={"verification_required": True},
+        request=request,
+    )
+    await db.commit()
     return {"message": "Check your new email address for a verification link."}
 
 
@@ -621,6 +633,17 @@ async def confirm_own_email_change(
         )
     except EmailChangeRejected as exc:
         raise HTTPException(status_code=400, detail="Invalid or expired verification") from exc
+    await emit_audit(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        action="auth.email_change.confirmed",
+        resource="user",
+        resource_id=str(current_user.user_id),
+        changes={"sessions_revoked": True},
+        request=request,
+    )
+    await db.commit()
 
 
 @router.delete("/me/pending-email-change", status_code=status.HTTP_204_NO_CONTENT)
