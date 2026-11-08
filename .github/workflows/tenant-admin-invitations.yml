@@ -117,6 +117,7 @@ jobs:
         run: >-
           "$RUNNER_TEMP/.venv-api-invitations/bin/python" -m pytest
           tests/test_password_change.py
+          tests/test_account_email_verification.py
           -q
 
       - name: Run real PostgreSQL concurrent-redemption integration test
