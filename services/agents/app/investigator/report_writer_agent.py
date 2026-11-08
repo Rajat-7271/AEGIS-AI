@@ -131,8 +131,8 @@ def _render_enrichment(state: InvestigatorState) -> list[str]:
 
 
 _BLOCK_IOC_ACTION = re.compile(
-    r"\b(?:block|blacklist|denylist)\b.{0,120}\b(?:ioc|indicator|hash|domain|ip|c2)\b"
-    r"|\b(?:ioc|indicator|hash|domain|ip|c2)\b.{0,120}\b(?:block|blacklist|denylist)\b",
+    r"\b(?:block|blacklist|denylist)\b.{0,120}\b(?:iocs?|indicators?|hash(?:es)?|domains?|ips?|c2)\b"
+    r"|\b(?:iocs?|indicators?|hash(?:es)?|domains?|ips?|c2)\b.{0,120}\b(?:block|blacklist|denylist)\b",
     re.I,
 )
 _WITHHELD_IOC_BLOCK = (
