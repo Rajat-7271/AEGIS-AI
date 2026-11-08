@@ -329,10 +329,20 @@ def smoke(project: str, scratch: Path) -> None:
             and all(state == "running" for name, (state, _) in states.items() if name != PREFLIGHT),
             "The eight-service set or preflight result differed from expectations.")
     verify_runtime_isolation(project, model)
-    docker(*compose, "exec", "-T", "api", "python", "-c",
-           "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=5).status == 200",
-           operation="Verify API readiness")
-    print("API /readyz: HTTP 200")
+    # Validate the response contract, not just HTTP status: a reverse proxy
+    # or an error page returning 200 must not count as a ready API.
+    for path, expected in (("/livez", "alive"), ("/readyz", "ready")):
+        docker(
+            *compose, "exec", "-T", "api", "python", "-c",
+            "import json,sys,urllib.request; "
+            "r=urllib.request.urlopen('http://127.0.0.1:8000'+sys.argv[1], timeout=5); "
+            "assert r.status == 200 and 'application/json' in r.headers.get('Content-Type',''); "
+            "body=json.load(r); "
+            "assert isinstance(body,dict) and body.get('status')==sys.argv[2] "
+            "and isinstance(body.get('service'),str) and body['service']",
+            path, expected, operation=f"Verify API {path} response contract",
+        )
+        print(f"API {path}: HTTP 200 with {expected} JSON contract")
     # A container with only internal networks has no gateway for publishing ports.
     # Probe the real Next server and its realtime rewrite from web's own loopback.
     for path in ("/api/health", "/api/v1/realtime/healthz"):
