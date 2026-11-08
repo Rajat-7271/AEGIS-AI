@@ -25,6 +25,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.rls import set_rls_context
+from app.models.account_email_change import AccountEmailChangeRequest
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
 from app.services.login_throttle import client_ip, get_login_throttle
@@ -518,6 +519,39 @@ async def change_own_display_name(
     user.username = name
     await db.commit()
     return UserMeResponse.model_validate(user)
+
+
+@router.delete("/me/pending-email-change", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_own_pending_email_change(
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> None:
+    """Revoke any unconfirmed email-change link for the current account.
+
+    No email-change token or user ID is accepted from the caller. This
+    operation is safe to repeat and never changes the active login address.
+    """
+    user = (
+        await db.execute(
+            select(User)
+            .where(User.id == current_user.user_id, User.tenant_id == current_user.tenant_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.execute(
+        update(AccountEmailChangeRequest)
+        .where(
+            AccountEmailChangeRequest.tenant_id == current_user.tenant_id,
+            AccountEmailChangeRequest.user_id == current_user.user_id,
+            AccountEmailChangeRequest.consumed_at.is_(None),
+            AccountEmailChangeRequest.cancelled_at.is_(None),
+        )
+        .values(cancelled_at=datetime.now(UTC))
+    )
+    await db.commit()
 
 
 @router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
