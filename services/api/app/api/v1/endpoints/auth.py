@@ -28,6 +28,12 @@ from app.db.rls import set_rls_context
 from app.models.account_email_change import AccountEmailChangeRequest
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
+from app.services.account_email_confirmation import EmailChangeRejected, confirm_pending_email_change
+from app.services.account_email_delivery import verification_link
+from app.services.account_email_request import EmailChangeRequestRejected
+from app.services.account_email_step_up import EmailChangeStepUpRejected
+from app.services.account_email_workflow import EmailChangeDeliveryRejected, request_verified_email_change
+from app.services.email_approval import MailgunClient
 from app.services.login_throttle import client_ip, get_login_throttle
 from app.services.waitlist import get_signup_rate_limiter
 
@@ -234,6 +240,16 @@ class UserMeResponse(BaseModel):
 
 class ProfileNameUpdate(BaseModel):
     username: str
+
+
+class EmailChangeStartRequest(BaseModel):
+    proposed_email: EmailStr
+    current_password: str
+    totp_code: str
+
+
+class EmailChangeConfirmRequest(BaseModel):
+    token: str
 
 
 class PasswordChangeRequest(BaseModel):
@@ -519,6 +535,92 @@ async def change_own_display_name(
     user.username = name
     await db.commit()
     return UserMeResponse.model_validate(user)
+
+
+async def _limit_email_change_attempt(request: Request, user_id: uuid.UUID) -> None:
+    """Bound sensitive attempts by both caller source and account identity."""
+    limiter = get_signup_rate_limiter()
+    for key in (
+        f"account-email-change:source:{client_ip(request)}",
+        f"account-email-change:user:{user_id}",
+    ):
+        decision = await limiter.acquire(key)
+        if not decision.allowed:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many account-change attempts. Try again later.",
+                headers=decision.to_headers(),
+            )
+
+
+@router.post("/me/email-change/request", status_code=status.HTTP_202_ACCEPTED)
+async def request_own_email_change(
+    body: EmailChangeStartRequest,
+    request: Request,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> dict[str, str]:
+    """Send verification to the proposed address only after TOTP step-up."""
+    await _limit_email_change_attempt(request, current_user.user_id)
+    origin = (settings.CONSOLE_PUBLIC_BASE_URL or "").strip()
+    # Never derive verification hosts from attacker-controlled Host headers.
+    try:
+        verification_link(origin=origin, token="a" * 43)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="Email verification is not configured") from exc
+    user = (
+        await db.execute(
+            select(User).where(
+                User.id == current_user.user_id,
+                User.tenant_id == current_user.tenant_id,
+                User.is_active.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    mailer = MailgunClient()
+    try:
+        await request_verified_email_change(
+            db,
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            current_email=user.email,
+            current_password=body.current_password,
+            proposed_email=str(body.proposed_email),
+            totp_code=body.totp_code,
+            origin=origin,
+            mailer=mailer,
+        )
+    except (EmailChangeRequestRejected, EmailChangeStepUpRejected) as exc:
+        raise HTTPException(status_code=403, detail="Email change could not be requested") from exc
+    except EmailChangeDeliveryRejected as exc:
+        raise HTTPException(status_code=503, detail="Email verification could not be delivered") from exc
+    finally:
+        await mailer.aclose()
+    return {"message": "Check your new email address for a verification link."}
+
+
+@router.post("/me/email-change/confirm", status_code=status.HTTP_204_NO_CONTENT)
+async def confirm_own_email_change(
+    body: EmailChangeConfirmRequest,
+    request: Request,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> None:
+    """Consume a verification token only for its authenticated owner."""
+    await _limit_email_change_attempt(request, current_user.user_id)
+    try:
+        await confirm_pending_email_change(
+            db,
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            token=body.token,
+        )
+    except EmailChangeRejected as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification") from exc
 
 
 @router.delete("/me/pending-email-change", status_code=status.HTTP_204_NO_CONTENT)
