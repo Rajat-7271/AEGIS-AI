@@ -41,16 +41,26 @@ async def request_verified_email_change(
     The step-up and pending request are committed in the same transaction.
     If either delivery fails, cancel the pending request and fail closed.
     """
-    await verify_email_change_totp(
-        db, user_id=user_id, tenant_id=tenant_id, code=totp_code
-    )
-    recipient, token = await create_pending_email_change(
-        db,
-        tenant_id=tenant_id,
-        user_id=user_id,
-        current_password=current_password,
-        proposed_email=proposed_email,
-    )
+    try:
+        await verify_email_change_totp(
+            db, user_id=user_id, tenant_id=tenant_id, code=totp_code
+        )
+    except Exception:
+        await db.rollback()
+        raise
+    try:
+        recipient, token = await create_pending_email_change(
+            db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            current_password=current_password,
+            proposed_email=proposed_email,
+            commit=False,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     try:
         await send_email_change_security_notice(
             recipient=current_email,
