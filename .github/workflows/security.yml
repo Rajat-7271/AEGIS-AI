@@ -351,12 +351,11 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=1.28.13
-          url="https://github.com/aquasecurity/tfsec/releases/download/v${VERSION}/tfsec-linux-amd64"
-          if ! curl -sSL --fail --retry 5 --retry-delay 5 --retry-all-errors "$url" -o /tmp/tfsec; then
-            echo "::error title=tfsec::could not download $url — check whether v${VERSION} still exists and bump the pin"
-            exit 1
-          fi
-          chmod +x /tmp/tfsec
+          # Build the pinned source via Go rather than relying on the GitHub
+          # Releases binary endpoint, which repeatedly returned HTTP 504.
+          # Do not skip scanning or change the tfsec version/ratchet baseline.
+          export GOBIN="/tmp"
+          go install "github.com/aquasecurity/tfsec/cmd/tfsec@v${VERSION}"
           # tfsec's JSON report carries no version field, so the ratchet's
           # version-drift arm has nothing in the report to compare against.
           # The binary's own answer is the robust source: the pinned URL says
