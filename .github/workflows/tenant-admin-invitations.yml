@@ -123,6 +123,8 @@ jobs:
           tests/test_account_email_request.py
           tests/test_account_email_cancel.py
           tests/test_account_email_step_up.py
+          app/services/account_email_workflow.py
+          tests/test_account_email_workflow.py
           tests/test_profile_name_change.py
           -q
 
