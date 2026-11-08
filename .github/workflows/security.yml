@@ -131,7 +131,17 @@ jobs:
       # .gitleaksignore with a written reason. Re-adding continue-on-error
       # is not one of the two options.
       - name: Scan working tree (respects .gitleaksignore)
-        run: gitleaks dir . --redact --exit-code 1 --no-banner
+        run: |
+          set -euo pipefail
+          report="${RUNNER_TEMP}/gitleaks-report.json"
+          status=0
+          gitleaks dir . --redact --exit-code 1 --no-banner \
+            --report-format json --report-path "$report" || status=$?
+          if [ -s "$report" ]; then
+            # Print only finding metadata; never print matched or secret values.
+            jq -r '.[] | "\(.File):\(.StartLine) [\(.RuleID)]"' "$report"
+          fi
+          exit "$status"
 
   # ── RATCHETED: SAST beyond CodeQL ─────────────────────────────────────────
   #

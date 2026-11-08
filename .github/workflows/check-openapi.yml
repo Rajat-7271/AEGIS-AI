@@ -12,12 +12,12 @@ on:
       - "services/api/**"
 
 # Shared install step extracted as a composite action would be cleaner, but for
-# simplicity we duplicate the pip install across both jobs.  The dep list mirrors
-# pyproject.toml so it stays in sync manually; a future improvement would be to
-# generate requirements.txt via `poetry export`.
+# simplicity we duplicate the pip install across both jobs. Generator versions
+# are pinned to services/api/poetry.lock: FastAPI/Pydantic versions affect the
+# serialized OpenAPI schema, so floating ranges create false drift.
 env:
   OPENAPI_DEPS: >-
-    "fastapi>=0.117,<0.142" uvicorn pydantic "pydantic[email]" pydantic-settings
+    "fastapi==0.141.1" uvicorn "pydantic[email]==2.14.0" "pydantic-settings==2.15.0"
     "sqlalchemy[asyncio]" asyncpg structlog
     "PyJWT>=2.8,<3" "cryptography>=46,<51" "passlib[bcrypt]"
     tenacity pyyaml prometheus-client

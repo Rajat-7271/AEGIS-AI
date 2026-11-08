@@ -1,0 +1,43 @@
+name: Migration API image build
+
+on:
+  pull_request:
+    branches: [migration/upstream-parity]
+    paths:
+      - "services/api/**"
+      - ".github/workflows/migration-api-image.yml"
+  push:
+    branches: [migration/upstream-parity]
+    paths:
+      - "services/api/**"
+      - ".github/workflows/migration-api-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-matched-image:
+    name: Build and import API from source
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Build API image from this commit
+        run: docker build --pull --tag aegis-api-validation:${{ github.sha }} services/api
+
+      - name: Compile Python in isolated container
+        run: |
+          docker run --rm --network none --entrypoint python \
+            aegis-api-validation:${{ github.sha }} -m compileall -q app
+
+      - name: Import API configuration in isolated container
+        env:
+          ENVIRONMENT: test
+        run: |
+          docker run --rm --network none \
+            -e ENVIRONMENT=test \
+            --entrypoint python aegis-api-validation:${{ github.sha }} \
+            -c 'from app.core.config import Settings; s = Settings(_env_file=None); assert s.AISOC_WAR_ROOM_SYNC_ENABLED is True; print("API settings import OK")'

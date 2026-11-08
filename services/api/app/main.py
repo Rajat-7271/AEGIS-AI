@@ -624,11 +624,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # `ON CONFLICT DO NOTHING`, while a single lock holder stalling every
     # tenant's rooms would be the worse failure.
     war_room_sync_task: asyncio.Task | None = None
-    try:
-        war_room_sync_task = asyncio.create_task(run_war_room_sync(), name="war_room_sync_worker")
-        logger.info("war_room_sync worker started")
-    except Exception as exc:
-        logger.warning("war_room_sync worker failed to start", error=str(exc))
+    if settings.AISOC_WAR_ROOM_SYNC_ENABLED:
+        try:
+            war_room_sync_task = asyncio.create_task(run_war_room_sync(), name="war_room_sync_worker")
+            logger.info("war_room_sync worker started")
+        except Exception as exc:
+            logger.warning("war_room_sync worker failed to start", error=str(exc))
 
     # Phase 2.6 — flip /readyz to 200. All lifespan-managed
     # dependencies have been touched at this point (DB, Redis,

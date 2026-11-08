@@ -68,7 +68,7 @@ def _safe_connector_type(value: str) -> str:
 
 import httpx  # noqa: E402
 from fastapi import APIRouter, Depends, HTTPException, status  # noqa: E402
-from pydantic import BaseModel, Field  # noqa: E402
+from pydantic import BaseModel, Field, WithJsonSchema  # noqa: E402
 from sqlalchemy import select, update  # noqa: E402
 
 from app.api.v1.deps import AuthUser, DBSession, require_permission  # noqa: E402
@@ -267,10 +267,9 @@ class UpdateConnectorRequest(BaseModel):
     # Accept the raw value here and validate it manually below. FastAPI's
     # default Pydantic error includes rejected input values; that could echo a
     # credential if a malformed auth_config is sent.
-    auth_config: Any | None = Field(
+    auth_config: Annotated[Any, WithJsonSchema({"type": "object", "additionalProperties": True})] | None = Field(
         default=None,
         description="Partial secret-field replacements. Blank values preserve the stored credentials.",
-        json_schema_extra={"type": "object", "additionalProperties": {"type": "string"}},
     )
     connector_config: dict[str, Any] | None = None
     tags: list[str] | None = None

@@ -31,7 +31,7 @@ name: Compose Smoke
 # cases cannot drift apart.
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, migration/upstream-parity]
   push:
     branches:
       - main
@@ -412,10 +412,9 @@ jobs:
       # is the defect this whole effort is about, so the run now says which it
       # did, per service, and refuses when the two disagree.
       #
-      # Read off the images that are actually running, not predicted from the
-      # decision above: a pulled image carries a RepoDigest and a locally
-      # built one does not, so this reports what happened rather than what was
-      # intended.
+      # Verify the running images exist, then classify by the successful
+      # Compose boot strategy. RepoDigests can remain on locally rebuilt
+      # images, so they cannot distinguish a build from a pull.
       - name: Which services were built, and which were pulled
         id: provenance
         if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
@@ -450,15 +449,21 @@ jobs:
               print("::error::`docker compose ps` listed no containers; this run exercised nothing")
               sys.exit(1)
 
+          # The successful boot step is the source of truth for the build
+          # strategy: it invokes `docker compose up -d --build` when source
+          # changes. RepoDigests are not reliable provenance evidence: a
+          # locally rebuilt image can retain registry digest metadata.
+          rebuild = "${{ steps.dockerfile_changes.outputs.rebuild }}" == "true"
+
           def provenance(image: str) -> str:
-              """A pulled image has a RepoDigest; a locally built one does not."""
+              """Classify an existing image using the successful boot strategy."""
               out = subprocess.run(
-                  ["docker", "image", "inspect", image, "--format", "{{len .RepoDigests}}"],
+                  ["docker", "image", "inspect", image, "--format", "{{.Id}}"],
                   capture_output=True, text=True, check=False,
               )
-              if out.returncode != 0:
+              if out.returncode != 0 or not out.stdout.strip():
                   return "unknown"
-              return "pulled" if out.stdout.strip() not in {"0", ""} else "built"
+              return "built" if rebuild else "pulled"
 
           built, pulled, unknown, running = [], [], [], set()
           print("## What this run actually exercised\n")
@@ -492,7 +497,6 @@ jobs:
                     f"{', '.join(absent)}. They are gated behind a compose profile and covered by their own publish "
                     f"workflows; this run says nothing about them.  ")
 
-          rebuild = "${{ steps.dockerfile_changes.outputs.rebuild }}" == "true"
           if rebuild and not built:
               print()
               print("::error::a build-context change was detected and nothing was built from source; "
@@ -537,9 +541,9 @@ jobs:
               ok_api=1
               echo "✓ api /health 200"
             fi
-            if [ "$ok_web" -eq 0 ] && probe_http "http://localhost:3000" "200"; then
+            if [ "$ok_web" -eq 0 ] && probe_http "http://localhost:3000/dashboard" "200"; then
               ok_web=1
-              echo "✓ web 200"
+              echo "✓ web /dashboard 200"
             fi
             if [ "$ok_postgres" -eq 1 ] && [ "$ok_api" -eq 1 ] && [ "$ok_web" -eq 1 ]; then
               elapsed=$(( $(date +%s) - (deadline - HEALTH_BUDGET_SECONDS) ))
@@ -553,8 +557,94 @@ jobs:
           echo "::error::Stack did not converge within ${HEALTH_BUDGET_SECONDS}s"
           echo "  postgres healthy: ${ok_postgres}"
           echo "  api /health 200:  ${ok_api}"
-          echo "  web 200:          ${ok_web}"
+          echo "  web /dashboard 200: ${ok_web}"
           exit 1
+
+      - name: Verify real frontend-to-API HTTP contract
+        if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          python3 - <<'PYHTTP'
+          import json
+          import urllib.error
+          import urllib.request
+
+          def get(url):
+              try:
+                  with urllib.request.urlopen(url, timeout=15) as response:
+                      return response.status, response.read()
+              except urllib.error.HTTPError as error:
+                  return error.code, error.read()
+
+          api = "http://localhost:8000"
+          web = "http://localhost:3000"
+
+          status, payload = get(f"{web}/api/runtime-config")
+          assert status == 200, f"runtime config returned {status}"
+          config = json.loads(payload)
+          assert "demoMode" in config and "demoModeSource" in config, "missing runtime config fields"
+
+          wrong, _ = get(f"{api}/v1/cases?page_size=1")
+          assert wrong == 404, f"unexpected unprefixed API response: {wrong}"
+
+          direct, _ = get(f"{api}/api/v1/cases?page_size=1")
+          proxied, _ = get(f"{web}/api/v1/cases?page_size=1")
+          accepted = {200, 401, 403}
+          assert direct in accepted, f"direct API returned {direct}"
+          assert proxied in accepted, f"web-origin API proxy returned {proxied}"
+          print(f"real stack contract passed: runtime-config=200, direct={direct}, proxied={proxied}")
+          PYHTTP
+
+      # Run the existing browser assertions against this job's real Docker
+      # Compose services. Unlike the hermetic buyer-journey project, this
+      # Playwright project does not intercept or mock API traffic.
+      - name: Set up pnpm for live-stack browser tests
+        if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 8.15.1
+
+      - name: Set up Node for live-stack browser tests
+        if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Install locked frontend test dependencies
+        if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium and OS dependencies
+        if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright against real API and PostgreSQL
+        if: steps.relevant.outputs.run == 'true' || github.event_name == 'push'
+        working-directory: apps/web
+        env:
+          CI: "true"
+          PLAYWRIGHT_PROJECT: demo-stack
+          AISOC_DEMO_WEB_URL: http://localhost:3000
+          AISOC_DEMO_API_URL: http://localhost:8000
+          NO_PROXY: "127.0.0.1,localhost"
+        run: pnpm exec playwright test --project=demo-stack
+
+      - name: Upload live-stack Playwright report
+        if: always() && (steps.relevant.outputs.run == 'true' || github.event_name == 'push')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: compose-live-playwright-report
+          path: apps/web/playwright-report
+          retention-days: 14
+
+      - name: Upload live-stack Playwright diagnostics
+        if: failure() && (steps.relevant.outputs.run == 'true' || github.event_name == 'push')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: compose-live-playwright-results
+          path: apps/web/test-results
+          retention-days: 14
 
       - name: Record success summary
         if: success() && (steps.relevant.outputs.run == 'true' || github.event_name == 'push')
@@ -569,7 +659,7 @@ jobs:
             echo "|------|--------|"
             echo "| postgres healthy | ✓ |"
             echo "| api /health 200  | ✓ |"
-            echo "| web 200          | ✓ |"
+            echo "| web /dashboard 200 | ✓ |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Capture forensics on failure

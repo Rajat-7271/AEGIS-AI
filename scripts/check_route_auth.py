@@ -174,6 +174,22 @@ IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
         "the route is not an oracle for whether a token was ever valid. The person clicking holds no AiSOC session "
         "by design — the prompt went to chat or email",
     ),
+    "services/agents/app/api/drain.py::begin_drain": (
+        "_authorize",
+        "operator-only drain control; _authorize requires the configured X-AiSOC-Drain-Token and fails closed with 503 when unset",
+    ),
+    "services/agents/app/api/drain.py::drain_status": (
+        "_authorize",
+        "operator-only drain status; _authorize requires the configured X-AiSOC-Drain-Token and fails closed with 503 when unset",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::validate_admin_invitation": (
+        "_invitation_target",
+        "public invitation preflight; _invitation_target validates the high-entropy, single-use bearer invite against the tenant and inactive initial-admin account, and the response reveals only a boolean",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::redeem_admin_invitation": (
+        "_invitation_target",
+        "public invitation redemption; _invitation_target validates the high-entropy, single-use bearer invite and tenant-bound inactive initial-admin account before atomic consumption and password activation",
+    ),
     "services/slack-bot/app/main.py::slack_events": (
         "SlackRequestHandler",
         "Slack Bolt verifies the request signature against SLACK_SIGNING_SECRET before the handler sees the body",
