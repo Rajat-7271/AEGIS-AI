@@ -7,6 +7,7 @@ persist only the digest and enforce expiration/consumption transactionally.
 import hashlib
 import re
 import secrets
+from datetime import datetime
 
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 
@@ -54,3 +55,30 @@ def normalize_proposed_email(value: str, *, current_email: str) -> str:
     if normalized.casefold() == current_email.casefold():
         raise ValueError("New email must differ from current email")
     return normalized
+
+
+def email_change_is_confirmable(
+    *,
+    now: datetime,
+    expires_at: datetime,
+    consumed_at: datetime | None,
+    cancelled_at: datetime | None,
+    original_email: str,
+    current_email: str,
+    active: bool,
+) -> bool:
+    """Fail closed before any transactional email update.
+
+    The caller must also lock the request/user, verify its token digest,
+    tenant/user binding and uniqueness, then consume it atomically.
+    """
+    timestamps = (now, expires_at, consumed_at, cancelled_at)
+    if any(t is not None and (t.tzinfo is None or t.utcoffset() is None) for t in timestamps):
+        return False
+    if not active or consumed_at is not None or cancelled_at is not None:
+        return False
+    if now >= expires_at:
+        return False
+    if not original_email or original_email.casefold() != current_email.casefold():
+        return False
+    return True
