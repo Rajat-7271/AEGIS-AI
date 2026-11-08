@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.services.account_email_delivery import (
+    send_email_change_security_notice,
     send_email_change_verification,
     verification_link,
 )
@@ -45,3 +46,21 @@ async def test_verification_mail_uses_injected_sender_and_verified_origin():
     assert f"https://console.example.com/settings/verify-email?token={token}" in kwargs["text"]
     assert token in kwargs["html"]
     assert "Confirm your account email change" == kwargs["subject"]
+
+
+@pytest.mark.asyncio
+async def test_old_address_notice_has_no_token_and_escapes_html():
+    mailer = AsyncMock()
+    await send_email_change_security_notice(
+        recipient="original@example.com",
+        proposed_email="attacker+<tag>@example.com",
+        mailer=mailer,
+    )
+    kwargs = mailer.send.await_args.kwargs
+    assert kwargs["to"] == ["original@example.com"]
+    assert "original@example.com" in kwargs["text"]
+    assert "attacker+<tag>@example.com" in kwargs["text"]
+    assert "&lt;tag&gt;" in kwargs["html"]
+    assert "<tag>" not in kwargs["html"]
+    assert "token=" not in kwargs["text"]
+    assert "token=" not in kwargs["html"]
