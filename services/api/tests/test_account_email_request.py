@@ -26,6 +26,7 @@ def _setup(*, active=True):
     db = MagicMock()
     db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: user))
     db.commit = AsyncMock()
+    db.flush = AsyncMock()
     return tenant_id, user_id, user, db
 
 
