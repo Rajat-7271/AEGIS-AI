@@ -7,13 +7,13 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import AuthUser, DBSession, get_current_user
+from app.api.v1.deps import AuthUser, DBSession, get_current_user, require_permission
 from app.core.config import settings
 from app.core.role_grants import wildcard_roles as WILDCARD_ROLES
 from app.core.security import (
@@ -493,6 +493,7 @@ async def change_own_password(
     body: PasswordChangeRequest,
     current_user: AuthUser,
     db: DBSession,
+    _authorized: Any = Depends(require_permission('settings:write')),
 ) -> None:
     """Rotate the authenticated principal's password without changing identity or role.
 
