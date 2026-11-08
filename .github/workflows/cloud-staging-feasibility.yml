@@ -1,0 +1,47 @@
+name: Cloud staging feasibility
+
+on:
+  pull_request:
+    branches: [migration/upstream-parity]
+    paths:
+      - '.github/workflows/cloud-staging-feasibility.yml'
+      - 'docker-compose.yml'
+      - 'docker-compose.prod.yml'
+      - 'docker-compose.staging*.yml'
+      - 'scripts/run_staging_ci.py'
+      - 'scripts/check_published_secrets.py'
+      - 'tests/test_staging_validator.py'
+      - 'services/api/**'
+      - 'services/realtime/**'
+      - 'apps/web/**'
+
+permissions:
+  contents: read
+
+jobs:
+  staging-smoke:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+    concurrency:
+      group: cloud-staging-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    name: Disposable isolated web and API smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Verify staging configuration regression cases
+        run: python3 -B -m unittest discover -s tests -p test_staging_validator.py -v
+
+      - name: Build and verify the isolated web target
+        timeout-minutes: 48
+        run: python3 -B scripts/run_staging_ci.py
+
+      - name: Report sanitized states and remove CI resources
+        if: always()
+        timeout-minutes: 5
+        run: python3 -B scripts/run_staging_ci.py --cleanup
