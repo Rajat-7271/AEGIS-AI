@@ -394,7 +394,14 @@ jobs:
           # satisfy it, and only this says what actually ran. Same shape as
           # the gitleaks job above, which has checked its pin this way for
           # exactly the same reason.
-          installed="$(/tmp/tfsec --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+          # Preserve diagnostics even if the CLI's version command exits nonzero.
+          version_output="$(/tmp/tfsec --version 2>&1)" || {
+            printf '%s\n' "$version_output"
+            echo "::error::tfsec binary failed its version self-check"
+            exit 1
+          }
+          printf 'tfsec version output: %s\n' "$version_output"
+          installed="$(printf '%s\n' "$version_output" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
           echo "installed tfsec ${installed:-unknown}"
           if [ "$installed" != "$VERSION" ]; then
             echo "::error title=iac-tfsec::expected tfsec $VERSION, got '${installed:-nothing}'"
