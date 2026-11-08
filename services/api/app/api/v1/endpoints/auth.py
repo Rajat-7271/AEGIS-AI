@@ -570,24 +570,12 @@ async def request_own_email_change(
         verification_link(origin=origin, token="a" * 43)
     except ValueError as exc:
         raise HTTPException(status_code=503, detail="Email verification is not configured") from exc
-    user = (
-        await db.execute(
-            select(User).where(
-                User.id == current_user.user_id,
-                User.tenant_id == current_user.tenant_id,
-                User.is_active.is_(True),
-            )
-        )
-    ).scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
     mailer = MailgunClient()
     try:
         await request_verified_email_change(
             db,
             tenant_id=current_user.tenant_id,
             user_id=current_user.user_id,
-            current_email=user.email,
             current_password=body.current_password,
             proposed_email=str(body.proposed_email),
             totp_code=body.totp_code,
