@@ -96,3 +96,35 @@ async def test_failed_step_up_prevents_request_and_mail():
             )
     create.assert_not_awaited()
     send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_password_rejection_rolls_back_consumed_totp():
+    from app.services.account_email_request import EmailChangeRequestRejected
+
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    with patch(
+        "app.services.account_email_workflow.verify_email_change_totp",
+        new_callable=AsyncMock,
+    ) as step_up, patch(
+        "app.services.account_email_workflow.create_pending_email_change",
+        new_callable=AsyncMock,
+        side_effect=EmailChangeRequestRejected("rejected"),
+    ) as create, patch(
+        "app.services.account_email_workflow.send_email_change_verification",
+        new_callable=AsyncMock,
+    ) as send:
+        with pytest.raises(EmailChangeRequestRejected):
+            await request_verified_email_change(
+                db, tenant_id=uuid.uuid4(), user_id=uuid.uuid4(),
+                current_email="old@example.com", current_password="wrong",
+                proposed_email="new@example.com", totp_code="123456",
+                origin="https://example.com", mailer=MagicMock(),
+            )
+    step_up.assert_awaited_once()
+    assert create.await_args.kwargs["commit"] is False
+    db.rollback.assert_awaited_once()
+    db.commit.assert_not_awaited()
+    send.assert_not_awaited()
