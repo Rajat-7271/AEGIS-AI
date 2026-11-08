@@ -284,7 +284,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     // and request metadata). Never forward that markup into UI error states.
     const isHtmlError =
       /text\/html/i.test(response.headers.get("content-type") ?? "") ||
-      /^\\s*(?:<!doctype\\s+html|<html[\\s>])/i.test(errorText);
+      /^\s*(?:<!doctype\s+html|<html[\s>])/i.test(errorText);
     const safeErrorBody = isHtmlError
       ? "The upstream service is temporarily unavailable. Please retry shortly."
       : errorText;
