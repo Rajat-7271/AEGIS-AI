@@ -322,6 +322,7 @@ def render_incident_report_md(state: InvestigatorState) -> str:
 
     lines.extend(["", "## Threat Actor Attribution", "", "Attribution is unconfirmed. Model-generated actor names are leads only and require corroborating threat-intelligence evidence."])
     actor_hypotheses = sanitize_iterable_of_strings(state.recon.threat_actors, max_item_len=128, max_items=20)
+    lines.append("")
     if actor_hypotheses:
         lines.append("- Unconfirmed model-generated leads: " + ", ".join(_md_value(actor, limit=128) for actor in actor_hypotheses))
     else:
