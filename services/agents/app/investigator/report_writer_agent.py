@@ -160,42 +160,42 @@ def _render_plan_steps(steps: list[str]) -> list[str]:
 
 def _executive_summary(state: InvestigatorState) -> list[str]:
     """Evidence-first snapshot; never promote agent hypotheses into verified facts."""
-    lines = [f"Investigation case: {_md_value(state.case_id, limit=128)}."]
+    lines = [f"- **Investigation case:** {_md_value(state.case_id, limit=128)}"]
     alert = _md_value(state.alert_summary, limit=500)
     if alert:
-        lines.append(f"Source alert (unverified): {alert}")
+        lines.append(f"- **Source alert (unverified):** {alert}")
     else:
-        lines.append("No source alert description was supplied.")
+        lines.append("- **Source alert:** No source alert description was supplied.")
 
     iocs = _render_iocs(state)
     lines.append(
-        f"Structured indicator entries returned: {len(iocs)} (not independently validated)."
-        if iocs else "No validated indicators of compromise were returned."
+        f"- **Indicators:** {len(iocs)} structured entries returned (not independently validated)."
+        if iocs else "- **Indicators:** No validated indicators of compromise were returned."
     )
     timeline = [
         event for event in state.forensic.timeline[:50]
         if isinstance(event, dict) and isinstance(event.get("event"), str) and event["event"].strip()
     ]
     lines.append(
-        f"Automated timeline entries: {len(timeline)} (timestamps require source verification)."
-        if timeline else "No timeline events were returned."
+        f"- **Timeline:** {len(timeline)} automated entries (timestamps require source verification)."
+        if timeline else "- **Timeline:** No timeline events were returned."
     )
     techniques = {
         value.strip().upper() for value in state.recon.mitre_techniques
         if isinstance(value, str) and _MITRE_ID.fullmatch(value.strip().upper())
     }
     lines.append(
-        f"Candidate ATT&CK technique IDs: {len(techniques)} (unconfirmed mappings)."
-        if techniques else "No valid ATT&CK technique IDs were returned."
+        f"- **ATT&CK:** {len(techniques)} candidate technique IDs (unconfirmed mappings)."
+        if techniques else "- **ATT&CK:** No valid ATT&CK technique IDs were returned."
     )
     if state.forensic.summary:
         finding = sanitize_text(state.forensic.summary, max_len=500)
         finding = _CONFIDENCE_CLAIM.sub("unverified confidence claim", finding)
-        lines.append(f"Forensic assessment (automated hypothesis): {_md_value(finding, limit=500)}")
+        lines.append(f"- **Forensic assessment (automated hypothesis):** {_md_value(finding, limit=500)}")
     else:
-        lines.append("No forensic assessment was returned.")
+        lines.append("- **Forensic assessment:** No forensic assessment was returned.")
     lines.append(
-        "Response status: proposed actions only; no response action was executed."
+        "- **Response status:** Proposed actions only; no response action was executed."
     )
     return lines
 
