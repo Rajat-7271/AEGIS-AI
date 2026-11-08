@@ -120,6 +120,8 @@ jobs:
           tests/test_account_email_verification.py
           tests/test_account_email_delivery.py
           tests/test_account_email_confirmation.py
+          tests/test_profile_name_change.py
+          tests/test_profile_name_change.py
           -q
 
       - name: Run real PostgreSQL concurrent-redemption integration test
