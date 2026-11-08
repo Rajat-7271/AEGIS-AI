@@ -128,7 +128,10 @@ jobs:
       - name: Install Ollama
         run: |
           set -euo pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
+          # Retry transient CDN 5xx errors without hiding a persistent failure.
+          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors \
+            https://ollama.com/install.sh -o /tmp/ollama-install.sh
+          sh /tmp/ollama-install.sh
           ollama --version
 
       - name: Serve the model
@@ -349,7 +352,10 @@ jobs:
       - name: Install Ollama
         run: |
           set -euo pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
+          # Retry transient CDN 5xx errors without hiding a persistent failure.
+          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors \
+            https://ollama.com/install.sh -o /tmp/ollama-install.sh
+          sh /tmp/ollama-install.sh
           ollama --version
 
       - name: Serve the model
