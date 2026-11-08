@@ -26,6 +26,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import {
   ApiError,
+  authApi,
   apiKeysApi,
   connectorsApi,
   deploymentApi,
@@ -527,6 +528,31 @@ function Toggle({
 function ProfilePanel() {
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
   const [dirty, setDirty] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const onChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Password updated. Please sign in again.');
+      window.location.assign('/login');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
     setProfile(loadProfile());
@@ -606,14 +632,8 @@ function ProfilePanel() {
               placeholder="e.g. Avi Sharma"
             />
           </Field>
-          <Field label="Email" hint="Used for notifications and login.">
-            <input
-              type="email"
-              className={inputClass()}
-              value={profile.email}
-              onChange={(e) => update('email', e.target.value)}
-              placeholder="you@org.com"
-            />
+          <Field label="Login email" hint="Read-only. Editing profile preferences does not change authentication credentials.">
+            <input type="email" className={inputClass()} value={authApi.currentUser()?.email ?? ''} readOnly aria-label="Login email" />
           </Field>
           <Field label="Job title">
             <input
@@ -634,9 +654,16 @@ function ProfilePanel() {
         </div>
 
         <div className="rounded-lg border border-gray-800 bg-gray-950/40 p-4 text-xs text-gray-500">
-          Profile preferences are persisted to your user account and sync
-          across devices when you sign in.
+          Display preferences are stored in this browser. Changing them does not update your login email or password.
         </div>
+        <form onSubmit={onChangePassword} className="space-y-3 rounded-lg border border-gray-800 p-4">
+          <h3 className="text-sm font-semibold text-gray-100">Change password</h3>
+          <p className="text-xs text-gray-400">Your current password is required. All existing sessions will be signed out.</p>
+          <Field label="Current password"><input type="password" autoComplete="current-password" required className={inputClass()} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></Field>
+          <Field label="New password"><input type="password" autoComplete="new-password" minLength={12} required className={inputClass()} value={newPassword} onChange={e => setNewPassword(e.target.value)} /></Field>
+          <Field label="Confirm new password"><input type="password" autoComplete="new-password" minLength={12} required className={inputClass()} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></Field>
+          <button type="submit" disabled={changingPassword} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">{changingPassword ? 'Updating…' : 'Change password'}</button>
+        </form>
       </div>
     </div>
   );
