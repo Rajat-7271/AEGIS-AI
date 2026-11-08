@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { authApi } from '@/lib/api';
 import { TimeWindowSelector } from './TimeWindowSelector';
 import { TenantSwitcher } from './TenantSwitcher';
 import { RoleBadge } from './RoleBadge';
@@ -52,6 +53,37 @@ export function TopBar({ demoOffset = false }: TopBarProps) {
   const [now, setNow] = useState<Date | null>(null);
   const [shortcut, setShortcut] = useState<'⌘K' | 'Ctrl K'>('⌘K');
   const { userRole } = useTenant();
+  const [operatorName, setOperatorName] = useState('');
+
+  useEffect(() => {
+    const refreshName = () => {
+      const authenticatedUser = authApi.currentUser();
+      if (!authenticatedUser) {
+        setOperatorName('');
+        return;
+      }
+      let displayName = '';
+      try {
+        const saved = window.localStorage.getItem('aisoc:settings:profile');
+        if (saved) {
+          const profile = JSON.parse(saved) as { displayName?: unknown };
+          if (typeof profile.displayName === 'string') displayName = profile.displayName.trim();
+        }
+      } catch {
+        // Invalid local preferences must not prevent the header from rendering.
+      }
+      setOperatorName(displayName || authenticatedUser.username?.trim() || authenticatedUser.email);
+    };
+    refreshName();
+    window.addEventListener('storage', refreshName);
+    window.addEventListener('aegis:profile-updated', refreshName);
+    return () => {
+      window.removeEventListener('storage', refreshName);
+      window.removeEventListener('aegis:profile-updated', refreshName);
+    };
+  }, []);
+
+  const initials = operatorName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('') || 'SO';
 
   // Update the clock every second on the client only (avoids hydration drift).
   useEffect(() => {
@@ -231,10 +263,10 @@ export function TopBar({ demoOffset = false }: TopBarProps) {
         {/* User avatar */}
         <div className="flex items-center gap-2 cursor-pointer group">
           <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-xs font-bold text-white">
-            SO
+            {initials}
           </div>
           <div className="hidden lg:block">
-            <p className="text-xs font-medium text-fg-secondary">SOC Analyst</p>
+            <p className="text-xs font-medium text-fg-secondary">{operatorName || 'SOC Analyst'}</p>
             <p className="text-xs text-fg-subtle">Admin</p>
           </div>
         </div>
