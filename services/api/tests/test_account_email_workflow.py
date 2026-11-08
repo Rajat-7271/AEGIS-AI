@@ -76,6 +76,7 @@ async def test_failed_step_up_prevents_request_and_mail():
     from app.services.account_email_step_up import EmailChangeStepUpRejected
 
     db = MagicMock()
+    db.rollback = AsyncMock()
     with patch(
         "app.services.account_email_workflow.verify_email_change_totp",
         new_callable=AsyncMock, side_effect=EmailChangeStepUpRejected("Invalid code"),
