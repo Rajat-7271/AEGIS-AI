@@ -231,6 +231,10 @@ class UserMeResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ProfileNameUpdate(BaseModel):
+    username: str
+
+
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
@@ -485,6 +489,34 @@ async def patch_me_preferences(
     # Re-fetch to return fresh state
     result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = result.scalar_one_or_none()
+    return UserMeResponse.model_validate(user)
+
+
+@router.patch("/me/name", response_model=UserMeResponse)
+async def change_own_display_name(
+    body: ProfileNameUpdate,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> UserMeResponse:
+    """Update only the authenticated user's display name, never their role."""
+    name = body.username.strip()
+    if (
+        not 1 <= len(name) <= 100
+        or any(ord(char) < 32 or ord(char) == 127 for char in name)
+    ):
+        raise HTTPException(status_code=400, detail="Display name must be 1-100 printable characters")
+    user = (
+        await db.execute(
+            select(User)
+            .where(User.id == current_user.user_id, User.tenant_id == current_user.tenant_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.username = name
+    await db.commit()
     return UserMeResponse.model_validate(user)
 
 
