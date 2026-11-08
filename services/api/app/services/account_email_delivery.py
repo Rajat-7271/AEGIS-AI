@@ -4,7 +4,8 @@ Never include a verification token in logs, metrics, exceptions, or audit record
 A successful provider response is not proof the recipient has verified ownership.
 """
 
-from urllib.parse import quote
+from html import escape
+from urllib.parse import quote, urlsplit
 
 from app.services.email_approval import MailgunClient
 
@@ -16,8 +17,6 @@ def verification_link(*, origin: str, token: str) -> str:
     hash_email_verification_token(token)
     if not isinstance(origin, str) or not origin.startswith("https://"):
         raise ValueError("HTTPS account origin required")
-    from urllib.parse import urlsplit
-
     parsed = urlsplit(origin)
     if (
         not parsed.hostname
@@ -27,6 +26,7 @@ def verification_link(*, origin: str, token: str) -> str:
         or parsed.fragment
         or parsed.path not in ("", "/")
         or parsed.port not in (None, 443)
+        or any(c.isspace() for c in origin)
     ):
         raise ValueError("Invalid account origin")
     return f"{origin.rstrip('/')}/settings/verify-email?token={quote(token, safe='')}"
@@ -53,7 +53,8 @@ async def send_email_change_verification(
         ),
         html=(
             "<p>A request was made to change your account login email.</p>"
-            "<p>If this was you, use the verification link in the plain-text message "
-            "within 30 minutes. Otherwise ignore this message.</p>"
+            "<p>If this was you, confirm within 30 minutes using "
+            f"<a href=\"{escape(link, quote=True)}\">this verification link</a>. "
+            "Otherwise ignore this message.</p>"
         ),
     )
