@@ -31,7 +31,8 @@ async def create_pending_email_change(
     current_password: str,
     proposed_email: str,
     commit: bool = True,
-) -> tuple[str, str]:
+    include_previous_email: bool = False,
+) -> tuple[str, str] | tuple[str, str, str]:
     """Return (recipient, secret token) after persisting its digest.
 
     The caller must deliver the secret only to the proposed address.
@@ -85,4 +86,6 @@ async def create_pending_email_change(
         # Flush while retaining the caller's transaction so MFA replay state
         # and the pending request commit or roll back together.
         await db.flush()
+    if include_previous_email:
+        return recipient, token, user.email
     return recipient, token
