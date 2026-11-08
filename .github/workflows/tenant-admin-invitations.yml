@@ -139,3 +139,6 @@ jobs:
           tests/test_tenant_admin_invitations.py
           tests/test_tenant_provision.py
           tests/test_password_change.py
+          tests/test_account_email_verification.py
+          app/services/account_email_verification.py
+          app/models/account_email_change.py
