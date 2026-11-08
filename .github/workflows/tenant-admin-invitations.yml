@@ -110,7 +110,6 @@ jobs:
           "$RUNNER_TEMP/.venv-api-invitations/bin/python" -m pytest
           tests/test_tenant_admin_invitations.py
           tests/test_tenant_provision.py
-          tests/test_password_change.py
           -q
 
       - name: Run password-change security regression tests
@@ -138,3 +137,4 @@ jobs:
           app/services/tenant_provision/provisioner.py
           tests/test_tenant_admin_invitations.py
           tests/test_tenant_provision.py
+          tests/test_password_change.py
