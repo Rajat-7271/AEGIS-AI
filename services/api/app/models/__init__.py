@@ -1,6 +1,7 @@
 """ORM models package - imports all models for Alembic and SQLAlchemy."""
 
 from app.db.database import Base
+from app.models.account_email_change import AccountEmailChangeRequest
 from app.models.ai_asset import AiAsset
 from app.models.alert import Alert
 from app.models.asset import AlertAssetCorrelation, Asset, AssetVulnerability
@@ -57,6 +58,7 @@ from app.models.threat_intel import ThreatActor, ThreatIntelFeed, ThreatIntelIOC
 
 __all__ = [
     "Base",
+    "AccountEmailChangeRequest",
     "Tenant",
     "User",
     "ApiKey",
