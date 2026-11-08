@@ -52,7 +52,7 @@ import { RetroHuntSettingsPanel } from './RetroHuntSettings';
 import { ScimTokensPanel } from './ScimTokensPanel';
 import { useTheme, type ThemePreference } from '@/components/theme/ThemeProvider';
 import { canUseDemoData } from '@/lib/demoFallback';
-import { rbacApi, authApi } from '@/lib/api';
+import { rbacApi } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
