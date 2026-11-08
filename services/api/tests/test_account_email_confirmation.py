@@ -38,7 +38,7 @@ def _fixture(*, expired=False, consumed=False, duplicate=False):
     db.execute = AsyncMock()
     db.commit = AsyncMock()
     db.rollback = AsyncMock()
-    rows = [user, pending, uuid.uuid4() if duplicate else None]
+    rows = [user, pending, uuid.uuid4() if duplicate else None, None]
     db.execute.side_effect = [
         MagicMock(scalar_one_or_none=MagicMock(return_value=value))
         for value in rows
