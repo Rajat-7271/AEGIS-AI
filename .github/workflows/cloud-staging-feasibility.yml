@@ -1,0 +1,46 @@
+name: Cloud staging feasibility
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cloud-staging-feasibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  feasibility:
+    name: Runner resources and Compose prerequisites
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect runner capacity (no services started)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "## Cloud staging feasibility" >> "$GITHUB_STEP_SUMMARY"
+          echo '### Host memory' >> "$GITHUB_STEP_SUMMARY"
+          free -h | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '### Disk space' >> "$GITHUB_STEP_SUMMARY"
+          df -h / /mnt /tmp | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '### Docker engine' >> "$GITHUB_STEP_SUMMARY"
+          docker version --format 'Client {{.Client.Version}}; Server {{.Server.Version}}' | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '### Compose version' >> "$GITHUB_STEP_SUMMARY"
+          docker compose version | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '### Docker storage' >> "$GITHUB_STEP_SUMMARY"
+          docker system df | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Check source prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docker-compose.yml
+          test -f docker-compose.prod.yml
+          test -f scripts/ensure_env.py
+          echo "Base Compose and secret generator found. No secrets generated and no containers started." >> "$GITHUB_STEP_SUMMARY"
+          if test -f docker-compose.staging.yml && test -f docker-compose.staging-build.yml && test -f docker-compose.staging-isolation.yml; then
+            echo "All local staging overrides are committed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Local staging overrides are not all in Git; full staging smoke is NOT ready to run in Actions." >> "$GITHUB_STEP_SUMMARY"
+          fi
