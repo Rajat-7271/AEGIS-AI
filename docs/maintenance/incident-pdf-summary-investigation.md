@@ -23,7 +23,7 @@ A generated investigation report executive summary repeated case-creation workfl
 - Deterministic regression tests covering sparse and evidence-rich states, HTML escaping, branding, actor rationale and singular/plural indicator-blocking phrases.
 
 ## Remaining acceptance checks
-- Confirm the latest branch head passes CI (the preceding head passed all 32 workflows after one dependency-install rerun).
-- Render a fresh report HTML from the branch and convert it to a PDF in a non-production environment; inspect the resulting pages, long tables, branding and page breaks. Existing stored report HTML and production PDFs are not evidence that the branch works.
-- Confirm report persistence/regeneration behavior before expecting historical reports to change after deployment.
+- Confirm the final branch head passes CI. The preceding head f5013749 passed all 33 workflows, including the dedicated PDF render workflow.
+- **Completed for the sample report:** GitHub Actions run 42484863964 generated artifact `incident-report-pdf-smoke` (WeasyPrint 70.0, 2 A4 pages). Both pages were visually inspected: correct AEGIS AI title/footer, readable IOC/timeline tables, no clipped content, and clean section breaks. Tight executive-summary bullet spacing was found and improved in a follow-up commit; the updated artifact still needs visual confirmation. This is a sample PDF, not a production report or a stress test of long tables.
+- Confirm report persistence/regeneration behavior before expecting historical reports to change after deployment. Inspect dense/long tables and multipage evidence separately if those layouts are release-blocking.
 - Obtain explicit merge and deployment approval. This draft PR must not change production.
