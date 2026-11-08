@@ -524,6 +524,22 @@ export const authApi = {
     return { ...tokens, user };
   },
 
+  async changeDisplayName(username: string): Promise<AuthUser> {
+    const user = await request<AuthUser>('/api/v1/auth/me/name', {
+      method: 'PATCH',
+      body: JSON.stringify({ username }),
+    });
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+      } catch {
+        /* storage unavailable */
+      }
+      window.dispatchEvent(new Event('aegis:profile-updated'));
+    }
+    return user;
+  },
+
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await request('/api/v1/auth/me/change-password', {
       method: 'POST',
