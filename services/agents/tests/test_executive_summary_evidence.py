@@ -1,0 +1,44 @@
+"""Evidence-first executive summary regression tests."""
+from app.investigator.report_writer_agent import render_incident_report_md
+from app.investigator.state import InvestigatorState
+
+
+def _summary(report: str) -> str:
+    return report.split("## Executive Summary\n", 1)[1].split("## Timeline of Events", 1)[0]
+
+
+def test_sparse_report_does_not_invent_findings():
+    state = InvestigatorState(case_id="case-sparse", alert_summary="")
+    summary = _summary(render_incident_report_md(state))
+    assert "No validated indicators of compromise were returned." in summary
+    assert "No valid ATT&CK technique IDs were returned." in summary
+    assert "No timeline events were returned." in summary
+    assert "no response action was executed" in summary
+    assert "No forensic assessment was returned." in summary
+
+
+def test_summary_uses_structured_findings_and_qualifies_hypotheses():
+    state = InvestigatorState(
+        case_id="case-123",
+        alert_summary="Suspicious login",
+        recon={"iocs": [{"type": "ip", "value": "192.0.2.1"}], "mitre_techniques": ["T1078"]},
+        forensic={"timeline": [{"ts": "2026-01-01", "event": "Login observed", "src": "EDR"}], "summary": "Possible credential misuse"},
+    )
+    summary = _summary(render_incident_report_md(state))
+    assert "Suspicious login" in summary
+    assert "Structured indicator entries returned: 1 (not independently validated)" in summary
+    assert "Automated timeline entries: 1" in summary
+    assert "Candidate ATT&CK technique IDs: 1" in summary
+    assert "Forensic assessment (automated hypothesis): Possible credential misuse" in summary
+    assert summary == _summary(render_incident_report_md(state))
+
+
+def test_untrusted_alert_text_is_escaped_and_summary_is_not_workflow_dump():
+    state = InvestigatorState(
+        case_id="case-x",
+        alert_summary="<script>alert(1)</script>",
+    )
+    summary = _summary(render_incident_report_md(state))
+    assert "<script>" not in summary
+    assert "&lt;script&gt;" in summary
+    assert "case creation workflow" not in summary.lower()
