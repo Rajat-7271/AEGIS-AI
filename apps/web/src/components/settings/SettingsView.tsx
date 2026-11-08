@@ -539,6 +539,7 @@ function ProfilePanel() {
 
   const onSave = () => {
     saveProfile(profile);
+    window.dispatchEvent(new Event('aegis:profile-updated'));
     setDirty(false);
     toast.success('Profile updated');
   };
