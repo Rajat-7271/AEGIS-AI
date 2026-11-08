@@ -27,3 +27,10 @@ A generated investigation report executive summary repeated case-creation workfl
 - **Completed for the sample report:** GitHub Actions run 42484863964 generated artifact `incident-report-pdf-smoke` (WeasyPrint 70.0, 2 A4 pages). Both pages were visually inspected: correct AEGIS AI title/footer, readable IOC/timeline tables, no clipped content, and clean section breaks. Tight executive-summary bullet spacing was found and improved in a follow-up commit; the updated artifact still needs visual confirmation. This is a sample PDF, not a production report or a stress test of long tables.
 - Confirm report persistence/regeneration behavior before expecting historical reports to change after deployment. Inspect dense/long tables and multipage evidence separately if those layouts are release-blocking.
 - Obtain explicit merge and deployment approval. This draft PR must not change production.
+
+
+## Final sample-PDF review (2026-11-08)
+
+- Commit `ec73f068`: dedicated PDF workflow run [42485720075](https://github.com/Rajat-7271/AEGIS-AI/actions/runs/42485720075) passed and uploaded `incident-report-pdf-smoke` (artifact ID `13618929736`).
+- Downloaded the artifact, rendered both A4 pages to images, and inspected the title, summary list spacing, timeline and IOC tables, section breaks, attribution text, and footer. No visible clipping; the attribution bullet now begins on its own line.
+- This validates the deterministic sample only. Historical stored report HTML, long-table stress cases, and production behavior remain unverified. No deployment was performed.
