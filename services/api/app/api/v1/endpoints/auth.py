@@ -5,7 +5,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -493,7 +493,7 @@ async def change_own_password(
     body: PasswordChangeRequest,
     current_user: AuthUser,
     db: DBSession,
-    _authorized: Any = Depends(require_permission('settings:write')),
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
 ) -> None:
     """Rotate the authenticated principal's password without changing identity or role.
 
