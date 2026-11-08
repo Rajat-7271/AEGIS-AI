@@ -1,0 +1,47 @@
+services:
+  preflight-secrets:
+    image: aegis-stage-api:local
+    pull_policy: never
+
+  api:
+    image: aegis-stage-api:local
+    pull_policy: never
+
+  web:
+    image: aegis-stage-web:local
+    pull_policy: never
+
+  realtime:
+    image: aegis-stage-realtime:local
+    pull_policy: never
+
+  ingest-worker:
+    image: aegis-stage-ingest:local
+    pull_policy: never
+
+  actions:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-actions
+
+  agents:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-agents
+
+  connectors:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-connectors
+
+  fusion:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-fusion
+
+  litellm:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-litellm
+
+  ollama:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-ollama
+
+  ollama-pull:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-ollama-pull
+
+  qdrant:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-qdrant
+
+  threatintel:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-threatintel

@@ -1,0 +1,31 @@
+services:
+  api:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-api
+    ports: !reset []
+
+  postgres:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-postgres
+
+  redis:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-redis
+
+  kafka:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-kafka
+
+  zookeeper:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-zookeeper
+
+  preflight-secrets:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-preflight
+
+  web:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-web
+    ports: !override
+      - "127.0.0.1:3200:3000"
+
+  realtime:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-realtime
+
+  ingest-worker:
+    container_name: ${AEGIS_STAGING_NAMESPACE:-aegis-stage}-ingest
+    ports: !reset []
