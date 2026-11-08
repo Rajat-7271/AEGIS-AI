@@ -142,7 +142,20 @@ def _safe_recommendations(state: InvestigatorState) -> list[str]:
             lines.append(_WITHHELD_DESTRUCTIVE_GUIDANCE)
             continue
         rationale = action.get("rationale")
-        suffix = f" Rationale: {_md_value(rationale, limit=300)}" if isinstance(rationale, str) and rationale.strip() else ""
+        # A model's rationale can silently turn an actor lead into an attribution.
+        # Keep the action as an unreviewed proposal, but do not publish a
+        # rationale that invokes an unconfirmed actor as an established cause.
+        actor_leads = sanitize_iterable_of_strings(state.recon.threat_actors, max_item_len=128, max_items=20)
+        unsupported_actor = (
+            isinstance(rationale, str)
+            and any(re.search(r"(?<!\\w)" + re.escape(actor) + r"(?!\\w)", rationale, re.I) for actor in actor_leads if actor)
+        )
+        suffix = (
+            " Rationale withheld: unconfirmed threat-actor attribution."
+            if unsupported_actor else
+            f" Rationale (unverified): {_md_value(rationale, limit=300)}"
+            if isinstance(rationale, str) and rationale.strip() else ""
+        )
         lines.append(f"- **Unreviewed AI proposal:** {_md_value(text, limit=400)}{suffix}")
     return lines
 
@@ -341,7 +354,11 @@ def _md_to_html(md: str, case_id: str) -> str:
 <style>
   body {{ font-family: 'Segoe UI', Arial, sans-serif; max-width: 960px; margin: 40px auto; color: #1a1a1a; }}
   h1 {{ color: #c0392b; }} h2 {{ color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; }}
-  table {{ border-collapse: collapse; width: 100%; }} th,td {{ border: 1px solid #ddd; padding: 8px; }}
+  table {{ border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 0.85em; }}
+  th,td {{ border: 1px solid #ddd; padding: 7px; vertical-align: top; overflow-wrap: anywhere; }}
+  @page {{ size: A4; margin: 16mm; }}
+  h1,h2,h3 {{ break-after: avoid; }}
+  tr {{ break-inside: avoid; }}
   th {{ background: #2c3e50; color: white; }}
   code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }}
   pre {{ background: #f4f4f4; padding: 16px; overflow-x: auto; border-radius: 4px; }}
