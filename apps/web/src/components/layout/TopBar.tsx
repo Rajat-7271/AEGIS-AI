@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { authApi } from '@/lib/api';
 import { TimeWindowSelector } from './TimeWindowSelector';
 import { TenantSwitcher } from './TenantSwitcher';
 import { RoleBadge } from './RoleBadge';
@@ -52,6 +53,16 @@ export function TopBar({ demoOffset = false }: TopBarProps) {
   const [now, setNow] = useState<Date | null>(null);
   const [shortcut, setShortcut] = useState<'⌘K' | 'Ctrl K'>('⌘K');
   const { userRole } = useTenant();
+  const [operator, setOperator] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const user = authApi.currentUser();
+    if (!user) return;
+    const name = (user.username || user.email?.split('@')[0] || '').trim();
+    setOperator({ name: name || 'Operator', role: user.role || 'User' });
+  }, []);
+
+  const operatorInitials = operator?.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase() || '').join('') || '?';
 
   // Update the clock every second on the client only (avoids hydration drift).
   useEffect(() => {
@@ -231,11 +242,11 @@ export function TopBar({ demoOffset = false }: TopBarProps) {
         {/* User avatar */}
         <div className="flex items-center gap-2 cursor-pointer group">
           <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-xs font-bold text-white">
-            SO
+            {operatorInitials}
           </div>
           <div className="hidden lg:block">
-            <p className="text-xs font-medium text-fg-secondary">SOC Analyst</p>
-            <p className="text-xs text-fg-subtle">Admin</p>
+            <p className="text-xs font-medium text-fg-secondary">{operator?.name || 'Operator'}</p>
+            <p className="text-xs text-fg-subtle">{operator?.role || 'User'}</p>
           </div>
         </div>
       </div>
