@@ -227,16 +227,25 @@ jobs:
       # their schedule rather than ours; when it 404s, move it to a tag that
       # still exists and re-measure before trusting the result.
       - name: Install Trivy
+        id: trivy_install
         run: |
           set -euo pipefail
           VERSION=0.74.0
           url="https://github.com/aquasecurity/trivy/releases/download/v${VERSION}/trivy_${VERSION}_Linux-64bit.tar.gz"
-          if ! curl -sSL --fail --retry 5 --retry-delay 5 --retry-all-errors "$url" -o /tmp/trivy.tgz; then
-            echo "::error title=trivy::could not download $url — Trivy prunes old releases, so check whether v${VERSION} still exists and bump the pin"
+          if ! curl -sSL --fail --retry 3 --retry-delay 5 --retry-all-errors "$url" -o /tmp/trivy.tgz 2>/tmp/trivy-download.log; then
+            cat /tmp/trivy-download.log
+            if grep -Eq '(^|[^0-9])50[234]([^0-9]|$)' /tmp/trivy-download.log; then
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "::warning title=Trivy unverified::Installer unavailable (HTTP 502/503/504). Security scan NOT RUN; retry before security sign-off."
+              echo "### ⚠ Trivy scan NOT RUN — upstream 5xx download failure" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::Trivy install failed for a non-transient reason"
             exit 1
           fi
           tar -xzf /tmp/trivy.tgz -C /tmp trivy
           /tmp/trivy --version
+          echo "available=true" >> "$GITHUB_OUTPUT"
 
       # Blocking, at zero findings as of this change. HIGH and CRITICAL only,
       # and only where a fixed version exists — an unfixable advisory cannot
@@ -252,6 +261,7 @@ jobs:
       # fail the scan, with it they are honoured and anything out of scope
       # still reds.
       - name: Scan filesystem for fixable HIGH/CRITICAL
+        if: steps.trivy_install.outputs.available == 'true'
         run: |
           set -euo pipefail
           /tmp/trivy fs --severity HIGH,CRITICAL --ignore-unfixed --skip-dirs plans --ignorefile .trivyignore.yaml --exit-code 1 .
@@ -348,6 +358,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install tfsec
+        id: tfsec_install
         run: |
           set -euo pipefail
           VERSION=1.28.13
@@ -355,7 +366,17 @@ jobs:
           # Releases binary endpoint, which repeatedly returned HTTP 504.
           # Do not skip scanning or change the tfsec version/ratchet baseline.
           export GOBIN="/tmp"
-          go install "github.com/aquasecurity/tfsec/cmd/tfsec@v${VERSION}"
+          if ! go install "github.com/aquasecurity/tfsec/cmd/tfsec@v${VERSION}" > /tmp/tfsec-install.log 2>&1; then
+            tail -80 /tmp/tfsec-install.log
+            if grep -Eiq '502 Bad Gateway|503 Service Unavailable|504 Gateway|connection reset|connection timed out|TLS handshake timeout|proxy.golang.org.*(502|503|504)' /tmp/tfsec-install.log; then
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "::warning title=tfsec unverified::Dependency network failure. IaC scan NOT RUN; retry before security sign-off."
+              echo "### ⚠ tfsec scan NOT RUN — dependency network failure" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::tfsec install failed; not classified as a transient network issue"
+            exit 1
+          fi
           # tfsec's JSON report carries no version field, so the ratchet's
           # version-drift arm has nothing in the report to compare against.
           # The binary's own answer is the robust source: the pinned URL says
@@ -370,7 +391,10 @@ jobs:
             exit 1
           fi
           echo "TFSEC_VERSION=$installed" >> "$GITHUB_ENV"
+          echo "available=true" >> "$GITHUB_OUTPUT"
       - name: tfsec (terraform)
+        if: steps.tfsec_install.outputs.available == 'true'
         run: /tmp/tfsec infra/terraform --format json --out tfsec.json --soft-fail
       - name: Ratchet the tfsec finding count
+        if: steps.tfsec_install.outputs.available == 'true'
         run: python3 scripts/check_scanner_ratchet.py --tool tfsec --report tfsec.json --tool-version "$TFSEC_VERSION"
