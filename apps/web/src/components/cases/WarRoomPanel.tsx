@@ -27,11 +27,27 @@ import useSWR from 'swr';
 import { ApiError, warRoomApi, type WarRoom } from '@/lib/api';
 import { formatTimeIST } from '@/lib/utils';
 
+/**
+ * War-room vendor errors may contain reverse-proxy HTML or infrastructure
+ * details. Keep actionable plain-text provider errors, but never render
+ * markup, hostnames or arbitrary network exception text in the panel.
+ */
+export function describeWarRoomFailure(error: unknown): string {
+  const fallback = 'War room unavailable. Please retry later.';
+  if (!(error instanceof ApiError)) return fallback;
+  if (error.status === 0 || error.status >= 500) return fallback;
+  const message = error.body.trim();
+  if (!message || message.length > 240 || /<[^>]*>|https?:\/\/|(?:[a-z0-9-]+\.)+[a-z]{2,}/i.test(message)) {
+    return fallback;
+  }
+  return message;
+}
+
 function SyncState({ room }: { room: WarRoom }) {
   if (room.last_error) {
     return (
       <span className="text-red-400" role="alert">
-        not mirroring — {room.last_error}
+        not mirroring — {describeWarRoomFailure(new ApiError('Sync failed', 502, room.last_error))}
       </span>
     );
   }
@@ -62,12 +78,7 @@ export function WarRoomPanel({ caseId }: { caseId: string }) {
         await warRoomApi.open(caseId, provider);
         await mutate();
       } catch (err) {
-        // The vendor's own reason, verbatim. "Something went wrong" sends an
-        // operator to debug the wrong thing; "the slack bot is not
-        // configured" tells them exactly what to do.
-        setFailure(
-          err instanceof ApiError ? err.body || err.message : err instanceof Error ? err.message : 'Open failed.',
-        );
+        setFailure(describeWarRoomFailure(err));
       } finally {
         setOpening(false);
       }
