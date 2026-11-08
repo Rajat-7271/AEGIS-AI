@@ -2460,7 +2460,7 @@ function AboutPanel() {
         <InfoTile label="Version" value={`v${process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'}`} />
         <InfoTile label="Build" value="Self-hosted • Docker Compose" />
         <InfoTile label="License" value="MIT" />
-        <InfoTile label="Source" value="github.com/beenuar/AiSOC" mono />
+        <InfoTile label="Source" value="github.com/Rajat-7271/AEGIS-AI" mono />
       </div>
       <div className="border-t border-gray-800 px-6 py-5 text-sm text-gray-400">
         <p>
@@ -2468,7 +2468,7 @@ function AboutPanel() {
           See the{' '}
           <a
             className="text-blue-400 hover:text-blue-300"
-            href="https://github.com/beenuar/AiSOC/blob/main/CONTRIBUTING.md"
+            href="https://github.com/Rajat-7271/AEGIS-AI/blob/release/public-mvp/CONTRIBUTING.md"
             target="_blank"
             rel="noreferrer"
           >
@@ -2479,7 +2479,7 @@ function AboutPanel() {
         <div className="mt-4 flex flex-wrap gap-2">
           <a
             className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-800"
-            href="https://github.com/beenuar/AiSOC"
+            href="https://github.com/Rajat-7271/AEGIS-AI"
             target="_blank"
             rel="noreferrer"
           >
@@ -2487,7 +2487,7 @@ function AboutPanel() {
           </a>
           <a
             className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-800"
-            href="https://github.com/beenuar/AiSOC/blob/main/CHANGELOG.md"
+            href="https://github.com/Rajat-7271/AEGIS-AI/blob/release/public-mvp/CHANGELOG.md"
             target="_blank"
             rel="noreferrer"
           >
@@ -2495,7 +2495,7 @@ function AboutPanel() {
           </a>
           <a
             className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-800"
-            href="https://github.com/beenuar/AiSOC/blob/main/SECURITY.md"
+            href="https://github.com/Rajat-7271/AEGIS-AI/blob/release/public-mvp/SECURITY.md"
             target="_blank"
             rel="noreferrer"
           >
