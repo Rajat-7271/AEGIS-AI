@@ -6,18 +6,17 @@
  * Depth 9.4. The one action the plan asks for, and the honest reporting
  * around it:
  *
- * - **The button performs a real write and fails loudly.** The API returns
- *   502 with the vendor's own reason when the bot is not deployed or Slack
- *   refuses, and that sentence is what the analyst reads. A toast saying
- *   "opening…" over a request that failed is the control this console is not
- *   allowed to ship.
+ * - **The button performs a real write and reports failures.** Upstream
+ *   5xx/network failures receive a safe message rather than exposing proxy
+ *   HTML or infrastructure details. Short, safe 4xx provider diagnostics
+ *   remain actionable; failures never claim a room was opened.
  * - **"Never synced" and "synced with nothing to say" render differently.**
  *   `last_synced_at: null` means the sweep has not run for this room yet,
  *   which is a different fact from a quiet case, and collapsing them would
  *   let an analyst read a broken mirror as a calm one.
- * - **A stalled mirror is shown, not hidden.** `last_error` is rendered in
- *   full. A war room that has silently stopped following the case is worse
- *   than one that was never opened.
+ * - **A stalled mirror is shown, not hidden.** `last_error` is displayed
+ *   when safe; markup, URLs and hostnames are redacted. A room that has
+ *   stopped mirroring must never appear healthy.
  * - **No `fallbackData` and no mock.** First paint is a loading state.
  */
 
@@ -27,11 +26,32 @@ import useSWR from 'swr';
 import { ApiError, warRoomApi, type WarRoom } from '@/lib/api';
 import { formatTimeIST } from '@/lib/utils';
 
+/**
+ * War-room vendor errors may contain reverse-proxy HTML or infrastructure
+ * details. Keep actionable plain-text provider errors, but never render
+ * markup, hostnames or arbitrary network exception text in the panel.
+ */
+const WAR_ROOM_UNAVAILABLE = 'War room unavailable. Please retry later.';
+
+function safeProviderDetail(message: string): string {
+  const detail = message.trim();
+  if (!detail || detail.length > 240 || /<[^>]*>|https?:\/\/|(?:[a-z0-9-]+\.)+[a-z]{2,}/i.test(detail)) {
+    return WAR_ROOM_UNAVAILABLE;
+  }
+  return detail;
+}
+
+export function describeWarRoomFailure(error: unknown): string {
+  if (!(error instanceof ApiError)) return WAR_ROOM_UNAVAILABLE;
+  if (error.status === 0 || error.status >= 500) return WAR_ROOM_UNAVAILABLE;
+  return safeProviderDetail(error.body);
+}
+
 function SyncState({ room }: { room: WarRoom }) {
   if (room.last_error) {
     return (
       <span className="text-red-400" role="alert">
-        not mirroring — {room.last_error}
+        not mirroring — {safeProviderDetail(room.last_error)}
       </span>
     );
   }
@@ -62,12 +82,7 @@ export function WarRoomPanel({ caseId }: { caseId: string }) {
         await warRoomApi.open(caseId, provider);
         await mutate();
       } catch (err) {
-        // The vendor's own reason, verbatim. "Something went wrong" sends an
-        // operator to debug the wrong thing; "the slack bot is not
-        // configured" tells them exactly what to do.
-        setFailure(
-          err instanceof ApiError ? err.body || err.message : err instanceof Error ? err.message : 'Open failed.',
-        );
+        setFailure(describeWarRoomFailure(err));
       } finally {
         setOpening(false);
       }
