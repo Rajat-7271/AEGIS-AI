@@ -25,6 +25,7 @@ def _fixture(*, expired=False, consumed=False, duplicate=False):
     )
     now = datetime.now(UTC)
     pending = SimpleNamespace(
+        id=uuid.uuid4(),
         tenant_id=tenant_id,
         user_id=user_id,
         token_hash=digest,
