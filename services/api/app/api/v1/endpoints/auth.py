@@ -675,7 +675,7 @@ async def change_own_password(
         )
     user = (
         await db.execute(
-            select(User).where(User.id == current_user.user_id).with_for_update()
+            select(User).where(User.id == current_user.user_id, User.tenant_id == current_user.tenant_id).with_for_update()
         )
     ).scalar_one_or_none()
     if user is None or not user.is_active:
