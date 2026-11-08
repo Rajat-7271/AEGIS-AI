@@ -21,6 +21,8 @@ from app.services.account_email_verification import issue_email_verification_tok
         "https://example.com?next=evil",
         "https://example.com/#fragment",
         "https://example.com:8443",
+        "https://example.com:invalid",
+        "https://example.com:99999",
         "https://example.com\nmalicious",
     ],
 )
