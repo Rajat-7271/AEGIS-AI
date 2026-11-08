@@ -17,7 +17,11 @@ def verification_link(*, origin: str, token: str) -> str:
     hash_email_verification_token(token)
     if not isinstance(origin, str) or not origin.startswith("https://"):
         raise ValueError("HTTPS account origin required")
-    parsed = urlsplit(origin)
+    try:
+        parsed = urlsplit(origin)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Invalid account origin") from exc
     if (
         not parsed.hostname
         or parsed.username
@@ -25,7 +29,7 @@ def verification_link(*, origin: str, token: str) -> str:
         or parsed.query
         or parsed.fragment
         or parsed.path not in ("", "/")
-        or parsed.port not in (None, 443)
+        or port not in (None, 443)
         or any(c.isspace() for c in origin)
     ):
         raise ValueError("Invalid account origin")
