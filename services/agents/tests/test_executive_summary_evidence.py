@@ -26,11 +26,13 @@ def test_summary_uses_structured_findings_and_qualifies_hypotheses():
     )
     summary = _summary(render_incident_report_md(state))
     assert "Suspicious login" in summary
-    assert "Structured indicator entries returned: 1 (not independently validated)" in summary
-    assert "Automated timeline entries: 1" in summary
-    assert "Candidate ATT&CK technique IDs: 1" in summary
-    assert "Forensic assessment (automated hypothesis): Possible credential misuse" in summary
+    assert "1 structured entries returned (not independently validated)" in summary
+    assert "1 automated entries" in summary
+    assert "1 candidate technique IDs" in summary
+    assert "Forensic assessment (automated hypothesis):** Possible credential misuse" in summary
     assert summary == _summary(render_incident_report_md(state))
+    assert "- **Indicators:**" in summary
+    assert "- **Response status:**" in summary
 
 
 def test_untrusted_alert_text_is_escaped_and_summary_is_not_workflow_dump():
