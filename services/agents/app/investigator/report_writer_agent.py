@@ -131,8 +131,8 @@ def _render_enrichment(state: InvestigatorState) -> list[str]:
 
 
 _BLOCK_IOC_ACTION = re.compile(
-    r"\\b(?:block|blacklist|denylist)\\b.{0,120}\\b(?:ioc|indicator|hash|domain|ip|c2)\\b"
-    r"|\\b(?:ioc|indicator|hash|domain|ip|c2)\\b.{0,120}\\b(?:block|blacklist|denylist)\\b",
+    r"\b(?:block|blacklist|denylist)\b.{0,120}\b(?:ioc|indicator|hash|domain|ip|c2)\b"
+    r"|\b(?:ioc|indicator|hash|domain|ip|c2)\b.{0,120}\b(?:block|blacklist|denylist)\b",
     re.I,
 )
 _WITHHELD_IOC_BLOCK = (
@@ -167,7 +167,7 @@ def _safe_recommendations(state: InvestigatorState) -> list[str]:
         actor_leads = sanitize_iterable_of_strings(state.recon.threat_actors, max_item_len=128, max_items=20)
         unsupported_actor = (
             isinstance(rationale, str)
-            and any(re.search(r"(?<!\\w)" + re.escape(actor) + r"(?!\\w)", rationale, re.I) for actor in actor_leads if actor)
+            and any(re.search(r"(?<!\w)" + re.escape(actor) + r"(?!\w)", rationale, re.I) for actor in actor_leads if actor)
         )
         suffix = (
             " Rationale withheld: unconfirmed threat-actor attribution."
