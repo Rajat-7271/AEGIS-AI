@@ -44,3 +44,17 @@ def test_untrusted_alert_text_is_escaped_and_summary_is_not_workflow_dump():
     assert "<script>" not in summary
     assert "&lt;script&gt;" in summary
     assert "case creation workflow" not in summary.lower()
+
+
+def test_unconfirmed_actor_is_not_presented_as_certain_in_rationale():
+    state = InvestigatorState(
+        case_id="case-attribution",
+        recon={"threat_actors": ["APT28"]},
+        responder={"recommended_actions": [
+            {"action": "Preserve endpoint telemetry", "rationale": "APT28 is responsible for this incident"}
+        ]},
+    )
+    report = render_incident_report_md(state)
+    assert "Rationale withheld: unconfirmed threat-actor attribution." in report
+    assert "APT28 is responsible" not in report
+    assert "Unconfirmed model-generated leads: APT28" in report
