@@ -6,7 +6,7 @@ notification, MFA step-up, and recovery flows have been completed.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,6 +84,20 @@ async def confirm_pending_email_change(
     if duplicate is not None:
         raise EmailChangeRejected("Invalid or expired verification")
 
+    # The partial unique index permits only one *pending* request per user.
+    # Close any other outstanding request before committing the identity swap.
+    # Normally none exists, but this is defensive against legacy or manual data.
+    await db.execute(
+        update(AccountEmailChangeRequest)
+        .where(
+            AccountEmailChangeRequest.tenant_id == tenant_id,
+            AccountEmailChangeRequest.user_id == user_id,
+            AccountEmailChangeRequest.id != pending.id,
+            AccountEmailChangeRequest.consumed_at.is_(None),
+            AccountEmailChangeRequest.cancelled_at.is_(None),
+        )
+        .values(cancelled_at=now)
+    )
     user.email = pending.proposed_email
     user.sessions_revoked_at = now
     pending.consumed_at = now
