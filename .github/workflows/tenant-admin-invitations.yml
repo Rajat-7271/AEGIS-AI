@@ -121,6 +121,7 @@ jobs:
           tests/test_account_email_delivery.py
           tests/test_account_email_confirmation.py
           tests/test_account_email_request.py
+          tests/test_account_email_cancel.py
           tests/test_profile_name_change.py
           -q
 
