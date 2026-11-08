@@ -14,6 +14,7 @@ async def test_failed_delivery_cancels_pending_request():
     db = MagicMock()
     db.execute = AsyncMock()
     db.commit = AsyncMock()
+    db.rollback = AsyncMock()
     with patch("app.services.account_email_workflow.verify_email_change_totp", new_callable=AsyncMock), patch(
         "app.services.account_email_workflow.create_pending_email_change",
         new_callable=AsyncMock, return_value=("new@example.com", "a" * 43),
@@ -32,7 +33,7 @@ async def test_failed_delivery_cancels_pending_request():
                 origin="https://example.com", mailer=MagicMock(),
             )
     db.execute.assert_awaited_once()
-    db.commit.assert_awaited_once()
+    assert db.commit.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -67,7 +68,7 @@ async def test_notice_precedes_verification_and_no_cancel_on_success():
     step_up.assert_awaited_once()
     assert delivery_order == [("notice", "old@example.com"), ("verify", "new@example.com")]
     db.execute.assert_not_awaited()
-    db.commit.assert_not_awaited()
+    db.commit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
