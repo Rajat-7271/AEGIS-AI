@@ -524,6 +524,14 @@ export const authApi = {
     return { ...tokens, user };
   },
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await request('/api/v1/auth/me/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+    this.logout();
+  },
+
   logout(): void {
     if (typeof window === "undefined") return;
     try {
