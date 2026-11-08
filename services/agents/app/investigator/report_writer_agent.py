@@ -379,6 +379,9 @@ def _md_to_html(md: str, case_id: str) -> str:
   th,td {{ border: 1px solid #ddd; padding: 7px; vertical-align: top; overflow-wrap: anywhere; }}
   @page {{ size: A4; margin: 16mm; }}
   h1,h2,h3 {{ break-after: avoid; }}
+  ul,ol {{ padding-left: 1.6em; margin: 0.7em 0 1em; }}
+  li {{ margin: 0.3em 0; line-height: 1.35; }}
+  p {{ line-height: 1.4; }}
   tr {{ break-inside: avoid; }}
   th {{ background: #2c3e50; color: white; }}
   code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }}
