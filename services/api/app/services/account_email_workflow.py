@@ -29,7 +29,6 @@ async def request_verified_email_change(
     *,
     tenant_id: object,
     user_id: object,
-    current_email: str,
     current_password: str,
     proposed_email: str,
     totp_code: str,
@@ -49,13 +48,14 @@ async def request_verified_email_change(
         await db.rollback()
         raise
     try:
-        recipient, token = await create_pending_email_change(
+        recipient, token, previous_email = await create_pending_email_change(
             db,
             tenant_id=tenant_id,
             user_id=user_id,
             current_password=current_password,
             proposed_email=proposed_email,
             commit=False,
+            include_previous_email=True,
         )
         await db.commit()
     except Exception:
@@ -63,7 +63,7 @@ async def request_verified_email_change(
         raise
     try:
         await send_email_change_security_notice(
-            recipient=current_email,
+            recipient=previous_email,
             proposed_email=recipient,
             mailer=mailer,
         )
