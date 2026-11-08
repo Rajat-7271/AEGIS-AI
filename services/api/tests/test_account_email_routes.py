@@ -23,13 +23,14 @@ def _principal():
 async def test_confirmation_scopes_token_to_authenticated_user():
     principal = _principal()
     db = MagicMock()
+    db.commit = AsyncMock()
     with patch(
         "app.api.v1.endpoints.auth._limit_email_change_attempt",
         new_callable=AsyncMock,
     ), patch(
         "app.api.v1.endpoints.auth.confirm_pending_email_change",
         new_callable=AsyncMock,
-    ) as confirm:
+    ) as confirm, patch("app.api.v1.endpoints.auth.emit_audit", new_callable=AsyncMock) as audit:
         await confirm_own_email_change(
             EmailChangeConfirmRequest(token="opaque"),
             MagicMock(),
@@ -37,6 +38,8 @@ async def test_confirmation_scopes_token_to_authenticated_user():
             db,
             principal,
         )
+    audit.assert_awaited_once()
+    db.commit.assert_awaited_once()
     confirm.assert_awaited_once_with(
         db, tenant_id=principal.tenant_id,
         user_id=principal.user_id, token="opaque",
