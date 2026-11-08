@@ -533,6 +533,39 @@ function ProfilePanel() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [proposedEmail, setProposedEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailTotp, setEmailTotp] = useState('');
+  const [requestingEmail, setRequestingEmail] = useState(false);
+  const [cancellingEmail, setCancellingEmail] = useState(false);
+
+  const onRequestEmailChange = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setRequestingEmail(true);
+    try {
+      await authApi.requestEmailChange(proposedEmail, emailPassword, emailTotp);
+      setEmailPassword('');
+      setEmailTotp('');
+      toast.success('Verification requested. Check the new email address.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not request email change');
+    } finally {
+      setRequestingEmail(false);
+    }
+  };
+
+  const onCancelEmailChange = async () => {
+    setCancellingEmail(true);
+    try {
+      await authApi.cancelEmailChange();
+      toast.success('Pending email changes cancelled');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not cancel email change');
+    } finally {
+      setCancellingEmail(false);
+    }
+  };
+
 
   const onChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -669,6 +702,23 @@ function ProfilePanel() {
         <div className="rounded-lg border border-gray-800 bg-gray-950/40 p-4 text-xs text-gray-500">
           Your display name is saved to your account. Job title and timezone remain browser-only preferences. Login email changes require separate verification.
         </div>
+        <form onSubmit={onRequestEmailChange} className="space-y-3 rounded-lg border border-gray-800 p-4">
+          <h3 className="text-sm font-semibold text-gray-100">Change login email</h3>
+          <p className="text-xs text-gray-400">Confirm your password and a fresh six-digit authenticator code. A verification link will be sent to your new email, and your current address will receive a security notice. Your login remains unchanged until you confirm.</p>
+          <Field label="New login email">
+            <input type="email" autoComplete="email" required className={inputClass()} value={proposedEmail} onChange={e => setProposedEmail(e.target.value)} />
+          </Field>
+          <Field label="Current password">
+            <input type="password" autoComplete="current-password" required className={inputClass()} value={emailPassword} onChange={e => setEmailPassword(e.target.value)} />
+          </Field>
+          <Field label="Authenticator code">
+            <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required className={inputClass()} value={emailTotp} onChange={e => setEmailTotp(e.target.value)} />
+          </Field>
+          <div className="flex flex-wrap gap-3">
+            <button type="submit" disabled={requestingEmail} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">{requestingEmail ? 'Requesting…' : 'Send verification email'}</button>
+            <button type="button" disabled={cancellingEmail} onClick={onCancelEmailChange} className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-200 disabled:opacity-50">{cancellingEmail ? 'Cancelling…' : 'Cancel pending change'}</button>
+          </div>
+        </form>
         <form onSubmit={onChangePassword} className="space-y-3 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-semibold text-gray-100">Change password</h3>
           <p className="text-xs text-gray-400">Your current password is required. All existing sessions will be signed out.</p>
