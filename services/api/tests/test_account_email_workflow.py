@@ -51,7 +51,7 @@ async def test_notice_precedes_verification_and_no_cancel_on_success():
 
     with patch("app.services.account_email_workflow.verify_email_change_totp", new_callable=AsyncMock) as step_up, patch(
         "app.services.account_email_workflow.create_pending_email_change",
-        new_callable=AsyncMock, return_value=("new@example.com", "a" * 43),
+        new_callable=AsyncMock, return_value=("new@example.com", "a" * 43, "old@example.com"),
     ), patch(
         "app.services.account_email_workflow.send_email_change_security_notice",
         side_effect=notify,
@@ -90,7 +90,7 @@ async def test_failed_step_up_prevents_request_and_mail():
         with pytest.raises(EmailChangeStepUpRejected):
             await request_verified_email_change(
                 db, tenant_id=uuid.uuid4(), user_id=uuid.uuid4(),
-                current_email="old@example.com", current_password="example-password",
+                current_password="example-password",
                 proposed_email="new@example.com", totp_code="000000",
                 origin="https://example.com", mailer=MagicMock(),
             )
@@ -119,7 +119,7 @@ async def test_password_rejection_rolls_back_consumed_totp():
         with pytest.raises(EmailChangeRequestRejected):
             await request_verified_email_change(
                 db, tenant_id=uuid.uuid4(), user_id=uuid.uuid4(),
-                current_email="old@example.com", current_password="wrong",
+                current_password="wrong",
                 proposed_email="new@example.com", totp_code="123456",
                 origin="https://example.com", mailer=MagicMock(),
             )
