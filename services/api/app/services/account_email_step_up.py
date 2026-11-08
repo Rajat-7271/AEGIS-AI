@@ -8,7 +8,7 @@ never silently downgrade them to password-only changes.
 
 import uuid
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
