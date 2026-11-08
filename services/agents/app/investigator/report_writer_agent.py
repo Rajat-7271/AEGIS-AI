@@ -130,6 +130,22 @@ def _render_enrichment(state: InvestigatorState) -> list[str]:
     return lines or ["No reportable enrichment data was returned."]
 
 
+_BLOCK_IOC_ACTION = re.compile(
+    r"\\b(?:block|blacklist|denylist)\\b.{0,120}\\b(?:ioc|indicator|hash|domain|ip|c2)\\b"
+    r"|\\b(?:ioc|indicator|hash|domain|ip|c2)\\b.{0,120}\\b(?:block|blacklist|denylist)\\b",
+    re.I,
+)
+_WITHHELD_IOC_BLOCK = (
+    "An indicator-blocking proposal was withheld because no structured indicators "
+    "were returned. Identify and verify specific hashes, addresses, or domains "
+    "before proposing a block."
+)
+
+
+def _has_structured_iocs(state: InvestigatorState) -> bool:
+    return bool(_render_iocs(state))
+
+
 def _safe_recommendations(state: InvestigatorState) -> list[str]:
     lines: list[str] = []
     for action in state.responder.recommended_actions[:20]:
@@ -137,6 +153,9 @@ def _safe_recommendations(state: InvestigatorState) -> list[str]:
             continue
         text = action.get("action")
         if not isinstance(text, str) or not text.strip():
+            continue
+        if _BLOCK_IOC_ACTION.search(text) and not _has_structured_iocs(state):
+            lines.append(f"- {_WITHHELD_IOC_BLOCK}")
             continue
         if _DESTRUCTIVE_VERB.search(text) and _EXECUTABLE.search(text):
             lines.append(_WITHHELD_DESTRUCTIVE_GUIDANCE)
@@ -160,11 +179,13 @@ def _safe_recommendations(state: InvestigatorState) -> list[str]:
     return lines
 
 
-def _render_plan_steps(steps: list[str]) -> list[str]:
+def _render_plan_steps(steps: list[str], *, has_iocs: bool = True) -> list[str]:
     """Keep destructive executable-removal guidance out of every plan section."""
     rendered: list[str] = []
     for step in sanitize_iterable_of_strings(steps, max_item_len=400, max_items=10):
-        if _DESTRUCTIVE_VERB.search(step) and _EXECUTABLE.search(step):
+        if _BLOCK_IOC_ACTION.search(step) and not has_iocs:
+            rendered.append(f"- {_WITHHELD_IOC_BLOCK}")
+        elif _DESTRUCTIVE_VERB.search(step) and _EXECUTABLE.search(step):
             rendered.append(_WITHHELD_DESTRUCTIVE_GUIDANCE)
         else:
             rendered.append(f"- {_md_value(step, limit=400)}")
@@ -310,7 +331,7 @@ def render_incident_report_md(state: InvestigatorState) -> str:
     containment = sanitize_iterable_of_strings(state.responder.containment_steps, max_item_len=400, max_items=10)
     if containment:
         lines.append("### Proposed containment (review before approval)")
-        lines.extend(_render_plan_steps(containment))
+        lines.extend(_render_plan_steps(containment, has_iocs=_has_structured_iocs(state)))
     lines.extend([
         "",
         "### Eradication",
@@ -320,7 +341,7 @@ def render_incident_report_md(state: InvestigatorState) -> str:
     recovery = sanitize_iterable_of_strings(state.responder.recovery_steps, max_item_len=400, max_items=10)
     if recovery:
         lines.extend(["", "### Proposed recovery (review before approval)"])
-        lines.extend(_render_plan_steps(recovery))
+        lines.extend(_render_plan_steps(recovery, has_iocs=_has_structured_iocs(state)))
     recommendations = _safe_recommendations(state)
     if recommendations:
         lines.extend(["", "### Additional proposals"])
