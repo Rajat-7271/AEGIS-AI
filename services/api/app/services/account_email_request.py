@@ -30,6 +30,7 @@ async def create_pending_email_change(
     user_id: object,
     current_password: str,
     proposed_email: str,
+    commit: bool = True,
 ) -> tuple[str, str]:
     """Return (recipient, secret token) after persisting its digest.
 
@@ -78,5 +79,10 @@ async def create_pending_email_change(
             expires_at=now + timedelta(minutes=30),
         )
     )
-    await db.commit()
+    if commit:
+        await db.commit()
+    else:
+        # Flush while retaining the caller's transaction so MFA replay state
+        # and the pending request commit or roll back together.
+        await db.flush()
     return recipient, token
