@@ -17,7 +17,7 @@ async def test_failed_delivery_cancels_pending_request():
     db.rollback = AsyncMock()
     with patch("app.services.account_email_workflow.verify_email_change_totp", new_callable=AsyncMock), patch(
         "app.services.account_email_workflow.create_pending_email_change",
-        new_callable=AsyncMock, return_value=("new@example.com", "a" * 43),
+        new_callable=AsyncMock, return_value=("new@example.com", "a" * 43, "old@example.com"),
     ), patch(
         "app.services.account_email_workflow.send_email_change_security_notice",
         new_callable=AsyncMock,
@@ -28,7 +28,7 @@ async def test_failed_delivery_cancels_pending_request():
         with pytest.raises(EmailChangeDeliveryRejected):
             await request_verified_email_change(
                 db, tenant_id=uuid.uuid4(), user_id=uuid.uuid4(),
-                current_email="old@example.com", current_password="example-password",
+                current_password="example-password",
                 proposed_email="new@example.com", totp_code="123456",
                 origin="https://example.com", mailer=MagicMock(),
             )
@@ -61,7 +61,7 @@ async def test_notice_precedes_verification_and_no_cancel_on_success():
     ):
         await request_verified_email_change(
             db, tenant_id=uuid.uuid4(), user_id=uuid.uuid4(),
-            current_email="old@example.com", current_password="example-password",
+            current_password="example-password",
             proposed_email="new@example.com", totp_code="123456",
             origin="https://example.com", mailer=MagicMock(),
         )
