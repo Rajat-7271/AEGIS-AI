@@ -8,10 +8,10 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 
 from app.api.v1.endpoints.auth import PasswordChangeRequest, change_own_password
 from app.core.security import get_password_hash, verify_password
+from fastapi import HTTPException
 
 
 OLD_PASSWORD = "correct-old-password-123"
