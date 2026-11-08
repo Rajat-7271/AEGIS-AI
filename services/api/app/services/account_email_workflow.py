@@ -16,6 +16,7 @@ from app.services.account_email_delivery import (
 )
 from app.services.account_email_request import create_pending_email_change
 from app.services.account_email_step_up import verify_email_change_totp
+from app.services.account_email_verification import hash_email_verification_token
 from app.services.email_approval import MailgunClient
 
 
@@ -69,7 +70,7 @@ async def request_verified_email_change(
             .where(
                 AccountEmailChangeRequest.tenant_id == tenant_id,
                 AccountEmailChangeRequest.user_id == user_id,
-                AccountEmailChangeRequest.token_hash.isnot(None),
+                AccountEmailChangeRequest.token_hash == hash_email_verification_token(token),
                 AccountEmailChangeRequest.consumed_at.is_(None),
                 AccountEmailChangeRequest.cancelled_at.is_(None),
             )
