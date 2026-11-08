@@ -92,3 +92,23 @@ def test_ioc_blocking_remains_unreviewed_when_structured_iocs_exist():
     report = render_incident_report_md(state)
     assert "Block identified domain after validation" in report
     assert "An indicator-blocking proposal was withheld" not in report
+
+
+def test_plural_ioc_blocking_variants_are_withheld():
+    state = InvestigatorState(
+        case_id="case-plural",
+        responder={
+            "containment_steps": [
+                "Block malicious hashes, IPs, and domains at the firewall",
+                "Block associated IOCs at the email gateway",
+            ],
+            "recommended_actions": [
+                {"action": "Blacklist identified domains", "rationale": "Pending review"}
+            ],
+        },
+    )
+    report = render_incident_report_md(state)
+    assert report.count("An indicator-blocking proposal was withheld") == 3
+    assert "Block malicious hashes" not in report
+    assert "Block associated IOCs" not in report
+    assert "Blacklist identified domains" not in report
