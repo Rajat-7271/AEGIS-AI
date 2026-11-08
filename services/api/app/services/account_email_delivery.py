@@ -58,3 +58,36 @@ async def send_email_change_verification(
             "Otherwise ignore this message.</p>"
         ),
     )
+
+
+async def send_email_change_security_notice(
+    *,
+    recipient: str,
+    proposed_email: str,
+    mailer: MailgunClient,
+) -> None:
+    """Notify the existing address; never include verification secrets.
+
+    This is a security alert, not a confirmation mechanism. The existing
+    address must remain active until the new one has been verified.
+    """
+    old = escape(recipient, quote=True)
+    proposed = escape(proposed_email, quote=True)
+    await mailer.send(
+        to=[recipient],
+        subject="Security notice: account email change requested",
+        text=(
+            "Someone requested a change to your account login email "
+            f"from {recipient} to {proposed_email}. "
+            "Your current login email remains unchanged until the new "
+            "address is verified. If you did not request this, contact "
+            "your administrator immediately.\n"
+        ),
+        html=(
+            "<p>Someone requested a change to your account login email "
+            f"from {old} to {proposed}.</p>"
+            "<p>Your current login email remains unchanged until the new "
+            "address is verified. If you did not request this, contact "
+            "your administrator immediately.</p>"
+        ),
+    )
