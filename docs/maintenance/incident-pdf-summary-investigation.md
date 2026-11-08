@@ -16,5 +16,14 @@ A generated investigation report executive summary repeated case-creation workfl
 5. Add deterministic unit tests for: evidence-rich case; sparse/no-IOC case; no duplicated workflow prose; stable output; escaped untrusted text.
 6. Run relevant backend tests and CI; keep PR draft until validation. No production changes.
 
-## Scope
-This document traces the report generation path. It is not an implementation or a claim that the PDF summary is fixed.
+## Implemented on draft PR #20
+- Evidence-first summary built from structured state with explicit labels for unverified alerts, candidate ATT&CK mappings, automated timelines, forensic hypotheses and unexecuted response actions.
+- AEGIS AI HTML title/footer branding, Markdown summary bullets and print-friendly table/page styling.
+- Safeguards for unsupported IOC-blocking proposals and rationales that assert unconfirmed threat-actor attribution.
+- Deterministic regression tests covering sparse and evidence-rich states, HTML escaping, branding, actor rationale and singular/plural indicator-blocking phrases.
+
+## Remaining acceptance checks
+- Confirm the latest branch head passes CI (the preceding head passed all 32 workflows after one dependency-install rerun).
+- Render a fresh report HTML from the branch and convert it to a PDF in a non-production environment; inspect the resulting pages, long tables, branding and page breaks. Existing stored report HTML and production PDFs are not evidence that the branch works.
+- Confirm report persistence/regeneration behavior before expecting historical reports to change after deployment.
+- Obtain explicit merge and deployment approval. This draft PR must not change production.
