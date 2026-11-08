@@ -131,3 +131,11 @@ def test_report_html_renders_as_pdf_when_weasyprint_available():
     pdf_bytes = weasyprint.HTML(string=rendered).write_pdf()
     assert pdf_bytes.startswith(b"%PDF-")
     assert len(pdf_bytes) > 1000
+    import os
+    from pathlib import Path
+
+    output = os.environ.get("AEGIS_PDF_SMOKE_OUTPUT")
+    if output:
+        destination = Path(output)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(pdf_bytes)
