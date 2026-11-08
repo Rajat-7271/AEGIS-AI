@@ -76,3 +76,21 @@ async def test_rejects_unauthorized_or_invalid_without_writing(password, email, 
     assert user.email == "original@example.com"
     db.add.assert_not_called()
     db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_returns_locked_previous_email_for_security_notice():
+    tenant_id, user_id, user, db = _setup()
+    recipient, token, previous_email = await create_pending_email_change(
+        db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        current_password="original-password-123",
+        proposed_email="new@example.com",
+        commit=False,
+        include_previous_email=True,
+    )
+    assert previous_email == "original@example.com"
+    assert recipient == "new@example.com"
+    assert hash_email_verification_token(token)
+    db.commit.assert_not_awaited()
