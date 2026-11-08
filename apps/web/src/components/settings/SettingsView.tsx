@@ -528,6 +528,7 @@ function Toggle({
 function ProfilePanel() {
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
   const [dirty, setDirty] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -555,7 +556,9 @@ function ProfilePanel() {
   };
 
   useEffect(() => {
-    setProfile(loadProfile());
+    const stored = loadProfile();
+    const account = authApi.currentUser();
+    setProfile({ ...stored, displayName: account?.username ?? stored.displayName });
   }, []);
 
   const update = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
@@ -563,11 +566,21 @@ function ProfilePanel() {
     setDirty(true);
   };
 
-  const onSave = () => {
-    saveProfile(profile);
-    window.dispatchEvent(new Event('aegis:profile-updated'));
-    setDirty(false);
-    toast.success('Profile updated');
+  const onSave = async () => {
+    if (savingProfile) return;
+    setSavingProfile(true);
+    try {
+      const updated = await authApi.changeDisplayName(profile.displayName);
+      const saved = { ...profile, displayName: updated.username };
+      saveProfile(saved);
+      setProfile(saved);
+      setDirty(false);
+      toast.success('Profile updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update profile');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const initials = profile.displayName
@@ -585,16 +598,16 @@ function ProfilePanel() {
         action={
           <button
             type="button"
-            disabled={!dirty}
+            disabled={!dirty || savingProfile}
             onClick={onSave}
             className={clsx(
               'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              dirty
+              dirty && !savingProfile
                 ? 'bg-blue-600 text-white hover:bg-blue-500'
                 : 'cursor-not-allowed bg-gray-800 text-gray-500',
             )}
           >
-            Save changes
+            {savingProfile ? 'Saving…' : 'Save changes'}
           </button>
         }
       />
@@ -654,7 +667,7 @@ function ProfilePanel() {
         </div>
 
         <div className="rounded-lg border border-gray-800 bg-gray-950/40 p-4 text-xs text-gray-500">
-          Display preferences are stored in this browser. Changing them does not update your login email or password.
+          Your display name is saved to your account. Job title and timezone remain browser-only preferences. Login email changes require separate verification.
         </div>
         <form onSubmit={onChangePassword} className="space-y-3 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-semibold text-gray-100">Change password</h3>
