@@ -32,22 +32,27 @@ import { formatTimeIST } from '@/lib/utils';
  * details. Keep actionable plain-text provider errors, but never render
  * markup, hostnames or arbitrary network exception text in the panel.
  */
-export function describeWarRoomFailure(error: unknown): string {
-  const fallback = 'War room unavailable. Please retry later.';
-  if (!(error instanceof ApiError)) return fallback;
-  if (error.status === 0 || error.status >= 500) return fallback;
-  const message = error.body.trim();
-  if (!message || message.length > 240 || /<[^>]*>|https?:\/\/|(?:[a-z0-9-]+\.)+[a-z]{2,}/i.test(message)) {
-    return fallback;
+const WAR_ROOM_UNAVAILABLE = 'War room unavailable. Please retry later.';
+
+function safeProviderDetail(message: string): string {
+  const detail = message.trim();
+  if (!detail || detail.length > 240 || /<[^>]*>|https?:\/\/|(?:[a-z0-9-]+\.)+[a-z]{2,}/i.test(detail)) {
+    return WAR_ROOM_UNAVAILABLE;
   }
-  return message;
+  return detail;
+}
+
+export function describeWarRoomFailure(error: unknown): string {
+  if (!(error instanceof ApiError)) return WAR_ROOM_UNAVAILABLE;
+  if (error.status === 0 || error.status >= 500) return WAR_ROOM_UNAVAILABLE;
+  return safeProviderDetail(error.body);
 }
 
 function SyncState({ room }: { room: WarRoom }) {
   if (room.last_error) {
     return (
       <span className="text-red-400" role="alert">
-        not mirroring — {describeWarRoomFailure(new ApiError('Sync failed', 502, room.last_error))}
+        not mirroring — {safeProviderDetail(room.last_error)}
       </span>
     );
   }
