@@ -16,6 +16,16 @@ This checklist covers the opt-in Kafka -> ClickHouse durable lake worker. It doe
 
 CI evidence is scoped to the isolated test containers. It is **not** a load, failover, production security, or operational acceptance test.
 
+## Minimum viable release scope (fast path)
+
+**Ship only after approval:** the dedicated opt-in worker, fail-stop processing, deterministic replay identity, separate Kafka group, protected Kafka transport, existing ClickHouse schema, and the documented stop/restart procedure. Keep the existing fusion worker and production lake writer unchanged.
+
+**Must pass before merging or any controlled pilot:** green CI on the exact head; security review of Kafka and ClickHouse credentials; a clear enable/disable switch; synthetic-data restart/replay verification; tenant isolation; documented owner and rollback steps. These are safety requirements, not optional enhancements.
+
+**Defer until after the minimum viable release:** an HTTP metrics exporter, dashboards, automatic alert delivery, batching optimizations, autoscaling, and a fully automated poison-event quarantine pipeline. Until a reviewed poison-record policy exists, invalid records deliberately stop processing and require operator intervention. External Kafka lag monitoring is still required for any actual pilot.
+
+**Separate approval required:** merge, deployment, and live Windows telemetry enrollment are three distinct actions. This plan authorizes none of them.
+
 ## Blocking gates before a controlled pilot
 
 1. **Ownership and rollout:** confirm the correct PR base (PR #25 currently targets `release/public-mvp`), document the exact commit, review diff, and obtain explicit approval for any merge or deployment. Keep the durable worker disabled by default.
