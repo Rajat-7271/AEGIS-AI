@@ -119,7 +119,7 @@ class _Ingest(BaseHTTPRequestHandler):
         # Mirror the ingest batch acknowledgement contract. An empty 202
         # response is not a valid acknowledgement and must not advance the
         # scheduler checkpoint or last_sync.
-        received = _Ingest.received[-1]["body"] if _Ingest.received else {}
+        received = json.loads(raw.decode()) if length else {}
         events = received.get("events", []) if isinstance(received, dict) else []
         count = len(events) if isinstance(events, list) else 0
         response = json.dumps({"accepted": count, "rejected": 0}).encode()
