@@ -58,3 +58,26 @@ Do not change the global fingerprint to include source event IDs without
 reviewing deduplication behavior across every connector. Instead verify that
 the raw-event lake retains distinct normalized IDs and handles exact replay
 idempotently; alert aggregation is a separate product decision.
+
+## ClickHouse raw-event lake findings (draft pilot)
+
+Reviewed `services/fusion/app/services/lake_writer.py` and
+`services/fusion/tests/test_lake_writer.py`:
+
+- The lake projects the ingest-normalized UUID to `event_id` and retains
+  different UUIDs as distinct rows. Two synthetic Windows-like events with
+  different normalized UUIDs are now covered by a characterization test.
+- The lake uses MergeTree and has no uniqueness enforcement on `event_id`.
+  An exact Kafka replay can append a second row with the same UUID. A second
+  characterization test demonstrates this with a fake ClickHouse client.
+- A failed ClickHouse insert is intentionally fail-soft: the writer discards
+  the buffered batch and does not fail the fusion consumer. Thus Kafka ingest
+  acknowledgement does **not** guarantee durable lake archival.
+- The fake-client tests describe current behavior, not end-to-end durability
+  or exactly-once semantics. Verify CI and actual ClickHouse behavior before
+  making any production readiness claim.
+
+**Pilot gate:** do not transmit real Windows events until a deliberate policy
+for lake archival loss, retry/replay, and query-level deduplication is agreed
+and validated. Any change to the lake writer's failure policy requires broader
+consumer/offset and backpressure analysis, not a local try/except change.
