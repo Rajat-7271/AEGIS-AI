@@ -280,6 +280,25 @@ async def _check_vocabularies(conn, table: str) -> dict[str, list[str]]:
 
 async def _seed_row(conn, table: str, tenant: uuid.UUID, enum_labels: dict[str, list[str]], nonce: str) -> None:
     """Insert one row owned by ``tenant``, filling only what the schema demands."""
+    if table == "account_email_change_requests":
+        # The generic seeder uses now() for both timestamps, violating the
+        # production invariant that a verification request expires later.
+        # Preserve that constraint and seed a valid, tenant-owned request.
+        await conn.execute(
+            """
+            INSERT INTO account_email_change_requests
+                (tenant_id, user_id, previous_email, proposed_email,
+                 token_hash, expires_at)
+            VALUES ($1, $2, $3, $4, $5, now() + interval '30 minutes')
+            """,
+            tenant,
+            uuid.uuid4(),
+            f"previous-{nonce}@example.com",
+            f"proposed-{nonce}@example.com",
+            uuid.uuid4().hex + uuid.uuid4().hex,
+        )
+        return
+
     if table == "tenant_admin_invitations":
         await conn.execute(
             """
