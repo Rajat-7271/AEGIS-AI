@@ -4,6 +4,7 @@ import re
 from datetime import UTC, datetime, timedelta
 
 import pytest
+
 from app.services.account_email_verification import (
     email_change_is_confirmable,
     hash_email_verification_token,
@@ -61,15 +62,15 @@ def test_invalid_or_unchanged_proposed_email_is_rejected(candidate):
 
 def test_email_confirmation_requires_active_unexpired_unchanged_identity():
     now = datetime.now(UTC)
-    args = dict(
-        now=now,
-        expires_at=now + timedelta(minutes=30),
-        consumed_at=None,
-        cancelled_at=None,
-        original_email="old@example.com",
-        current_email="old@example.com",
-        active=True,
-    )
+    args = {
+        "now": now,
+        "expires_at": now + timedelta(minutes=30),
+        "consumed_at": None,
+        "cancelled_at": None,
+        "original_email": "old@example.com",
+        "current_email": "old@example.com",
+        "active": True,
+    }
     assert email_change_is_confirmable(**args)
     for changes in (
         {"expires_at": now},
