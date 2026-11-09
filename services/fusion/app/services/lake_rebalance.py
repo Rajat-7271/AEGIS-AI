@@ -1,4 +1,4 @@
-﻿"""Partition ownership lifecycle for the dedicated durable lake consumer.
+"""Partition ownership lifecycle for the dedicated durable lake consumer.
 
 This module does not connect to Kafka or start background tasks.
 """
