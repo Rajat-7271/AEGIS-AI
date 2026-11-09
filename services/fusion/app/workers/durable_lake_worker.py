@@ -76,7 +76,16 @@ class DurableLakeWorker:
     async def start(self) -> None:
         if self._started:
             raise RuntimeError("Lake worker already started")
-        await self._consumer.start()
+        try:
+            await self._consumer.start()
+        except BaseException:
+            # Kafka startup can partially allocate sockets/tasks before failing.
+            # Best-effort cleanup must not replace the original startup error.
+            try:
+                await self._consumer.stop()
+            except Exception:
+                pass
+            raise
         self._started = True
         self._running = True
 
