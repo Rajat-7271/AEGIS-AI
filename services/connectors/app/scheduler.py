@@ -709,7 +709,15 @@ class ConnectorScheduler:
             await self._record_failure(target.id)
             return
 
-        accepted = int(result.get("accepted", 0) or 0)
+        if not _acknowledgement_complete(result, len(kept)):
+            logger.error(
+                "connector.scheduler.ingest_ack_incomplete id=%s sent=%d",
+                connector_id, len(kept),
+            )
+            await self._record_failure(target.id)
+            return
+
+        accepted = result["accepted"]
         elapsed_ms = int((datetime.now(UTC) - started).total_seconds() * 1000)
 
         # Advance the persisted checkpoint only now that ingest has accepted the
@@ -1172,3 +1180,19 @@ __all__ = [
     "ConnectorScheduler",
     "scheduler_disabled",
 ]
+
+
+def _acknowledgement_complete(result: Any, sent: int) -> bool:
+    """Only a fully accepted batch may advance the connector checkpoint.
+
+    Reject malformed acknowledgements, bools (subclass of int), negative
+    counters, and partial acceptance. Retrying a partial batch requires
+    downstream idempotency; this predicate prevents permanent data loss.
+    """
+    return (
+        isinstance(result, dict)
+        and type(result.get("accepted")) is int
+        and type(result.get("rejected")) is int
+        and result["accepted"] == sent
+        and result["rejected"] == 0
+    )

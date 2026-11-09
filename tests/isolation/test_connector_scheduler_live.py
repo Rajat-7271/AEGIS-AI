@@ -116,10 +116,18 @@ class _Ingest(BaseHTTPRequestHandler):
                     "body": json.loads(raw.decode()),
                 }
             )
+        # Mirror the ingest batch acknowledgement contract. An empty 202
+        # response is not a valid acknowledgement and must not advance the
+        # scheduler checkpoint or last_sync.
+        received = json.loads(raw.decode()) if length else {}
+        events = received.get("events", []) if isinstance(received, dict) else []
+        count = len(events) if isinstance(events, list) else 0
+        response = json.dumps({"accepted": count, "rejected": 0}).encode()
         self.send_response(202)
-        self.send_header("Content-Length", "2")
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
         self.end_headers()
-        self.wfile.write(b"{}")
+        self.wfile.write(response)
 
     def log_message(self, *_args) -> None:  # noqa: ANN002
         """Quiet."""

@@ -285,8 +285,9 @@ func (p *Publisher) PublishBatch(ctx context.Context, events []*normalizer.Norma
 	for _, event := range events {
 		data, err := json.Marshal(event)
 		if err != nil {
-			log.Warn().Err(err).Str("event_id", event.ID).Msg("Skipping event due to marshal error")
-			continue
+			// Never acknowledge a batch when an event was silently omitted.
+			// Fail before any Kafka writes so the caller can retry the full batch.
+			return fmt.Errorf("failed to marshal event %s: %w", event.ID, err)
 		}
 		msgs = append(msgs, kafka.Message{
 			Key:   partitionKey(event),
