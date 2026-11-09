@@ -54,3 +54,41 @@ def test_pilot_rejects_unencrypted_kafka_before_connecting(monkeypatch, protocol
         monkeypatch.setenv("KAFKA_SASL_MECHANISM", "PLAIN")
     with pytest.raises(ValueError, match="TLS-encrypted Kafka transport"):
         build_worker()
+
+
+def test_pilot_passes_verified_tls_transport_to_worker(monkeypatch):
+    """Exercise construction with fakes; no sockets or credentials leave the test."""
+    import sys
+    import types
+    from app.core.config import settings
+    from app.workers import durable_lake_pilot as pilot
+
+    monkeypatch.setattr(settings, "environment", "development")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_PILOT_ENABLED", "true")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_TOPIC", "aegis.synthetic.pilot")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_GROUP", "isolated-test")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST", "synthetic.invalid")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT", "9440")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_CLICKHOUSE_USER", "synthetic")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_CLICKHOUSE_PASSWORD", "synthetic-only")
+    monkeypatch.setenv("AEGIS_DURABLE_LAKE_KAFKA_BOOTSTRAP", "synthetic.invalid:9093")
+    transport = {"security_protocol": "SSL", "ssl_context": object()}
+    monkeypatch.setattr(pilot, "kafka_client_kwargs", lambda: transport)
+    captured = {}
+
+    def fake_clickhouse_client(**kwargs):
+        captured["clickhouse"] = kwargs
+        return object()
+
+    def fake_worker(**kwargs):
+        captured["worker"] = kwargs
+        return "synthetic-worker"
+
+    monkeypatch.setitem(sys.modules, "clickhouse_driver", types.SimpleNamespace(Client=fake_clickhouse_client))
+    monkeypatch.setattr(pilot, "DurableLakeWorker", fake_worker)
+    assert pilot.build_worker() == "synthetic-worker"
+    assert captured["worker"]["security_kwargs"] is transport
+    assert captured["worker"]["topic"] == "aegis.synthetic.pilot"
+    assert captured["worker"]["group_id"] == "isolated-test"
+    assert captured["clickhouse"]["secure"] is True
+    assert captured["clickhouse"]["verify"] is True
