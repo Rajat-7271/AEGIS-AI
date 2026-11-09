@@ -10,15 +10,38 @@ Requires connector-service dependencies (httpx, structlog) installed.
 from __future__ import annotations
 
 import collections
+import importlib.util
+import types
 import json
 import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "services" / "connectors"))
-from app.connectors.windows_event import WindowsEventConnector  # noqa: E402
+# Import just the Windows connector, bypassing the package registry in
+# app.connectors.__init__ (which imports every vendor connector).
+CONNECTORS = ROOT / "services" / "connectors" / "app" / "connectors"
+app_package = types.ModuleType("app")
+app_package.__path__ = [str(CONNECTORS.parent)]
+connector_package = types.ModuleType("app.connectors")
+connector_package.__path__ = [str(CONNECTORS)]
+sys.modules["app"] = app_package
+sys.modules["app.connectors"] = connector_package
 
+
+def _load_connector_module(name: str):
+    full_name = f"app.connectors.{name}"
+    spec = importlib.util.spec_from_file_location(full_name, CONNECTORS / f"{name}.py")
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load {full_name}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[full_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_load_connector_module("base")
+WindowsEventConnector = _load_connector_module("windows_event").WindowsEventConnector
 from validate_export import validate  # noqa: E402
 
 
