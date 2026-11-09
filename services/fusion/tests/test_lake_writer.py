@@ -149,6 +149,7 @@ async def test_flush_failure_drops_batch_and_does_not_raise():
     await w.write_event(_message())
     await w.write_event(_message())  # triggers flush -> fails
     assert w.flush_failures == 1
+    assert w.metrics()["rows_dropped"] == 2
     assert w.rows_written == 0
     assert w.metrics()["buffered"] == 0  # batch was dropped, not re-buffered
 
@@ -287,3 +288,12 @@ async def test_exact_replay_currently_inserts_duplicate_lake_rows():
     await w.write_event(event)
     assert len(fake.inserted) == 2
     assert fake.inserted[0]["event_id"] == fake.inserted[1]["event_id"]
+
+
+async def test_flush_without_client_counts_discarded_rows():
+    w = LakeWriter(host="x", batch_size=2)
+    await w.write_event(_message())
+    await w.write_event(_message())
+    assert w.metrics()["rows_dropped"] == 2
+    assert w.metrics()["rows_written"] == 0
+    assert w.metrics()["buffered"] == 0
