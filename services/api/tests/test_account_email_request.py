@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from app.core.security import get_password_hash
 from app.services.account_email_request import (
     EmailChangeRequestRejected,
