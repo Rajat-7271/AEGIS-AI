@@ -32,8 +32,12 @@ class Consumer:
         {"id": str(uuid.uuid4()), "tenant_id": "not-a-uuid", "ocsf_event": {}},
         {"id": str(uuid.uuid4()), "tenant_id": str(uuid.uuid4())},
         {"id": str(uuid.uuid4()), "tenant_id": str(uuid.uuid4()), "ocsf_event": None},
+        {"id": str(uuid.uuid4()), "tenant_id": str(uuid.uuid4()), "ocsf_event": {"time": "invalid"}},
+        {"id": str(uuid.uuid4()), "tenant_id": str(uuid.uuid4()), "ocsf_event": {"time": "2026-11-09T12:00:00"}},
+        {"id": str(uuid.uuid4()), "tenant_id": str(uuid.uuid4()), "ocsf_event": {"time": ""}},
     ],
-    ids=["invalid-event-id", "invalid-tenant-id", "missing-ocsf", "null-ocsf"],
+    ids=["invalid-event-id", "invalid-tenant-id", "missing-ocsf", "null-ocsf",
+         "invalid-time", "naive-time", "missing-time"],
 )
 async def test_malformed_event_never_commits(message):
     offsets = OffsetTracker()
