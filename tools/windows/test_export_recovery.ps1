@@ -5,22 +5,22 @@ $ErrorActionPreference = 'Stop'
 $exporter = Join-Path $PSScriptRoot 'export-security-events.ps1'
 $root = Join-Path ([IO.Path]::GetTempPath()) ("aegis-export-recovery-" + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($root) | Out-Null
-$script:mockNewest = 100
-$script:mockQueryCalls = 0
+$global:AegisTestMockNewest = 100
+$global:AegisTestMockQueryCalls = 0
 function Get-WinEvent {
     param([string]$LogName, [int]$MaxEvents,
           [string]$FilterXPath, [hashtable]$FilterHashtable, [switch]$Oldest)
     if ($MaxEvents -eq 1 -and -not $Oldest) {
-        return [pscustomobject]@{ RecordId = $script:mockNewest }
+        return [pscustomobject]@{ RecordId = $global:AegisTestMockNewest }
     }
-    $script:mockQueryCalls++
+    $global:AegisTestMockQueryCalls++
     throw 'Unexpected query: safety guard should stop first'
 }
 function Assert-Stops {
     param([string]$Name, [string]$Expected, [string]$OutputPath, [string]$CheckpointPath)
     $before = [IO.File]::ReadAllBytes($OutputPath)
     $checkpointBefore = [IO.File]::ReadAllText($CheckpointPath)
-    $script:mockQueryCalls = 0
+    $global:AegisTestMockQueryCalls = 0
     $caught = $null
     try {
         & $exporter -OutputPath $OutputPath -CheckpointPath $CheckpointPath -MaxEvents 25
@@ -28,7 +28,7 @@ function Assert-Stops {
     if (-not $caught -or -not $caught.Contains($Expected)) {
         throw "$Name failed: unexpected result '$caught'"
     }
-    if ($script:mockQueryCalls -ne 0) { throw "$Name failed: attempted event pagination" }
+    if ($global:AegisTestMockQueryCalls -ne 0) { throw "$Name failed: attempted event pagination" }
     if ([Convert]::ToBase64String($before) -ne [Convert]::ToBase64String([IO.File]::ReadAllBytes($OutputPath))) {
         throw "$Name failed: output changed"
     }
@@ -47,7 +47,7 @@ try {
     Assert-Stops 'malformed_tail' 'export JSONL tail is invalid' $out $cp
 
     [IO.File]::WriteAllText($out, '{"System":{"EventRecordID":40}}' + [Environment]::NewLine)
-    $script:mockNewest = 39
+    $global:AegisTestMockNewest = 39
     Assert-Stops 'log_regression' 'Possible log clear/reset' $out $cp
 
     @{status='passed'; checks=3; mocked_event_log=$true;
@@ -55,4 +55,5 @@ try {
         ConvertTo-Json -Compress
 } finally {
     Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Variable -Name AegisTestMockNewest, AegisTestMockQueryCalls -Scope Global -ErrorAction SilentlyContinue
 }
