@@ -39,3 +39,16 @@ Status: design only; no runtime delivery-policy change in this PR.
 | Lake backpressure | Alerts stay available if using a separate consumer group |
 
 **Non-goals:** changing the current fusion consumer commit behavior in this pilot PR, claiming exactly-once semantics from Kafka acknowledgements alone, or shipping a live Windows telemetry path before these gates pass.
+
+## Implementation progress — offset primitive
+
+`services/fusion/app/services/lake_offsets.py` now contains an isolated
+per-topic-partition contiguous-offset tracker. It handles out-of-order
+persistence acknowledgements, retries after unsuccessful Kafka commits,
+partition revocation/reassignment and invalid commit regressions. Synthetic
+regression tests live in `services/fusion/tests/test_lake_offsets.py`.
+
+**Not wired into a live Kafka consumer.** This is a building block only:
+no ClickHouse durability confirmation, no consumer-group separation, and no
+change to production or fusion's existing commit policy. A later change must
+wire persistence acknowledgements to offset commits and test rebalance races.
