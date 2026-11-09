@@ -40,3 +40,14 @@ them into one analyst alert.
 - The static pagination test checks source ordering, not Windows Event Log\n  runtime behavior. A Windows integration test remains necessary.
 
 No production or real-event transmission is authorized.
+
+## Offline failure-injection runtime harness
+
+Run `powershell -NoProfile -File tools/windows/test_export_recovery.ps1`
+from the repository root. The harness shadows `Get-WinEvent` with a local
+mock and uses unique temporary JSONL/checkpoint paths. It checks three
+fail-closed paths (tail ahead, malformed tail, and newest record behind the
+checkpoint), confirms files are unchanged, then deletes its temporary data.
+It never reads the real Security channel and never sends events over the
+network. This harness must be run on Windows before claiming a pass; the
+source commit alone is not a runtime validation.
