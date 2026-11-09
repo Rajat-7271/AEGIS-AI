@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock
 
 import pytest
-
 from app.services.account_email_delivery import (
     send_email_change_security_notice,
     send_email_change_verification,
