@@ -82,3 +82,19 @@ async def test_out_of_order_completion_does_not_cross_gap():
     assert consumer.commits == []
     await processor.process(consumer=consumer, topic_partition=_TP(), offset=10, message={"id": "a"})
     assert consumer.commits == [{_TP(): 12}]
+
+
+async def test_reassignment_during_persist_does_not_commit_stale_offset():
+    processor, sink, consumer, offsets = _setup()
+
+    async def persist_and_reassign(event):
+        offsets.revoke("raw-events", 0)
+        offsets.assign("raw-events", 0, 10)
+
+    sink.persist = persist_and_reassign
+    await processor.process(
+        consumer=consumer, topic_partition=_TP(), offset=10, message={"id": "old"}
+    )
+    assert consumer.commits == []
+    assert offsets._partitions[("raw-events", 0)].next_offset == 10
+    assert offsets._partitions[("raw-events", 0)].committed_next == 10
