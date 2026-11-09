@@ -2,6 +2,12 @@
 
 **Status:** pre-production guidance only. No production deployment or real Windows telemetry is authorized by this document.
 
+## Activation gap (must resolve before pilot)
+
+The current PR adds the `DurableLakeWorker` class, processor, offset tracker, sink, and isolated CI tests. It does **not** add a deployment entrypoint or an environment-controlled process launcher for the dedicated worker. Importing the module does nothing. Therefore the passing tests prove the components in isolation, **not** that a deployed AEGIS AI instance will start or supervise this worker.
+
+Before an authorized isolated pilot, add or select an explicit worker entrypoint with startup/shutdown lifecycle, dedicated group and topic configuration, secured ClickHouse connection, and a process supervisor. Review that entrypoint and run it only against synthetic non-production infrastructure. Do not silently add the worker to the existing fusion process or enable it in production.
+
 ## Preconditions
 
 - Identify the exact approved commit and release owner. Keep PR #25 draft until the intended target branch is reviewed.
