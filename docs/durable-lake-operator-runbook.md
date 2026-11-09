@@ -6,13 +6,13 @@
 
 The standalone `python -m app.workers.durable_lake_pilot` launcher is **not** referenced by the normal fusion startup or deployment manifests. It refuses to start unless `AEGIS_DURABLE_LAKE_PILOT_ENABLED=true`, `ENVIRONMENT` is `development`, `test`, or `testing`, the Kafka topic differs from the live raw-events topic, and the consumer group differs from the existing fusion group. The ClickHouse client requires verified TLS.
 
-For a separately approved synthetic-only environment, configure these explicit variables using your secret manager (never commit passwords): `AEGIS_DURABLE_LAKE_PILOT_ENABLED`, `AEGIS_DURABLE_LAKE_TOPIC`, `AEGIS_DURABLE_LAKE_GROUP`, `AEGIS_DURABLE_LAKE_KAFKA_BOOTSTRAP`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_USER`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PASSWORD`. Existing `ENVIRONMENT`, `KAFKA_CONSUMER_GROUP`, and Kafka security variables also apply. Ensure the broker and ClickHouse are independently isolated and only contain synthetic events.
+For a separately approved synthetic-only environment, configure these explicit variables using your secret manager (never commit passwords): `AEGIS_DURABLE_LAKE_PILOT_ENABLED`, `AEGIS_DURABLE_LAKE_TOPIC`, `AEGIS_DURABLE_LAKE_GROUP`, `AEGIS_DURABLE_LAKE_KAFKA_BOOTSTRAP`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_USER`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PASSWORD`. Existing `ENVIRONMENT`, `KAFKA_CONSUMER_GROUP`, and Kafka security variables also apply. Set `KAFKA_SECURITY_PROTOCOL=SSL` or `SASL_SSL`; the pilot refuses plaintext even in development/test environments. Ensure the broker and ClickHouse are independently isolated and only contain synthetic events.
 
 The launcher is a **manual test entrypoint**, not a production service or complete operational deployment. It has no supervisor, readiness endpoint, or automatic restarts. A pilot operator must separately verify Kafka TLS/SASL policy, least-privilege ACLs, ClickHouse certificate trust, monitoring, and rollback. Do not use it with production credentials, live topics, or real Windows events.
 
 ## Preconditions
 
-- Identify the exact approved commit and release owner. Keep PR #25 draft until the intended target branch is reviewed.
+- Identify the exact approved commit and release owner. PR #25 was merged into `release/public-mvp` at `ef3cc7d3`; this does not authorize pilot deployment.
 - Use an isolated Kafka topic and a **distinct** consumer group from the existing fusion worker.
 - Use a dedicated ClickHouse insert-only identity and secured Kafka credentials. Validate certificate chains and hostname verification.
 - Confirm ClickHouse migrations, stable event UUID/time mapping, tenant isolation, retention settings, and query deduplication with `FINAL` where needed.
