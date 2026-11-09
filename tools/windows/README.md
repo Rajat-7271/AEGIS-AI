@@ -16,7 +16,7 @@ To see how many lines were exported (without displaying event contents):
 (Get-Content "$env:LOCALAPPDATA\AEGIS-AI\windows-events.jsonl" | Measure-Object -Line).Lines
 ```
 
-**Important limitations:** this is a bounded pilot, not a lossless production collector. It reads up to `MaxEvents` newest matching records per run and advances a local record-ID checkpoint; high event volume can cause older unseen records to be skipped. A production collector needs durable queueing, channel-scoped cursors, gap detection, bounded retention, spool authentication, replay and end-to-end acknowledgement. Do not expose or upload this file; even metadata can reveal machine activity.
+**Important limitations:** this is a bounded pilot, not a lossless production collector. It reads up to `MaxEvents` matching records **oldest-first** per run and advances a local record-ID checkpoint. Subsequent runs query records after that checkpoint, so a busy log does not by itself skip older matching records. However, the initial run is limited by `LookbackHours`, and records lost to Windows log retention/rotation, log resets, or incomplete exports cannot be recovered automatically. A production collector needs durable queueing, channel-scoped cursors, gap detection, bounded retention, spool authentication, replay and end-to-end acknowledgement. Do not expose or upload this file; even metadata can reveal machine activity.
 
 The existing `WindowsEventConnector` pulls from an authenticated HTTP JSON spool. This script intentionally **does not** create that endpoint. Only wire them together after verifying the universal-capture path and tenant isolation in a non-production environment.
 
