@@ -59,3 +59,18 @@ epochs; do not assume that a globally unique ID already exists.
 - Credentials are staging-scoped; no production data or secrets are used.
 
 **No live ingestion is authorized by this document.**
+
+## Kafka batch serialization acknowledgement fix (draft)
+
+`services/ingest/internal/publisher/publisher.go::PublishBatch` previously
+logged a JSON marshal failure and continued with remaining events, then
+returned success. The handler could acknowledge the full normalized count
+although the malformed event was never published. The publisher now returns
+an error before writing any Kafka messages if any event cannot be serialized.
+
+A Go unit regression (`publisher_batch_ack_test.go`) supplies one valid
+and one NaN-bearing synthetic event and uses a nil Kafka writer to assert
+that serialization fails before attempting a write. Run the Go package
+unit tests in CI before claiming validation. This fix does not make Kafka
+writes exactly-once: ambiguous broker failures and downstream storage
+replays still need independent idempotency verification.
