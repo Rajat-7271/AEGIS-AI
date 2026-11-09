@@ -1,20 +1,21 @@
-"""Static offline regression for capped Windows Security export safety.
+"""Static offline regression for oldest-first checkpoint pagination.
 
-Confirms the exporter fails before selecting/appending events or advancing the
-checkpoint when Get-WinEvent returns MaxEvents entries.
+This checks source structure, not a live Windows Event Log query.
 """
 import json
 from pathlib import Path
 
 source = (Path(__file__).resolve().parents[2] /
           "tools/windows/export-security-events.ps1").read_text(encoding="utf-8")
-cap = "if ($events.Count -ge $MaxEvents)"
-guard = source.index(cap)
-selected = source.index("$selected = @(")
-append = source.index("[IO.File]::AppendAllLines(")
-checkpoint = source.index("[IO.File]::WriteAllText(")
-assert guard < selected < append < checkpoint
-assert "Safety stop:" in source[guard:selected]
-assert "throw (" in source[guard:selected]
-print(json.dumps({"status": "passed", "export_cap_guard_before_writes": True,
+assert 'if ($lastRecord -gt 0)' in source
+assert 'EventRecordID > $lastRecord' in source
+assert '-FilterXPath $xpath -Oldest -MaxEvents $MaxEvents' in source
+assert '-FilterHashtable $filter -Oldest -MaxEvents $MaxEvents' in source
+assert '$selected = @($events | Where-Object' in source
+assert source.index('$selected = @(') < source.index('[IO.File]::AppendAllLines(')
+assert source.index('[IO.File]::AppendAllLines(') < source.index('[IO.File]::WriteAllText(')
+assert 'if ($events.Count -ge $MaxEvents)' not in source
+print(json.dumps({"status": "passed", "checks": 8,
+                  "checkpoint_pagination_source_verified": True,
+                  "windows_runtime_verified": False,
                   "network_requests": 0, "real_events_sent": 0}, indent=2))
