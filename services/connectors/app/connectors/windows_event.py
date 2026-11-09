@@ -124,7 +124,7 @@ class WindowsEventConnector(BaseConnector):
             "severity": severity,
             "title": f"Windows {channel or 'event'} EventID {event_id}",
             "description": (f"channel={channel}; event_id={event_id}; computer={computer}"),
-            "external_id": str(raw.get("RecordId") or raw.get("record_id") or system.get("EventRecordID") or ""),
+            "external_id": _source_event_id(raw, system, computer, channel),
             "hostname": computer,
             "username": data.get("TargetUserName") or data.get("SubjectUserName") or data.get("User"),
             "process_name": data.get("Image") or data.get("NewProcessName"),
@@ -165,3 +165,20 @@ def _lift_containers(raw: dict[str, Any], system: Any, data: Any) -> dict[str, A
             lifted.update({k: v for k, v in container.items() if isinstance(k, str)})
     lifted.update(raw)
     return lifted
+
+
+def _source_event_id(raw: dict[str, Any], system: dict[str, Any], computer: Any, channel: Any) -> str:
+    """Scope Windows record IDs by machine and channel to prevent collisions.
+
+    A record ID is only meaningful within a Windows event channel on a host.
+    If source metadata is incomplete, avoid inventing a supposedly stable ID:
+    the Go normalizer can use its payload-based fallback instead. Log clear
+    and record-number reuse still require an explicit source epoch policy.
+    """
+    record = raw.get("RecordId") or raw.get("record_id") or system.get("EventRecordID")
+    if record is None or not str(record).strip() or not computer or not channel:
+        return ""
+    # Length-prefixed segments make boundaries unambiguous even if host or
+    # channel names contain colons or other separators.
+    parts = (str(computer).strip().casefold(), str(channel).strip().casefold(), str(record).strip())
+    return "winrec:v1:" + "".join(f"{len(part)}:{part}" for part in parts)
