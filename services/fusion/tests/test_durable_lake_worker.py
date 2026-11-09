@@ -110,8 +110,12 @@ async def test_unassigned_partition_is_not_dispatched():
     worker._consumer.batches = {
         TP(): [Record(10, {"id": "unassigned"})]
     }
-    assert await worker.poll_once() == 0
+    with pytest.raises(RuntimeError, match="without partition ownership"):
+        await worker.poll_once()
     assert processor.calls == []
+    assert worker.health_snapshot()["failures_total"] == 1
+    assert worker.health_snapshot()["running"] is False
+    assert await worker.poll_once() == 0
 
     await worker.stop()
 
@@ -393,6 +397,20 @@ async def test_cancelled_consumer_start_attempts_cleanup():
     worker._consumer.start = cancelled_start
     with pytest.raises(asyncio.CancelledError):
         await worker.start()
+    assert worker._consumer.stopped is True
+    assert worker._started is False
+    assert worker._running is False
+
+
+async def test_unassigned_record_failure_closes_consumer_in_run():
+    worker, processor, _ = make_worker()
+    await worker.start()
+    worker._consumer.batches = {TP(): [Record(10, {"id": "not-owned"})]}
+
+    with pytest.raises(RuntimeError, match="without partition ownership"):
+        await worker.run()
+
+    assert processor.calls == []
     assert worker._consumer.stopped is True
     assert worker._started is False
     assert worker._running is False
