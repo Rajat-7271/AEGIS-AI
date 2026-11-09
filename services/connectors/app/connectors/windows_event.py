@@ -14,6 +14,7 @@ operator-supplied.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import httpx
@@ -79,6 +80,10 @@ class WindowsEventConnector(BaseConnector):
     def __init__(self, collector_url: str, api_token: str, verify_tls: bool = True) -> None:
         self._base = collector_url.rstrip("/")
         self._token = api_token
+        # Never send the bearer token over unverified TLS in protected environments.
+        environment = os.getenv("ENVIRONMENT", "development").strip().lower()
+        if environment in {"production", "staging"} and verify_tls is not True:
+            raise ValueError("Windows collector TLS verification is required in protected environments")
         self._verify = bool(verify_tls)
 
     def _headers(self) -> dict[str, str]:
