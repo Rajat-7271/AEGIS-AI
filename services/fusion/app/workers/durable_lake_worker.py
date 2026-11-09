@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any
 
 from aiokafka import AIOKafkaConsumer
@@ -39,6 +40,9 @@ class DurableLakeWorker:
         self._started = False
         self._poll_lock = asyncio.Lock()
         self._stop_lock = asyncio.Lock()
+        self._processed_total = 0
+        self._failures_total = 0
+        self._last_success_monotonic = None
 
         # Resolve security through the existing centralized policy.
         # An injected dictionary is only intended for isolated tests.
@@ -88,6 +92,7 @@ class DurableLakeWorker:
                     max_records=1,
                 )
             except Exception:
+                self._failures_total += 1
                 # Deserialization, transport, or broker failures must also
                 # fail-stop: never continue after an uncertain fetch state.
                 self._running = False
@@ -111,6 +116,7 @@ class DurableLakeWorker:
                             message=record.value,
                         )
                     except Exception:
+                        self._failures_total += 1
                         # Do not continue polling after a failed record.
                         # A restart/reassignment must replay from the last
                         # successfully committed Kafka offset.
@@ -118,8 +124,28 @@ class DurableLakeWorker:
                         raise
 
                     count += 1
+                    self._processed_total += 1
+                    self._last_success_monotonic = time.monotonic()
 
             return count
+
+    def health_snapshot(self) -> dict[str, Any]:
+        """Non-sensitive worker counters for an external health reporter.
+
+        last_success_age_seconds is null until the first successful record.
+        These counters are process-local and reset on restart; consumer lag
+        must be monitored independently from Kafka committed offsets.
+        """
+        return {
+            "started": self._started,
+            "running": self._running,
+            "processed_total": self._processed_total,
+            "failures_total": self._failures_total,
+            "last_success_age_seconds": (
+                None if self._last_success_monotonic is None
+                else max(0.0, time.monotonic() - self._last_success_monotonic)
+            ),
+        }
 
     async def run(self) -> None:
         if not self._started:
