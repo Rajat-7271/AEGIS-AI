@@ -2,11 +2,13 @@
 
 **Status:** pre-production guidance only. No production deployment or real Windows telemetry is authorized by this document.
 
-## Activation gap (must resolve before pilot)
+## Explicit synthetic-only pilot launcher
 
-The current PR adds the `DurableLakeWorker` class, processor, offset tracker, sink, and isolated CI tests. It does **not** add a deployment entrypoint or an environment-controlled process launcher for the dedicated worker. Importing the module does nothing. Therefore the passing tests prove the components in isolation, **not** that a deployed AEGIS AI instance will start or supervise this worker.
+The standalone `python -m app.workers.durable_lake_pilot` launcher is **not** referenced by the normal fusion startup or deployment manifests. It refuses to start unless `AEGIS_DURABLE_LAKE_PILOT_ENABLED=true`, `ENVIRONMENT` is `development`, `test`, or `testing`, the Kafka topic differs from the live raw-events topic, and the consumer group differs from the existing fusion group. The ClickHouse client requires verified TLS.
 
-Before an authorized isolated pilot, add or select an explicit worker entrypoint with startup/shutdown lifecycle, dedicated group and topic configuration, secured ClickHouse connection, and a process supervisor. Review that entrypoint and run it only against synthetic non-production infrastructure. Do not silently add the worker to the existing fusion process or enable it in production.
+For a separately approved synthetic-only environment, configure these explicit variables using your secret manager (never commit passwords): `AEGIS_DURABLE_LAKE_PILOT_ENABLED`, `AEGIS_DURABLE_LAKE_TOPIC`, `AEGIS_DURABLE_LAKE_GROUP`, `AEGIS_DURABLE_LAKE_KAFKA_BOOTSTRAP`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_USER`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PASSWORD`. Existing `ENVIRONMENT`, `KAFKA_CONSUMER_GROUP`, and Kafka security variables also apply. Ensure the broker and ClickHouse are independently isolated and only contain synthetic events.
+
+The launcher is a **manual test entrypoint**, not a production service or complete operational deployment. It has no supervisor, readiness endpoint, or automatic restarts. A pilot operator must separately verify Kafka TLS/SASL policy, least-privilege ACLs, ClickHouse certificate trust, monitoring, and rollback. Do not use it with production credentials, live topics, or real Windows events.
 
 ## Preconditions
 
