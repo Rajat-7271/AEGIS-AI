@@ -57,3 +57,29 @@ async def test_missing_client_and_invalid_event_fail_closed() -> None:
     with pytest.raises(LakePersistenceError, match="valid tenant"):
         await DurableLakeSink(client).persist({"id": EVENT, "tenant_id": "invalid", "ocsf_event": {"time": "2026-11-09T00:00:00Z"}})
     assert client.calls == []
+
+
+async def test_replay_keeps_identical_dedup_key_across_timezone_spellings() -> None:
+    client = _Client()
+    sink = DurableLakeSink(client)
+    first = _event()
+    second = _event()
+    second["ocsf_event"]["time"] = "2026-11-09T05:30:00+05:30"
+    await sink.persist(first)
+    await sink.persist(second)
+    rows = [call[1][0] for call in client.calls]
+    for key in ("tenant_id", "event_time", "class_uid", "event_id"):
+        assert rows[0][key] == rows[1][key]
+
+
+async def test_replay_same_event_keeps_stable_dedup_key() -> None:
+    client = _Client()
+    sink = DurableLakeSink(client)
+    event = _event()
+    await sink.persist(event)
+    await sink.persist(event)
+    rows = [call[1][0] for call in client.calls]
+    assert all(
+        rows[0][key] == rows[1][key]
+        for key in ("tenant_id", "event_time", "class_uid", "event_id")
+    )
