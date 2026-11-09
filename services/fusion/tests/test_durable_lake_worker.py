@@ -304,3 +304,25 @@ async def test_worker_run_requires_successful_start():
     worker, _, _ = make_worker()
     with pytest.raises(RuntimeError, match="Start the worker"):
         await worker.run()
+
+
+async def test_failed_consumer_start_does_not_mark_worker_running():
+    worker, _, _ = make_worker()
+
+    async def failed_start():
+        raise OSError("Kafka bootstrap unavailable")
+
+    worker._consumer.start = failed_start
+    with pytest.raises(OSError, match="bootstrap unavailable"):
+        await worker.start()
+
+    assert worker._started is False
+    assert worker._running is False
+    assert await worker.poll_once() == 0
+
+
+async def test_stopping_worker_before_start_is_safe():
+    worker, _, _ = make_worker()
+    await worker.stop()
+    assert worker._started is False
+    assert worker._running is False
