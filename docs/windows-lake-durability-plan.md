@@ -67,3 +67,17 @@ success, failure, retry and invalid envelopes.
 consumer, an insert timeout can be ambiguous, and the MergeTree lake still
 allows physical duplicates. The current fusion `LakeWriter` remains
 unchanged and best-effort. No real-event traffic is enabled.
+
+## Implementation progress — persistence-to-offset coordination
+
+`services/fusion/app/services/durable_lake_processor.py` now coordinates
+`DurableLakeSink.persist()` with a partition-specific Kafka commit. The
+processor commits only after persistence returns, and marks the offset as
+committed only after the Kafka commit succeeds. Synthetic tests cover failed
+inserts, failed Kafka commits, out-of-order completion and partition-specific
+commit mappings.
+
+**Not yet a running dedicated consumer:** this processor is a reusable
+component only. It does not create an aiokafka consumer, manage group
+membership, fence rebalance callbacks, perform bounded retries, or guarantee
+query-level deduplication. Those remain required before live integration.
