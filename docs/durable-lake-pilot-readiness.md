@@ -2,7 +2,7 @@
 
 Status: **development-only / NOT approved for production**.
 
-This checklist covers the opt-in Kafka -> ClickHouse durable lake worker. It does not authorize deployment, live Windows collection, or a merge.
+This checklist covers the opt-in Kafka -> ClickHouse durable lake worker. PR #25 merged into `release/public-mvp` at `ef3cc7d3`; this does not authorize deployment or live Windows collection. Further changes require separate review and merge approval.
 
 ## Evidence already covered by CI
 
@@ -20,15 +20,15 @@ CI evidence is scoped to the isolated test containers. It is **not** a load, fai
 
 **Ship only after approval:** the dedicated opt-in worker, fail-stop processing, deterministic replay identity, separate Kafka group, protected Kafka transport, existing ClickHouse schema, and the documented stop/restart procedure. Keep the existing fusion worker and production lake writer unchanged.
 
-**Must pass before merging or any controlled pilot:** green CI on the exact head; security review of Kafka and ClickHouse credentials; a clear enable/disable switch; synthetic-data restart/replay verification; tenant isolation; documented owner and rollback steps. These are safety requirements, not optional enhancements.
+**Must pass before merging further pilot changes or conducting any controlled pilot:** green CI on the exact head; security review of Kafka and ClickHouse credentials; a clear enable/disable switch; synthetic-data restart/replay verification; tenant isolation; documented owner and rollback steps. These are safety requirements, not optional enhancements.
 
 **Defer until after the minimum viable release:** an HTTP metrics exporter, dashboards, automatic alert delivery, batching optimizations, autoscaling, and a fully automated poison-event quarantine pipeline. Until a reviewed poison-record policy exists, invalid records deliberately stop processing and require operator intervention. External Kafka lag monitoring is still required for any actual pilot.
 
-**Separate approval required:** merge, deployment, and live Windows telemetry enrollment are three distinct actions. This plan authorizes none of them.
+**Separate approval required:** any subsequent merge, deployment, and live Windows telemetry enrollment are distinct actions. This plan authorizes none of them.
 
 ## Blocking gates before a controlled pilot
 
-1. **Ownership and rollout:** confirm the correct PR base (PR #25 currently targets `release/public-mvp`), document the exact commit, review diff, and obtain explicit approval for any merge or deployment. Keep the durable worker disabled by default.
+1. **Ownership and rollout:** confirm the approved branch and merged baseline (`ef3cc7d3`), document the exact proposed pilot commit, review the diff, and obtain separate approval for any further merge or deployment. Keep the durable worker disabled by default.
 2. **Kafka isolation:** allocate a distinct consumer group, broker ACLs scoped to the raw-events topic and group, verified TLS/SASL as appropriate, and least-privilege credentials. Do not enable `AISOC_ALLOW_CLEARTEXT_KAFKA` in a protected environment without a separately reviewed network-security exception.
 3. **ClickHouse security:** use a dedicated least-privilege insert identity, TLS with certificate validation, managed credentials, connection timeouts, and bounded retries. The test suite's local plaintext ClickHouse connection is not a production configuration.
 4. **Observability:** publish committed offsets, consumer lag, insertion latency, failures, restart count, and last successful insert time; alert on sustained lag or fail-stop. Verify logs never expose event bodies or secrets.
