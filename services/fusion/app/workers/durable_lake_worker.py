@@ -82,10 +82,16 @@ class DurableLakeWorker:
             if not self._running:
                 return 0
 
-            batches = await self._consumer.getmany(
-                timeout_ms=500,
-                max_records=1,
-            )
+            try:
+                batches = await self._consumer.getmany(
+                    timeout_ms=500,
+                    max_records=1,
+                )
+            except Exception:
+                # Deserialization, transport, or broker failures must also
+                # fail-stop: never continue after an uncertain fetch state.
+                self._running = False
+                raise
             count = 0
 
             for tp, records in batches.items():
