@@ -205,3 +205,41 @@ async def test_fetch_or_deserialization_error_stops_worker():
     assert await worker.poll_once() == 0
     assert processor.calls == []
     await worker.stop()
+
+
+async def test_production_rejects_cleartext_kafka_without_override(monkeypatch):
+    from app.core.kafka_security import KafkaTransportError
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT")
+    monkeypatch.delenv("AISOC_ALLOW_CLEARTEXT_KAFKA", raising=False)
+    offsets = OffsetTracker()
+
+    with pytest.raises(KafkaTransportError, match="on the wire in the clear"):
+        DurableLakeWorker(
+            processor=Processor(),
+            offsets=offsets,
+            bootstrap_servers="localhost:9092",
+            topic="raw-events",
+            group_id="aegis-lake-test",
+            existing_fusion_group="aegis-fusion",
+            consumer_factory=FakeConsumer,
+        )
+
+
+async def test_explicit_tls_transport_is_passed_to_consumer(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("KAFKA_SECURITY_PROTOCOL", "SSL")
+    monkeypatch.delenv("AISOC_ALLOW_CLEARTEXT_KAFKA", raising=False)
+    worker = DurableLakeWorker(
+        processor=Processor(),
+        offsets=OffsetTracker(),
+        bootstrap_servers="localhost:9093",
+        topic="raw-events",
+        group_id="aegis-lake-test",
+        existing_fusion_group="aegis-fusion",
+        consumer_factory=FakeConsumer,
+    )
+    assert worker._consumer.kwargs["security_protocol"] == "SSL"
+    assert worker._consumer.kwargs["ssl_context"].verify_mode != 0
+    assert worker._consumer.kwargs["ssl_context"].check_hostname is True
