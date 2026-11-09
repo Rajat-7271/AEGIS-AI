@@ -188,3 +188,20 @@ async def test_stop_is_idempotent():
     await worker.stop()
 
     assert worker._consumer.stopped is True
+
+
+async def test_fetch_or_deserialization_error_stops_worker():
+    worker, processor, _ = make_worker()
+    await worker.start()
+
+    async def broken_fetch(**kwargs):
+        raise ValueError("invalid Kafka JSON payload")
+
+    worker._consumer.getmany = broken_fetch
+    with pytest.raises(ValueError, match="invalid Kafka JSON"):
+        await worker.poll_once()
+
+    assert worker._running is False
+    assert await worker.poll_once() == 0
+    assert processor.calls == []
+    await worker.stop()
