@@ -28,12 +28,12 @@ from app.db.rls import set_rls_context
 from app.models.account_email_change import AccountEmailChangeRequest
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
-from app.services.audit import emit_audit
 from app.services.account_email_confirmation import EmailChangeRejected, confirm_pending_email_change
 from app.services.account_email_delivery import verification_link
 from app.services.account_email_request import EmailChangeRequestRejected
 from app.services.account_email_step_up import EmailChangeStepUpRejected
 from app.services.account_email_workflow import EmailChangeDeliveryRejected, request_verified_email_change
+from app.services.audit import emit_audit
 from app.services.email_approval import MailgunClient
 from app.services.login_throttle import client_ip, get_login_throttle
 from app.services.waitlist import get_signup_rate_limiter
