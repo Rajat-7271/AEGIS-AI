@@ -7,6 +7,7 @@ manage Kafka subscriptions or offsets; those belong to the caller.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Any
 
 from app.services.lake_writer import _INSERT_SQL, _to_ip_obj, event_to_row
@@ -27,6 +28,20 @@ class DurableLakeSink:
         self._client = client
 
     async def persist(self, message: dict[str, Any]) -> None:
+        # ReplacingMergeTree's deduplication key includes event_time. The
+        # best-effort mapper falls back to now() on malformed timestamps,
+        # which would turn a replay into a different key. Fail closed here.
+        ocsf = message.get("ocsf_event") if isinstance(message, dict) else None
+        raw_time = ocsf.get("time") if isinstance(ocsf, dict) else None
+        if not isinstance(raw_time, str) or not raw_time.strip():
+            raise LakePersistenceError("durable event requires a stable timestamp")
+        try:
+            parsed = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise LakePersistenceError("durable event requires a valid timestamp") from exc
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise LakePersistenceError("durable event timestamp must include timezone")
+
         row = event_to_row(message)
         if row is None or row["event_id"] is None:
             raise LakePersistenceError("raw event must have a valid tenant and deterministic UUID")
