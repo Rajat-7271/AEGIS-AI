@@ -31,6 +31,10 @@ class PartitionProgress:
         call mark_committed. Repeating an acknowledgement is harmless.
         """
         if offset < self.next_offset:
+            # Persistence succeeded, but the Kafka commit may have failed.
+            # Retry the contiguous candidate until Kafka confirms it.
+            if self.committed_next is None or self.next_offset > self.committed_next:
+                return self.next_offset
             return None
         self.persisted.add(offset)
         while self.next_offset in self.persisted:

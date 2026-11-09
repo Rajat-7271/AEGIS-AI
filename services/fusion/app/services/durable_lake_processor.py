@@ -6,6 +6,7 @@ assignment/rebalance fencing and must not share the fusion consumer group.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from app.services.durable_lake_sink import DurableLakeSink
@@ -18,6 +19,18 @@ class DurableLakeProcessor:
     def __init__(self, sink: DurableLakeSink, offsets: OffsetTracker) -> None:
         self._sink = sink
         self._offsets = offsets
+        self._partition_locks: dict[tuple[str, int], asyncio.Lock] = {}
+
+    async def revoke_partition(self, topic: str, partition: int) -> None:
+        """Drain in-flight processing before revoking partition ownership.
+
+        The Kafka consumer must stop dispatching new records for this
+        partition before awaiting this method.
+        """
+        key = (topic, partition)
+        lock = self._partition_locks.setdefault(key, asyncio.Lock())
+        async with lock:
+            self._offsets.revoke(topic, partition)
 
     async def process(
         self,
@@ -27,26 +40,28 @@ class DurableLakeProcessor:
         offset: int,
         message: dict,
     ) -> None:
-        # Capture assignment identity before the first asynchronous boundary.
-        # A revoke/reassign replaces the progress object, even if the new
-        # assignment starts at the same offset.
         key = (topic_partition.topic, topic_partition.partition)
-        assignment = self._offsets._partitions[key]
-        # If persistence fails, neither the offset tracker nor Kafka moves.
-        await self._sink.persist(message)
-        if self._offsets._partitions.get(key) is not assignment:
-            return
-        next_offset = self._offsets.persisted(
-            topic_partition.topic, topic_partition.partition, offset
-        )
-        if next_offset is None:
-            return
+        lock = self._partition_locks.setdefault(key, asyncio.Lock())
 
-        # aiokafka commit() accepts a mapping from TopicPartition to the
-        # NEXT offset. Never commit the consumer's entire assignment.
-        await consumer.commit({topic_partition: next_offset})
-        # Record acknowledgement only after Kafka confirms the commit.
-        if self._offsets._partitions.get(key) is assignment:
-            self._offsets.committed(
-                topic_partition.topic, topic_partition.partition, next_offset
+        async with lock:
+            assignment = self._offsets._partitions.get(key)
+            if assignment is None:
+                return
+
+            await self._sink.persist(message)
+
+            if self._offsets._partitions.get(key) is not assignment:
+                return
+
+            next_offset = self._offsets.persisted(
+                topic_partition.topic, topic_partition.partition, offset
             )
+            if next_offset is None:
+                return
+
+            await consumer.commit({topic_partition: next_offset})
+
+            if self._offsets._partitions.get(key) is assignment:
+                self._offsets.committed(
+                    topic_partition.topic, topic_partition.partition, next_offset
+                )
