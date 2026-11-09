@@ -41,6 +41,14 @@ try {
     }
     throw
 }
+# Fail closed when the query reaches its cap. A newest-first capped result
+# cannot prove that all older unseen matching records were included. Advancing
+# the checkpoint could silently skip records. Use a larger MaxEvents (up to
+# 2000), a shorter export interval, or a future paginated exporter instead.
+# No file or checkpoint is changed in this case.
+if ($events.Count -ge $MaxEvents) {
+    throw ("Safety stop: query returned {0} events (MaxEvents={1}); cannot guarantee complete coverage. No checkpoint advanced." -f $events.Count, $MaxEvents)
+}
 # Get-WinEvent returns newest first. Process oldest first for a monotonic checkpoint.
 $selected = @($events | Where-Object { [long]$_.RecordId -gt $lastRecord } | Sort-Object RecordId)
 if ($selected.Count -eq 0) {
