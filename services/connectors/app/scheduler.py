@@ -709,17 +709,7 @@ class ConnectorScheduler:
             await self._record_failure(target.id)
             return
 
-        # A 2xx HTTP response is not sufficient to advance a checkpoint:
-        # partial/invalid acknowledgements would permanently skip rejected
-        # records. Fail closed and re-poll rather than silently lose events.
-        try:
-            accepted_value = result["accepted"]
-            rejected_value = result["rejected"]
-            if (type(accepted_value) is not int or type(rejected_value) is not int
-                    or accepted_value < 0 or rejected_value != 0
-                    or accepted_value != len(kept)):
-                raise ValueError("incomplete ingestion acknowledgement")
-        except (KeyError, TypeError, ValueError):
+        if not _acknowledgement_complete(result, len(kept)):
             logger.error(
                 "connector.scheduler.ingest_ack_incomplete id=%s sent=%d",
                 connector_id, len(kept),
@@ -727,7 +717,7 @@ class ConnectorScheduler:
             await self._record_failure(target.id)
             return
 
-        accepted = accepted_value
+        accepted = result["accepted"]
         elapsed_ms = int((datetime.now(UTC) - started).total_seconds() * 1000)
 
         # Advance the persisted checkpoint only now that ingest has accepted the
@@ -1190,3 +1180,19 @@ __all__ = [
     "ConnectorScheduler",
     "scheduler_disabled",
 ]
+
+
+def _acknowledgement_complete(result: Any, sent: int) -> bool:
+    """Only a fully accepted batch may advance the connector checkpoint.
+
+    Reject malformed acknowledgements, bools (subclass of int), negative
+    counters, and partial acceptance. Retrying a partial batch requires
+    downstream idempotency; this predicate prevents permanent data loss.
+    """
+    return (
+        isinstance(result, dict)
+        and type(result.get("accepted")) is int
+        and type(result.get("rejected")) is int
+        and result["accepted"] == sent
+        and result["rejected"] == 0
+    )
