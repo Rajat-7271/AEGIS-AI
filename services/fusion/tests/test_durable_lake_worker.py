@@ -318,6 +318,7 @@ async def test_failed_consumer_start_does_not_mark_worker_running():
 
     assert worker._started is False
     assert worker._running is False
+    assert worker._consumer.stopped is True
     assert await worker.poll_once() == 0
 
 
@@ -362,3 +363,36 @@ async def test_health_snapshot_reports_fail_stop_without_sensitive_payload():
     assert snapshot["last_success_age_seconds"] is None
     assert "private" not in repr(snapshot)
     await worker.stop()
+
+
+async def test_failed_consumer_start_preserves_original_error_if_cleanup_fails():
+    worker, _, _ = make_worker()
+
+    async def failed_start():
+        raise OSError("original Kafka startup failure")
+
+    async def failed_stop():
+        raise RuntimeError("cleanup failure")
+
+    worker._consumer.start = failed_start
+    worker._consumer.stop = failed_stop
+    with pytest.raises(OSError, match="original Kafka startup failure"):
+        await worker.start()
+    assert worker._started is False
+    assert worker._running is False
+
+
+async def test_cancelled_consumer_start_attempts_cleanup():
+    import asyncio
+
+    worker, _, _ = make_worker()
+
+    async def cancelled_start():
+        raise asyncio.CancelledError()
+
+    worker._consumer.start = cancelled_start
+    with pytest.raises(asyncio.CancelledError):
+        await worker.start()
+    assert worker._consumer.stopped is True
+    assert worker._started is False
+    assert worker._running is False
