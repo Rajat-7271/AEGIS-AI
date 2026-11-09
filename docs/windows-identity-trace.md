@@ -31,9 +31,10 @@ rather than an invented globally unique identifier.
 3. A successful Kafka publish can be followed by an ambiguous client timeout,
    causing replay. Stable IDs are a prerequisite but do not prove downstream
    deduplication.
-4. The publisher skips individual JSON marshal errors but can still return
-   success for the rest of the batch; inspect and test this behavior before
-   considering an acknowledgement equivalent to per-event durability.
+4. The publisher now fails the entire batch before Kafka writes if any event
+   cannot be JSON-serialized (draft PR #25). This avoids false success for
+   omitted records but does not establish exactly-once delivery. The Go unit
+   regression must be confirmed by CI.
 5. Source host names can be reused or renamed. A durable collector source
    identity and log epoch need to be defined for robust deployments.
 
