@@ -6,13 +6,13 @@
 
 The standalone `python -m app.workers.durable_lake_pilot` launcher is **not** referenced by the normal fusion startup or deployment manifests. It refuses to start unless `AEGIS_DURABLE_LAKE_PILOT_ENABLED=true`, `ENVIRONMENT` is `development`, `test`, or `testing`, the Kafka topic differs from the live raw-events topic, and the consumer group differs from the existing fusion group. The ClickHouse client requires verified TLS.
 
-For a separately approved synthetic-only environment, configure these explicit variables using your secret manager (never commit passwords): `AEGIS_DURABLE_LAKE_PILOT_ENABLED`, `AEGIS_DURABLE_LAKE_TOPIC`, `AEGIS_DURABLE_LAKE_GROUP`, `AEGIS_DURABLE_LAKE_KAFKA_BOOTSTRAP`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_USER`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PASSWORD`. Existing `ENVIRONMENT`, `KAFKA_CONSUMER_GROUP`, and Kafka security variables also apply. Ensure the broker and ClickHouse are independently isolated and only contain synthetic events.
+For a separately approved synthetic-only environment, configure these explicit variables using your secret manager (never commit passwords): `AEGIS_DURABLE_LAKE_PILOT_ENABLED`, `AEGIS_DURABLE_LAKE_TOPIC`, `AEGIS_DURABLE_LAKE_GROUP`, `AEGIS_DURABLE_LAKE_KAFKA_BOOTSTRAP`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_USER`, `AEGIS_DURABLE_LAKE_CLICKHOUSE_PASSWORD`. Existing `ENVIRONMENT`, `KAFKA_CONSUMER_GROUP`, and Kafka security variables also apply. Set `KAFKA_SECURITY_PROTOCOL=SSL` or `SASL_SSL`; the pilot refuses plaintext even in development/test environments. Ensure the broker and ClickHouse are independently isolated and only contain synthetic events.
 
 The launcher is a **manual test entrypoint**, not a production service or complete operational deployment. It has no supervisor, readiness endpoint, or automatic restarts. A pilot operator must separately verify Kafka TLS/SASL policy, least-privilege ACLs, ClickHouse certificate trust, monitoring, and rollback. Do not use it with production credentials, live topics, or real Windows events.
 
 ## Preconditions
 
-- Identify the exact approved commit and release owner. Keep PR #25 draft until the intended target branch is reviewed.
+- Identify the exact approved commit and release owner. PR #25 was merged into `release/public-mvp` at `ef3cc7d3`; this does not authorize pilot deployment.
 - Use an isolated Kafka topic and a **distinct** consumer group from the existing fusion worker.
 - Use a dedicated ClickHouse insert-only identity and secured Kafka credentials. Validate certificate chains and hostname verification.
 - Confirm ClickHouse migrations, stable event UUID/time mapping, tenant isolation, retention settings, and query deduplication with `FINAL` where needed.
@@ -25,6 +25,12 @@ The launcher is a **manual test entrypoint**, not a production service or comple
 3. Read `DurableLakeWorker.health_snapshot()` from an **external** health reporter; this is a process-local Python API, not an HTTP endpoint or metrics exporter.
 4. A healthy snapshot while processing should have `started=true`, `running=true`, an increasing `processed_total`, and stable `failures_total`. `last_success_age_seconds` is null until the first event; an idle topic can legitimately have a large age.
 5. Independently monitor broker-reported committed-offset lag, consumer group assignment, ClickHouse query success, insert latency, disk usage, and retention backlog. These are **not** included in the worker snapshot.
+
+## Pilot supervision and external checks (not provided by launcher)
+
+The manual launcher has no readiness endpoint, built-in restart supervisor, or metrics server. Before an approved isolated run, assign an operator to supervise the process and monitor the dedicated Kafka group independently. A process that exits after a poison record or ClickHouse failure must **not** be blindly restarted in a loop: preserve the failing offset and investigate before resuming. Record process exit code, restart count, broker lag, and successful ClickHouse inserts in the pilot log without event bodies or credentials. Define thresholds using observed synthetic traffic and provide an independent stop/disable procedure.
+
+**Preflight checklist:** validate `KAFKA_SECURITY_PROTOCOL=SSL` or `SASL_SSL` and trusted CA, dedicated topic/group and ACLs, TLS-enabled ClickHouse endpoint and insert-only credentials, explicit opt-in, synthetic-only source, rollback owner, and broker/ClickHouse monitoring. Stop if any item cannot be verified. No production configuration changes or real Windows enrollment are implied.
 
 ## Failure triage
 
