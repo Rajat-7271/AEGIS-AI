@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
 from app.api.v1.endpoints.auth import (
     EmailChangeConfirmRequest,
@@ -13,6 +12,7 @@ from app.api.v1.endpoints.auth import (
     confirm_own_email_change,
     request_own_email_change,
 )
+from fastapi import HTTPException
 
 
 def _principal():
