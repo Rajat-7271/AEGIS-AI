@@ -27,8 +27,15 @@ class DurableLakeProcessor:
         offset: int,
         message: dict,
     ) -> None:
+        # Capture assignment identity before the first asynchronous boundary.
+        # A revoke/reassign replaces the progress object, even if the new
+        # assignment starts at the same offset.
+        key = (topic_partition.topic, topic_partition.partition)
+        assignment = self._offsets._partitions[key]
         # If persistence fails, neither the offset tracker nor Kafka moves.
         await self._sink.persist(message)
+        if self._offsets._partitions.get(key) is not assignment:
+            return
         next_offset = self._offsets.persisted(
             topic_partition.topic, topic_partition.partition, offset
         )
@@ -39,6 +46,7 @@ class DurableLakeProcessor:
         # NEXT offset. Never commit the consumer's entire assignment.
         await consumer.commit({topic_partition: next_offset})
         # Record acknowledgement only after Kafka confirms the commit.
-        self._offsets.committed(
-            topic_partition.topic, topic_partition.partition, next_offset
-        )
+        if self._offsets._partitions.get(key) is assignment:
+            self._offsets.committed(
+                topic_partition.topic, topic_partition.partition, next_offset
+            )
