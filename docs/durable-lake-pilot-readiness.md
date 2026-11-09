@@ -38,6 +38,10 @@ CI evidence is scoped to the isolated test containers. It is **not** a load, fai
 8. **Scale and operations:** perform bounded-volume load and backpressure tests, assess per-event insert cost, set capacity and retention budgets, and document rollback (stop dedicated worker without affecting the original fusion consumer).
 9. **Windows data:** validate event-source permissions, consent/authorization, minimization, PII handling, tenant isolation, and controlled synthetic-data tests before any live host enrollment.
 
+## Windows exporter implementation clarification
+
+The current metadata-only PowerShell exporter processes matching Security records oldest-first, up to `MaxEvents` per invocation, and resumes by EventRecordID. This avoids skipping older retained matching records merely because a poll is delayed. It **does not** guarantee losslessness: initial `LookbackHours`, Security log rotation/retention, record-ID resets, local append/checkpoint interruption, and lack of end-to-end ingest acknowledgement still require operator handling. The export remains local-only and is not automatically sent to the collector.
+
 ## Pilot exit criteria
 
 - All relevant branch CI checks pass and independent security/reliability review is complete.
