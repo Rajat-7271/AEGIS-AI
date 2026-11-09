@@ -13,7 +13,7 @@ The source-level regression test checks the ordering and checkpoint query,
 **not** actual Windows PowerShell runtime behavior. Validate this on a
 throwaway output/checkpoint path before replacing the existing exporter.
 
-Still unresolved: Security log clearing/rollover, source log gaps, a crash
+A basic continuity guard now stops when the newest Security record ID is\nbelow the saved checkpoint. It cannot detect a clear/reset if the log has\nalready grown beyond the previous checkpoint; a durable source epoch or\nchannel identity mechanism is still needed.\n\nStill unresolved: complete Security log clearing/rollover detection, source log gaps, a crash
 between JSONL append and checkpoint write, and log retention exhaustion.
 The exporter is not yet a lossless durable collector.
 
