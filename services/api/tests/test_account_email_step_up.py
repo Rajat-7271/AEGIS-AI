@@ -4,7 +4,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.services.account_email_step_up import (
     EmailChangeStepUpRejected,
     verify_email_change_totp,
