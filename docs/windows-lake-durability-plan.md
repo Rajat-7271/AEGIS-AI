@@ -52,3 +52,18 @@ regression tests live in `services/fusion/tests/test_lake_offsets.py`.
 no ClickHouse durability confirmation, no consumer-group separation, and no
 change to production or fusion's existing commit policy. A later change must
 wire persistence acknowledgements to offset commits and test rebalance races.
+
+## Implementation progress — acknowledgement-gated sink
+
+`services/fusion/app/services/durable_lake_sink.py` introduces a separate,
+non-default `DurableLakeSink` boundary: a normalized event must have a valid
+UUID and tenant, and the insert must return successfully before `persist()`
+returns. A failed or unavailable ClickHouse connection raises
+`LakePersistenceError` rather than silently dropping the event. The same
+normalized UUID is preserved across retry attempts. Fake-client tests cover
+success, failure, retry and invalid envelopes.
+
+**Still not end-to-end durable:** this sink is not connected to a Kafka
+consumer, an insert timeout can be ambiguous, and the MergeTree lake still
+allows physical duplicates. The current fusion `LakeWriter` remains
+unchanged and best-effort. No real-event traffic is enabled.
