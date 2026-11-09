@@ -283,3 +283,24 @@ async def test_worker_rejects_missing_kafka_connection_parameters():
                 consumer_factory=FakeConsumer,
                 security_kwargs={},
             )
+
+
+async def test_worker_run_failure_always_closes_consumer():
+    processor = Processor(fail=True)
+    worker, _, _ = make_worker(processor)
+    await worker.start()
+    await worker._consumer.listener.on_partitions_assigned({TP()})
+    worker._consumer.batches = {TP(): [Record(10, {"id": "failed"})]}
+
+    with pytest.raises(OSError, match="persistence failure"):
+        await worker.run()
+
+    assert worker._consumer.stopped is True
+    assert worker._started is False
+    assert worker._running is False
+
+
+async def test_worker_run_requires_successful_start():
+    worker, _, _ = make_worker()
+    with pytest.raises(RuntimeError, match="Start the worker"):
+        await worker.run()
