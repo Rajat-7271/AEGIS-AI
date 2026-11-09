@@ -55,5 +55,5 @@ async def test_missing_client_and_invalid_event_fail_closed() -> None:
     with pytest.raises(LakePersistenceError, match="deterministic UUID"):
         await DurableLakeSink(client).persist(_event("invalid"))
     with pytest.raises(LakePersistenceError, match="valid tenant"):
-        await DurableLakeSink(client).persist({"id": EVENT, "tenant_id": "invalid", "ocsf_event": {}})
+        await DurableLakeSink(client).persist({"id": EVENT, "tenant_id": "invalid", "ocsf_event": {"time": "2026-11-09T00:00:00Z"}})
     assert client.calls == []
