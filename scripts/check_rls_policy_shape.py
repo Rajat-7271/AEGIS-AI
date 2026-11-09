@@ -294,8 +294,11 @@ def judge(schema: Schema) -> list[str]:
             )
             continue
 
-        # The forward direction: the fail-open arm.
-        if not re.search(r"\bIS\s+NULL\b", body, re.I):
+        # Verification tokens are never read by cross-tenant background workers.
+        # Unlike operational tables, they must fail closed without a tenant.
+        sensitive_tenant_only = table == "account_email_change_requests"
+        # The forward direction: the fail-open arm for operational tables.
+        if not sensitive_tenant_only and not re.search(r"\bIS\s+NULL\b", body, re.I):
             problems.append(
                 f"{where} has no 'OR <tenant context> IS NULL' arm. Ingest, fusion, the retention purge and the "
                 "schedulers read this table on a connection that binds no tenant; without the arm they see zero "
