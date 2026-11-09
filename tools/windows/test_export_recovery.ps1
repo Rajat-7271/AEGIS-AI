@@ -8,7 +8,7 @@ $root = Join-Path ([IO.Path]::GetTempPath()) ("aegis-export-recovery-" + [guid]:
 $script:mockNewest = 100
 $script:mockQueryCalls = 0
 function Get-WinEvent {
-    param([string]$LogName, [int]$MaxEvents, [string]$ErrorAction,
+    param([string]$LogName, [int]$MaxEvents,
           [string]$FilterXPath, [hashtable]$FilterHashtable, [switch]$Oldest)
     if ($MaxEvents -eq 1 -and -not $Oldest) {
         return [pscustomobject]@{ RecordId = $script:mockNewest }
@@ -29,7 +29,7 @@ function Assert-Stops {
         throw "$Name failed: unexpected result '$caught'"
     }
     if ($script:mockQueryCalls -ne 0) { throw "$Name failed: attempted event pagination" }
-    if (-not [Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][IO.File]::ReadAllBytes($OutputPath))) {
+    if ([Convert]::ToBase64String($before) -ne [Convert]::ToBase64String([IO.File]::ReadAllBytes($OutputPath))) {
         throw "$Name failed: output changed"
     }
     if ([IO.File]::ReadAllText($CheckpointPath) -ne $checkpointBefore) {
