@@ -92,3 +92,71 @@ def test_pilot_passes_verified_tls_transport_to_worker(monkeypatch):
     assert captured["worker"]["group_id"] == "isolated-test"
     assert captured["clickhouse"]["secure"] is True
     assert captured["clickhouse"]["verify"] is True
+
+
+@pytest.mark.asyncio
+async def test_pilot_main_stops_worker_after_run_failure(monkeypatch):
+    from app.workers import durable_lake_pilot as pilot
+
+    calls = []
+
+    class FakeWorker:
+        async def start(self):
+            calls.append("start")
+
+        async def run(self):
+            calls.append("run")
+            raise OSError("synthetic persistence outage")
+
+        async def stop(self):
+            calls.append("stop")
+
+    monkeypatch.setattr(pilot, "build_worker", FakeWorker)
+    with pytest.raises(OSError, match="synthetic persistence outage"):
+        await pilot.main()
+    assert calls == ["start", "run", "stop"]
+
+
+@pytest.mark.asyncio
+async def test_pilot_main_stops_worker_after_cancellation(monkeypatch):
+    import asyncio
+    from app.workers import durable_lake_pilot as pilot
+
+    calls = []
+
+    class FakeWorker:
+        async def start(self):
+            calls.append("start")
+
+        async def run(self):
+            calls.append("run")
+            raise asyncio.CancelledError()
+
+        async def stop(self):
+            calls.append("stop")
+
+    monkeypatch.setattr(pilot, "build_worker", FakeWorker)
+    with pytest.raises(asyncio.CancelledError):
+        await pilot.main()
+    assert calls == ["start", "run", "stop"]
+
+
+@pytest.mark.asyncio
+async def test_pilot_main_normal_exit_stops_worker_once(monkeypatch):
+    from app.workers import durable_lake_pilot as pilot
+
+    calls = []
+
+    class FakeWorker:
+        async def start(self):
+            calls.append("start")
+
+        async def run(self):
+            calls.append("run")
+
+        async def stop(self):
+            calls.append("stop")
+
+    monkeypatch.setattr(pilot, "build_worker", FakeWorker)
+    await pilot.main()
+    assert calls == ["start", "run", "stop"]
