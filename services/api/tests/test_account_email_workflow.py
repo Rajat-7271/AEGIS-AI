@@ -1,11 +1,13 @@
 """Account email delivery orchestration tests."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from app.services.account_email_workflow import (
-    EmailChangeDeliveryRejected, request_verified_email_change,
+    EmailChangeDeliveryRejected,
+    request_verified_email_change,
 )
 
 
