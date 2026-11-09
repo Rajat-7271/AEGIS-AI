@@ -44,7 +44,7 @@ jobs:
         working-directory: services/fusion
         run: |
           set -euo pipefail
-          python -m pytest -q tests/test_durable_lake_clickhouse_ci.py tests/test_durable_lake_sink.py
+          python -m pytest -q tests/test_durable_lake_clickhouse_ci.py tests/test_durable_lake_sink.py tests/test_lake_offsets.py tests/test_durable_lake_processor.py
       - name: Collect ClickHouse diagnostics on failure
         if: failure()
         run: |
