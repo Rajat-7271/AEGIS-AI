@@ -10,6 +10,7 @@ import asyncio
 import os
 
 from app.core.config import settings
+from app.core.kafka_security import kafka_client_kwargs
 from app.services.durable_lake_processor import DurableLakeProcessor
 from app.services.durable_lake_sink import DurableLakeSink
 from app.services.lake_offsets import OffsetTracker
@@ -37,6 +38,10 @@ def build_worker() -> DurableLakeWorker:
     if topic == settings.kafka_topic_raw_events:
         raise ValueError("Pilot must not subscribe to the live raw-events topic")
 
+    transport = kafka_client_kwargs()
+    if transport.get("security_protocol") not in {"SSL", "SASL_SSL"}:
+        raise ValueError("Durable lake pilot requires TLS-encrypted Kafka transport")
+
     host = _required("AEGIS_DURABLE_LAKE_CLICKHOUSE_HOST")
     port = int(_required("AEGIS_DURABLE_LAKE_CLICKHOUSE_PORT"))
     user = _required("AEGIS_DURABLE_LAKE_CLICKHOUSE_USER")
@@ -61,6 +66,7 @@ def build_worker() -> DurableLakeWorker:
         topic=topic,
         group_id=group,
         existing_fusion_group=settings.kafka_consumer_group,
+        security_kwargs=transport,
     )
 
 
