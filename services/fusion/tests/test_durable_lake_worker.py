@@ -326,3 +326,39 @@ async def test_stopping_worker_before_start_is_safe():
     await worker.stop()
     assert worker._started is False
     assert worker._running is False
+
+
+async def test_health_snapshot_reports_success_without_event_contents():
+    worker, _, _ = make_worker()
+    assert worker.health_snapshot() == {
+        "started": False, "running": False, "processed_total": 0,
+        "failures_total": 0, "last_success_age_seconds": None,
+    }
+    await worker.start()
+    await worker._consumer.listener.on_partitions_assigned({TP()})
+    worker._consumer.batches = {TP(): [Record(10, {"secret": "do-not-expose"})]}
+    assert await worker.poll_once() == 1
+    snapshot = worker.health_snapshot()
+    assert snapshot["processed_total"] == 1
+    assert snapshot["failures_total"] == 0
+    assert snapshot["started"] is True
+    assert snapshot["running"] is True
+    assert snapshot["last_success_age_seconds"] >= 0
+    assert "secret" not in repr(snapshot)
+    await worker.stop()
+
+
+async def test_health_snapshot_reports_fail_stop_without_sensitive_payload():
+    worker, _, _ = make_worker(Processor(fail=True))
+    await worker.start()
+    await worker._consumer.listener.on_partitions_assigned({TP()})
+    worker._consumer.batches = {TP(): [Record(10, {"secret": "private"})]}
+    with pytest.raises(OSError, match="persistence failure"):
+        await worker.poll_once()
+    snapshot = worker.health_snapshot()
+    assert snapshot["failures_total"] == 1
+    assert snapshot["processed_total"] == 0
+    assert snapshot["running"] is False
+    assert snapshot["last_success_age_seconds"] is None
+    assert "private" not in repr(snapshot)
+    await worker.stop()
