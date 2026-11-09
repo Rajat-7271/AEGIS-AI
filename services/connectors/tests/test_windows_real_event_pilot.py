@@ -2,6 +2,8 @@
 
 No Windows host, credentials, network access, or production data required.
 """
+import pytest
+
 from app.connectors.windows_event import WindowsEventConnector
 
 
@@ -22,7 +24,7 @@ def test_security_event_normalization_preserves_evidence():
     assert event["severity"] == "medium"
     assert event["hostname"] == "lab-host"
     assert event["username"] == "lab-user"
-    assert event["external_id"] == "1234"
+    assert event["external_id"] == "winrec:v1:8:lab-host8:security4:1234"
     assert event["created_at"] == "2026-11-09T10:00:00Z"
     assert event["raw_event"]["EventID"] == 4720
     assert event["raw_event"]["TargetUserName"] == "lab-user"
@@ -44,3 +46,22 @@ def test_log_clear_is_high_severity():
     connector = WindowsEventConnector("https://collector.example.test/spool", "test-token")
     event = connector.normalize({"EventID": 1102, "Channel": "Security"})
     assert event["severity"] == "high"
+
+
+@pytest.mark.parametrize("environment", ["production", "staging"])
+def test_protected_environment_rejects_disabled_tls(monkeypatch, environment):
+    monkeypatch.setenv("ENVIRONMENT", environment)
+    with pytest.raises(ValueError, match="TLS verification is required"):
+        WindowsEventConnector("https://collector.example.test/spool", "dummy", verify_tls=False)
+
+
+def test_protected_environment_accepts_verified_tls(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    connector = WindowsEventConnector("https://collector.example.test/spool", "dummy")
+    assert connector._verify is True
+
+
+def test_local_synthetic_environment_can_disable_tls(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    connector = WindowsEventConnector("https://collector.example.test/spool", "dummy", verify_tls=False)
+    assert connector._verify is False
