@@ -258,3 +258,32 @@ async def test_an_attacker_chosen_user_agent_is_bounded():
     row = event_to_row(_with_activity(location={"client": {"raw": "x" * 50_000}}))
     assert row is not None
     assert len(row["client_raw"]) <= 1024
+
+
+# ── Windows pilot: raw-event replay semantics ────────────────────────────────
+
+
+async def test_distinct_windows_record_ids_remain_distinct_lake_rows():
+    """Distinct normalized UUIDs must survive the lake projection."""
+    first = _message()
+    second = _message()
+    second["id"] = "33333333-3333-3333-3333-333333333333"
+    first_row = event_to_row(first)
+    second_row = event_to_row(second)
+    assert first_row is not None and second_row is not None
+    assert first_row["event_id"] != second_row["event_id"]
+    w, fake = _writer_with_fake(batch_size=2)
+    await w.write_event(first)
+    await w.write_event(second)
+    assert len(fake.inserted) == 2
+    assert len({row["event_id"] for row in fake.inserted}) == 2
+
+
+async def test_exact_replay_currently_inserts_duplicate_lake_rows():
+    """Characterization: MergeTree does not enforce unique event_id."""
+    w, fake = _writer_with_fake(batch_size=2)
+    event = _message()
+    await w.write_event(event)
+    await w.write_event(event)
+    assert len(fake.inserted) == 2
+    assert fake.inserted[0]["event_id"] == fake.inserted[1]["event_id"]
