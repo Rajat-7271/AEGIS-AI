@@ -27,6 +27,27 @@ if (Test-Path -LiteralPath $checkpointFull) {
     if ($checkpointText -notmatch '^\d+$') { throw 'Invalid checkpoint; refusing to replay or skip events' }
     $lastRecord = [long]::Parse($checkpointText)
 }
+# A prior append may have succeeded before checkpoint persistence failed.
+# Never silently append duplicate rows in that situation. The pilot stops for
+# manual recovery instead of assuming that a partially written JSONL tail is
+# valid or automatically advancing past potentially corrupt evidence.
+if (Test-Path -LiteralPath $outputFull) {
+    $lastNonEmptyLine = $null
+    foreach ($line in [IO.File]::ReadLines($outputFull)) {
+        if (-not [string]::IsNullOrWhiteSpace($line)) { $lastNonEmptyLine = $line }
+    }
+    if ($null -ne $lastNonEmptyLine) {
+        try {
+            $tail = ConvertFrom-Json -InputObject $lastNonEmptyLine -ErrorAction Stop
+            $tailId = [long]$tail.System.EventRecordID
+        } catch {
+            throw "Safety stop: export JSONL tail is invalid; inspect local file before resuming. Checkpoint unchanged."
+        }
+        if ($tailId -gt $lastRecord) {
+            throw ("Safety stop: exported tail record {0} is ahead of checkpoint {1}. Possible interrupted checkpoint write; manual recovery required." -f $tailId, $lastRecord)
+        }
+    }
+}
 # Detect obvious Security log reset / record-ID regression before resuming.
 # This is only a guard: a cleared log that has already surpassed the old
 # checkpoint cannot be detected from record numbers alone. Fail closed when
