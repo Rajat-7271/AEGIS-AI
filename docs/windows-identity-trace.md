@@ -81,3 +81,14 @@ Reviewed `services/fusion/app/services/lake_writer.py` and
 for lake archival loss, retry/replay, and query-level deduplication is agreed
 and validated. Any change to the lake writer's failure policy requires broader
 consumer/offset and backpressure analysis, not a local try/except change.
+
+## Archival-loss observability (draft implementation)
+
+The lake writer now exposes cumulative `rows_dropped` through its existing
+`metrics()` dictionary. The counter increments for failed ClickHouse inserts
+and flushes attempted without a client, while `rows_written` continues to
+count successful inserts. Synthetic tests cover both failure cases. This
+is visibility, **not** recovery: the writer still drops failed batches.
+Operational alert wiring, durable retry/offset handling, and duplicate-aware
+query semantics remain separate release gates. Verify the updated CI before
+considering this change validated.
