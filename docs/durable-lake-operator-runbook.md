@@ -26,6 +26,12 @@ The launcher is a **manual test entrypoint**, not a production service or comple
 4. A healthy snapshot while processing should have `started=true`, `running=true`, an increasing `processed_total`, and stable `failures_total`. `last_success_age_seconds` is null until the first event; an idle topic can legitimately have a large age.
 5. Independently monitor broker-reported committed-offset lag, consumer group assignment, ClickHouse query success, insert latency, disk usage, and retention backlog. These are **not** included in the worker snapshot.
 
+## Pilot supervision and external checks (not provided by launcher)
+
+The manual launcher has no readiness endpoint, built-in restart supervisor, or metrics server. Before an approved isolated run, assign an operator to supervise the process and monitor the dedicated Kafka group independently. A process that exits after a poison record or ClickHouse failure must **not** be blindly restarted in a loop: preserve the failing offset and investigate before resuming. Record process exit code, restart count, broker lag, and successful ClickHouse inserts in the pilot log without event bodies or credentials. Define thresholds using observed synthetic traffic and provide an independent stop/disable procedure.
+
+**Preflight checklist:** validate `KAFKA_SECURITY_PROTOCOL=SSL` or `SASL_SSL` and trusted CA, dedicated topic/group and ACLs, TLS-enabled ClickHouse endpoint and insert-only credentials, explicit opt-in, synthetic-only source, rollback owner, and broker/ClickHouse monitoring. Stop if any item cannot be verified. No production configuration changes or real Windows enrollment are implied.
+
 ## Failure triage
 
 - **`running=false` after a failure:** treat as fail-stop; inspect the exception, broker connectivity, ClickHouse availability, and malformed records. Do not automatically advance Kafka offsets to bypass an event.
