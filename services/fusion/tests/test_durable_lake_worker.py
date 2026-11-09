@@ -243,3 +243,43 @@ async def test_explicit_tls_transport_is_passed_to_consumer(monkeypatch):
     assert worker._consumer.kwargs["security_protocol"] == "SSL"
     assert worker._consumer.kwargs["ssl_context"].verify_mode != 0
     assert worker._consumer.kwargs["ssl_context"].check_hostname is True
+
+
+async def test_invalid_kafka_transport_fails_before_consumer_creation(monkeypatch):
+    from app.core.kafka_security import KafkaTransportError
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("KAFKA_SECURITY_PROTOCOL", "INVALID_PROTOCOL")
+    monkeypatch.delenv("AISOC_ALLOW_CLEARTEXT_KAFKA", raising=False)
+    created = []
+
+    def recording_factory(**kwargs):
+        created.append(kwargs)
+        return FakeConsumer(**kwargs)
+
+    with pytest.raises(KafkaTransportError, match="not one of"):
+        DurableLakeWorker(
+            processor=Processor(),
+            offsets=OffsetTracker(),
+            bootstrap_servers="localhost:9092",
+            topic="raw-events",
+            group_id="aegis-lake-test",
+            existing_fusion_group="aegis-fusion",
+            consumer_factory=recording_factory,
+        )
+    assert created == []
+
+
+async def test_worker_rejects_missing_kafka_connection_parameters():
+    for topic, bootstrap in [("", "localhost:9092"), ("raw-events", "")]:
+        with pytest.raises(ValueError, match="required"):
+            DurableLakeWorker(
+                processor=Processor(),
+                offsets=OffsetTracker(),
+                bootstrap_servers=bootstrap,
+                topic=topic,
+                group_id="aegis-lake-test",
+                existing_fusion_group="aegis-fusion",
+                consumer_factory=FakeConsumer,
+                security_kwargs={},
+            )
