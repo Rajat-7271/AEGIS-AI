@@ -4,7 +4,6 @@ import re
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from app.services.account_email_verification import (
     email_change_is_confirmable,
     hash_email_verification_token,
