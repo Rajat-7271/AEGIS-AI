@@ -27,6 +27,20 @@ if (Test-Path -LiteralPath $checkpointFull) {
     if ($checkpointText -notmatch '^\d+$') { throw 'Invalid checkpoint; refusing to replay or skip events' }
     $lastRecord = [long]::Parse($checkpointText)
 }
+# Detect obvious Security log reset / record-ID regression before resuming.
+# This is only a guard: a cleared log that has already surpassed the old
+# checkpoint cannot be detected from record numbers alone. Fail closed when
+# the newest Security record is below the saved checkpoint.
+if ($lastRecord -gt 0) {
+    try {
+        $newestSecurity = Get-WinEvent -LogName Security -MaxEvents 1 -ErrorAction Stop
+    } catch {
+        throw "Unable to verify Security log continuity; checkpoint not advanced. $($_.Exception.Message)"
+    }
+    if ([long]$newestSecurity.RecordId -lt $lastRecord) {
+        throw ("Safety stop: Security log newest record {0} is below checkpoint {1}. Possible log clear/reset; manual review required." -f [long]$newestSecurity.RecordId, $lastRecord)
+    }
+}
 # Read oldest-first. Each invocation processes at most MaxEvents records and
 # resumes at the last written EventRecordID. Unlike newest-first sampling,
 # a busy log cannot push older unseen records out of the returned window.
