@@ -62,7 +62,7 @@ jobs:
         working-directory: services/fusion
         run: |
           set -euo pipefail
-          python -m pytest -q -o asyncio_default_fixture_loop_scope=function tests/test_durable_lake_clickhouse_ci.py tests/test_durable_lake_sink.py tests/test_lake_offsets.py tests/test_durable_lake_processor.py tests/test_lake_clickhouse_integration.py tests/test_lake_kafka_integration.py tests/test_lake_rebalance.py tests/test_lake_rebalance_concurrency.py tests/test_durable_lake_worker.py tests/test_lake_end_to_end_ci.py tests/test_durable_lake_invalid_events.py
+          python -m pytest -q -o asyncio_default_fixture_loop_scope=function tests/test_durable_lake_clickhouse_ci.py tests/test_durable_lake_sink.py tests/test_lake_offsets.py tests/test_durable_lake_processor.py tests/test_lake_clickhouse_integration.py tests/test_lake_kafka_integration.py tests/test_lake_rebalance.py tests/test_lake_rebalance_concurrency.py tests/test_durable_lake_worker.py tests/test_lake_end_to_end_ci.py tests/test_durable_lake_invalid_events.py tests/test_durable_lake_pilot.py
       - name: Collect ClickHouse diagnostics on failure
         if: failure()
         run: |
