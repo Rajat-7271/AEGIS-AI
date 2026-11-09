@@ -1,18 +1,21 @@
 # Windows pilot: remaining source and fusion data-loss risks
 
-## Export cap safety (draft fix)
+## Checkpoint pagination (draft implementation)
 
-The metadata exporter uses `Get-WinEvent -MaxEvents` (newest first).
-Previously it filtered by the last record ID and advanced the checkpoint,
-even when the query hit its cap and might have omitted older unseen events.
-The exporter now **fails closed** when the query returns `MaxEvents` rows:
-it does not append or advance the checkpoint.
+The exporter now reads matching Security events **oldest-first**, up to
+`MaxEvents` per invocation. When a checkpoint exists, it uses an XPath
+filter on `EventRecordID > checkpoint`, without a sliding time cutoff.
+This allows subsequent runs to resume at the oldest unseen matching record
+instead of sampling the newest events and silently skipping earlier ones.
 
-This is a conservative stop, not a complete solution. A busy Security log
-may routinely hit the cap, including when all those records were already
-exported. The proper fix is checkpoint-based pagination or a durable Windows
-event subscription with explicit source-gap detection. Until implemented,
-the exporter must not be advertised as lossless or unattended.
+On the initial run only, `LookbackHours` bounds the historical scan.
+The source-level regression test checks the ordering and checkpoint query,
+**not** actual Windows PowerShell runtime behavior. Validate this on a
+throwaway output/checkpoint path before replacing the existing exporter.
+
+Still unresolved: Security log clearing/rollover, source log gaps, a crash
+between JSONL append and checkpoint write, and log retention exhaustion.
+The exporter is not yet a lossless durable collector.
 
 ## Fusion alert fingerprint versus raw-event identity
 
@@ -35,7 +38,6 @@ them into one analyst alert.
 - Export JSONL append and checkpoint write are not atomic.
 - No durable acknowledgement protocol connects local JSONL to ingestion.
 - Backend storage uniqueness and graph replay idempotency not yet verified.
-- The static cap-guard test checks source ordering, not Windows Event Log
-  runtime behavior. A Windows integration test remains necessary.
+- The static pagination test checks source ordering, not Windows Event Log\n  runtime behavior. A Windows integration test remains necessary.
 
 No production or real-event transmission is authorized.
