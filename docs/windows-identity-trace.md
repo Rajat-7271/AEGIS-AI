@@ -41,3 +41,20 @@ rather than an invented globally unique identifier.
 The next validation must follow the normalized event ID into the fusion
 consumer, database uniqueness constraints and optional graph projections.
 No real events were transmitted during this investigation.
+
+## Fusion alert identity versus raw-event identity
+
+`services/fusion/app/models/alert.py::RawAlert.fingerprint` intentionally
+hashes tenant, source, title, network/entity fields and MITRE techniques,
+**not** `source_event_ids` or a Windows record ID. Consequently two distinct
+Windows records with the same alert fields produce one canonical alert UUID.
+This is alert-level aggregation, not proof of raw-event loss or raw-event
+storage deduplication. A new regression test
+(`services/fusion/tests/test_windows_alert_fingerprint_semantics.py`)
+locks down the distinction and tenant isolation. This test is synthetic;
+its CI execution and the event-lake uniqueness contract still need verification.
+
+Do not change the global fingerprint to include source event IDs without
+reviewing deduplication behavior across every connector. Instead verify that
+the raw-event lake retains distinct normalized IDs and handles exact replay
+idempotently; alert aggregation is a separate product decision.
