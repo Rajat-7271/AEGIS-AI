@@ -430,6 +430,16 @@ def self_test() -> list[str]:
                 f"expected it to {'accept' if should_pass else 'reject'}"
             )
 
+    # Sensitive verification requests must fail closed when no tenant is bound.
+    token_schema = replay([("<self-test: token isolation>",
+        "ALTER TABLE account_email_change_requests ENABLE ROW LEVEL SECURITY; "
+        "ALTER TABLE account_email_change_requests FORCE ROW LEVEL SECURITY; "
+        "CREATE POLICY account_email_change_tenant ON account_email_change_requests "
+        "USING (tenant_id = current_tenant_id()) "
+        "WITH CHECK (tenant_id = current_tenant_id());")])
+    if judge(token_schema):
+        failures.append(f"tenant-only verification token policy was rejected: {judge(token_schema)[0]}")
+
     # Supersession across two files, which is the real shape in this tree.
     broken = (
         "ALTER TABLE t ENABLE ROW LEVEL SECURITY;\nALTER TABLE t FORCE ROW LEVEL SECURITY;\n"
