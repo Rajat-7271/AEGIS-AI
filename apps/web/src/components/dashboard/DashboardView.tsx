@@ -509,12 +509,9 @@ export function DashboardView() {
     void mutateMetrics();
   }, [mutateMetrics]);
 
-  const metricsErrorMessage =
-    metricsError instanceof Error
-      ? metricsError.message
-      : metricsError
-        ? String(metricsError)
-        : null;
+  // Never render raw API exception text on the dashboard: it may contain
+  // upstream URLs, internal service details, or response bodies.
+  const metricsUnavailable = Boolean(metricsError);
 
   // `MOCK_METRICS` reaches this component through exactly one door: the
   // `demoFallback` above, which returns `undefined` outside the hosted demo.
@@ -810,15 +807,15 @@ export function DashboardView() {
   return (
     <DashboardErrorBoundary>
       <div className="space-y-5">
-        {metricsErrorMessage && (
+        {metricsUnavailable && (
           <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
             <p className="font-semibold">Dashboard metrics unavailable</p>
             <p className="mt-1 text-xs text-red-300/80">
-              {metricsErrorMessage}
+              The metrics service could not be reached. Retry or check service status.
             </p>
             <p className="mt-1 text-xs text-red-300/60">
               Panels below are blank rather than showing placeholder figures.
-              Retrying every 4s.
+              Automatic retries are limited; use Retry on a panel to try again.
             </p>
           </div>
         )}
