@@ -101,6 +101,21 @@ describe('ExploreView', () => {
     expect(await screen.findByRole('table')).toBeInTheDocument();
   });
 
+  it('queries tenant-scoped Windows Security events through the existing lake API', async () => {
+    api.sql.mockResolvedValue(RESULT);
+    const user = userEvent.setup();
+    render(<ExploreView />);
+    await user.click(screen.getByRole('button', { name: 'View Windows Security events' }));
+    expect(api.sql).toHaveBeenCalledWith({
+      sql: expect.stringContaining("connector_type = 'windows_event'"),
+      row_cap: 100,
+    });
+    expect(screen.getByLabelText('SQL')).toHaveValue(
+      expect.stringContaining("connector_type = 'windows_event'"),
+    );
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+  });
+
   it('surfaces a backend error without crashing', async () => {
     api.sql.mockRejectedValue(new Error('rate limited'));
     const user = userEvent.setup();
