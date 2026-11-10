@@ -109,6 +109,8 @@ async def ingest_windows(
             raise HTTPException(422, "Invalid source timestamp") from None
         if event.created_at != source_time:
             raise HTTPException(422, "Inconsistent event timestamp")
+        if event.severity not in {"info", "low", "medium", "high", "critical"}:
+            raise HTTPException(422, "Invalid event severity")
         # Stable across retries; tenant scope is part of the primary key.
         event_id = uuid.uuid5(uuid.NAMESPACE_URL, event.external_id)
         await db.execute(text("""
