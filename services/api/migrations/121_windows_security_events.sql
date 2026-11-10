@@ -19,5 +19,5 @@ ALTER TABLE windows_security_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE windows_security_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS windows_security_events_tenant ON windows_security_events;
 CREATE POLICY windows_security_events_tenant ON windows_security_events
-    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
+    USING ((tenant_id = current_tenant_id() OR current_tenant_id() IS NULL))
     WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
