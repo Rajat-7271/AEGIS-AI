@@ -24,6 +24,7 @@ import { useCallback, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   lakeApi,
+  windowsSecurityApi,
   nlQueryApi,
   type LakeQueryResponse,
 } from '@/lib/api';
@@ -159,6 +160,20 @@ function EventsExplorer() {
     }
   }, []);
 
+  const runWindows = useCallback(async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      const response = await windowsSecurityApi.events();
+      setResult({ ...response, row_cap: 100, referenced_tables: ['windows_security_events'], elapsed_ms: 0, executed_at: new Date().toISOString() } as LakeQueryResponse);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Windows events unavailable');
+      setResult(null);
+    } finally {
+      setRunning(false);
+    }
+  }, []);
+
   const translateAndRun = useCallback(
     async (q: string) => {
       const trimmed = q.trim();
@@ -243,7 +258,7 @@ function EventsExplorer() {
           <button
             type="button"
             disabled={running}
-            onClick={() => { setSql(WINDOWS_EVENTS_SQL); void runSql(WINDOWS_EVENTS_SQL); }}
+            onClick={() => { setSql(WINDOWS_EVENTS_SQL); void runWindows(); }}
             className="rounded-lg border border-sky-600 px-4 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-50"
           >
             View Windows Security events
