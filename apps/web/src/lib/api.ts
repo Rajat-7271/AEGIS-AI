@@ -4220,6 +4220,10 @@ export interface LakeSchemaResponse {
   tables: LakeTableInfo[];
 }
 
+export const windowsSecurityApi = {
+  events: () => request<{ columns: string[]; rows: (string | number | null)[][]; row_count: number }>("/api/v1/windows-security/events"),
+};
+
 export const lakeApi = {
   sql: (body: LakeQueryRequest) =>
     request<LakeQueryResponse>("/api/v1/lake/sql", {
