@@ -19,10 +19,12 @@ import type { LakeQueryResponse } from '@/lib/api';
 const api = vi.hoisted(() => ({
   sql: vi.fn(),
   translate: vi.fn(),
+  windows: vi.fn(),
 }));
 
 vi.mock('@/lib/api', () => ({
   lakeApi: { sql: api.sql, schema: vi.fn() },
+  windowsSecurityApi: { events: api.windows },
   nlQueryApi: { translate: api.translate },
 }));
 
@@ -48,6 +50,7 @@ const RESULT: LakeQueryResponse = {
 beforeEach(() => {
   api.sql.mockReset();
   api.translate.mockReset();
+  api.windows.mockReset();
 });
 
 describe('ExploreView', () => {
@@ -101,15 +104,13 @@ describe('ExploreView', () => {
     expect(await screen.findByRole('table')).toBeInTheDocument();
   });
 
-  it('queries tenant-scoped Windows Security events through the existing lake API', async () => {
-    api.sql.mockResolvedValue(RESULT);
+  it('queries tenant-scoped Windows Security events through the hosted API', async () => {
+    api.windows.mockResolvedValue({ columns: RESULT.columns, rows: RESULT.rows, row_count: RESULT.row_count });
     const user = userEvent.setup();
     render(<ExploreView />);
     await user.click(screen.getByRole('button', { name: 'View Windows Security events' }));
-    expect(api.sql).toHaveBeenCalledWith({
-      sql: expect.stringContaining("connector_type = 'windows_event'"),
-      row_cap: 100,
-    });
+    expect(api.windows).toHaveBeenCalledTimes(1);
+    expect(api.sql).not.toHaveBeenCalled();
     expect((screen.getByLabelText('SQL') as HTMLTextAreaElement).value).toContain(
       "connector_type = 'windows_event'",
     );
