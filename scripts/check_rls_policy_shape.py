@@ -332,6 +332,22 @@ _GOOD = (
 _FIXTURES: tuple[tuple[str, str, bool], ...] = (
     ("the canonical shape passes", _GOOD, True),
     (
+        "Windows Security rejects missing tenant context",
+        "ALTER TABLE windows_security_events ENABLE ROW LEVEL SECURITY;\n"
+        "ALTER TABLE windows_security_events FORCE ROW LEVEL SECURITY;\n"
+        "CREATE POLICY windows_events_tenant_select ON windows_security_events "
+        "USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);",
+        True,
+    ),
+    (
+        "Windows Security must not allow missing tenant context",
+        "ALTER TABLE windows_security_events ENABLE ROW LEVEL SECURITY;\n"
+        "ALTER TABLE windows_security_events FORCE ROW LEVEL SECURITY;\n"
+        "CREATE POLICY windows_events_tenant_select ON windows_security_events "
+        "USING (tenant_id = current_tenant_id() OR current_tenant_id() IS NULL);",
+        False,
+    ),
+    (
         "a commented-out policy is prose, not a statement",
         "-- CREATE POLICY ghost_tenant ON ghost USING (tenant_id = current_tenant_id());\n"
         "/* DROP POLICY IF EXISTS t_tenant ON t; */\n" + _GOOD,
