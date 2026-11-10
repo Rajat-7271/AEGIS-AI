@@ -26,8 +26,7 @@ def main():
              "EventData": {}}
             for i in (1, 2, 3)
         ]
-        path.write_text("".join(json.dumps(r) + "
-" for r in records), encoding="utf-8")
+        path.write_text("".join(json.dumps(r) + chr(10) for r in records), encoding="utf-8")
         first, cursor = shipper.read_batch(path, 0, 2)
         assert len(first) == 2 and cursor == 2
         remaining, cursor = shipper.read_batch(path, 2, 2)
