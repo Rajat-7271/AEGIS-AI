@@ -295,7 +295,12 @@ def judge(schema: Schema) -> list[str]:
             continue
 
         # The forward direction: the fail-open arm.
-        if not re.search(r"\bIS\s+NULL\b", body, re.I):
+        # Windows Security is consumed only through explicitly tenant-scoped API paths.
+        # Unlike legacy worker tables, it must deny unbound sessions.
+        if table == "windows_security_events":
+            if re.search(r"\bOR\s+[^;]*\bIS\s+NULL\b", body, re.I):
+                problems.append(f"{where} permits an unbound tenant to read Windows Security events")
+        elif not re.search(r"\bIS\s+NULL\b", body, re.I):
             problems.append(
                 f"{where} has no 'OR <tenant context> IS NULL' arm. Ingest, fusion, the retention purge and the "
                 "schedulers read this table on a connection that binds no tenant; without the arm they see zero "
