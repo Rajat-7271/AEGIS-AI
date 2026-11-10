@@ -2,7 +2,9 @@
 import asyncio
 import importlib.util
 import json
+import os
 import tempfile
+from argparse import Namespace
 from pathlib import Path
 import sys
 
@@ -48,8 +50,8 @@ def main():
             assert req.headers["Authorization"] == "Bearer synthetic-token"
             assert req.headers["X-Tenant-ID"] == "11111111-1111-4111-8111-111111111111"
             payload = json.loads(req.content)
-            assert len(payload["events"]) == 2
-            return httpx.Response(200, json={"accepted": 2, "rejected": 0})
+            assert 1 <= len(payload["events"]) <= 2
+            return httpx.Response(200, json={"accepted": len(payload["events"]), "rejected": 0})
 
         # Override the module's httpx.AsyncClient for an entirely in-memory request.
         original = shipper.httpx.AsyncClient
@@ -75,6 +77,28 @@ def main():
             shipper.httpx.AsyncClient = original
         assert ack == {"accepted": 2, "rejected": 0}
         assert len(calls) == 1
+        # A scheduled invocation must drain multiple batches and persist
+        # the cursor after each fully acknowledged batch.
+        calls.clear()
+        saved.write_text("0", encoding="utf-8")
+        shipper.httpx.AsyncClient = MockClient
+        previous_token = os.environ.get("AEGIS_WINDOWS_INGEST_TOKEN")
+        os.environ["AEGIS_WINDOWS_INGEST_TOKEN"] = "synthetic-token"
+        try:
+            asyncio.run(shipper.run(Namespace(
+                cursor=saved, input=path, limit=2, max_batches=5,
+                send=True, url="https://staging.invalid",
+                tenant="11111111-1111-4111-8111-111111111111",
+                connector="22222222-2222-4222-8222-222222222222",
+            )))
+        finally:
+            shipper.httpx.AsyncClient = original
+            if previous_token is None:
+                os.environ.pop("AEGIS_WINDOWS_INGEST_TOKEN", None)
+            else:
+                os.environ["AEGIS_WINDOWS_INGEST_TOKEN"] = previous_token
+        assert saved.read_text() == "3"
+        assert len(calls) == 2
 
         def partial(req):
             return httpx.Response(200, json={"accepted": 1, "rejected": 1})
