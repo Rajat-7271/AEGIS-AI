@@ -95,7 +95,7 @@ export function InvestigationRail({ alertId, onClose }: InvestigationRailProps) 
   // burn the LLM call until the analyst explicitly asks for it.
   const [deepExplainOpen, setDeepExplainOpen] = useState(false);
 
-  const { data: alert, error, isLoading } = useSWR(
+  const { data: alert, error, isLoading, mutate } = useSWR(
     alertId ? (['alerts', alertId, 'rail'] as const) : null,
     () => alertsApi.get(alertId as string),
     {
@@ -121,9 +121,20 @@ export function InvestigationRail({ alertId, onClose }: InvestigationRailProps) 
         <div className="px-4 py-6 text-sm text-red-300">
           <p className="font-medium">Couldn&apos;t load the alert envelope.</p>
           <p className="mt-1 text-xs text-gray-500">
-            The alert API didn&apos;t respond. Try selecting the alert again or
-            open the full detail view.
+            The alert API didn&apos;t respond. Retry loading this alert or open its full detail view.
           </p>
+          <div className="mt-3 flex flex-wrap gap-3 items-center">
+            <button
+              type="button"
+              onClick={() => void mutate()}
+              className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-200 hover:bg-blue-500/20"
+            >
+              Retry investigation
+            </button>
+            <Link href={`/alerts/${encodeURIComponent(alertId)}`} className="text-xs text-blue-300 hover:text-blue-200">
+              Open full detail
+            </Link>
+          </div>
         </div>
       </RailShell>
     );
