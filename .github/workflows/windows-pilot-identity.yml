@@ -13,6 +13,8 @@ on:
       - "services/connectors/app/connectors/base.py"
       - "services/ingest/internal/normalizer/windows_pipeline_test.go"
       - "services/ingest/internal/normalizer/normalizer.go"
+      - "apps/web/src/components/explore/ExploreView.tsx"
+      - "apps/web/src/components/explore/ExploreView.test.tsx"
       - ".github/workflows/windows-pilot-identity.yml"
   workflow_dispatch:
 
@@ -80,3 +82,22 @@ jobs:
           cache-dependency-path: services/ingest/go.sum
       - name: Verify Windows ingest normalization and replay identity
         run: go test ./internal/normalizer -run TestWindowsShipperEnvelopeNormalizesAndReplays -count=1
+
+  web-explorer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test Windows event lake view
+        run: pnpm --dir apps/web exec vitest run src/components/explore/ExploreView.test.tsx
