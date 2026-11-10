@@ -297,3 +297,31 @@ async def test_flush_without_client_counts_discarded_rows():
     assert w.metrics()["rows_dropped"] == 2
     assert w.metrics()["rows_written"] == 0
     assert w.metrics()["buffered"] == 0
+
+
+async def test_windows_security_event_is_queryable_in_lake():
+    """The Windows Data Explorer shortcut relies on these exact lake columns."""
+    msg = _message(
+        class_uid=1001,
+        category_uid=1,
+        severity_id=4,
+        severity="high",
+        time="2026-11-10T10:00:00Z",
+        metadata={"product": {"name": "windows_event", "vendor_name": "windows_event"}},
+        device={"name": "synthetic-windows-host"},
+        raw_data='{"System":{"EventID":1102,"Channel":"Security"}}',
+    )
+    row = event_to_row(msg)
+    assert row is not None
+    assert row["connector_type"] == "windows_event"
+    assert row["src_hostname"] == "synthetic-windows-host"
+    assert row["severity"] == "high"
+    assert row["event_time"].isoformat() == "2026-11-10T10:00:00"
+    assert row["event_id"] == msg["id"]
+    assert row["tenant_id"] == TENANT
+
+    writer, client = _writer_with_fake(batch_size=1)
+    await writer.write_event(msg)
+    assert writer.rows_written == 1
+    assert len(client.inserted) == 1
+    assert client.inserted[0]["connector_type"] == "windows_event"

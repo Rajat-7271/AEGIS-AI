@@ -24,6 +24,7 @@ import { useCallback, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   lakeApi,
+  windowsSecurityApi,
   nlQueryApi,
   type LakeQueryResponse,
 } from '@/lib/api';
@@ -68,6 +69,8 @@ const SOURCES: SourceDef[] = [
     pivotHref: '/detection',
   },
 ];
+
+const WINDOWS_EVENTS_SQL = "SELECT event_time, severity, src_hostname, connector_type, event_id FROM raw_events WHERE connector_type = 'windows_event' ORDER BY event_time DESC LIMIT 100";
 
 const EXAMPLE_QUESTIONS = [
   'Show critical events in the last 24 hours',
@@ -157,6 +160,20 @@ function EventsExplorer() {
     }
   }, []);
 
+  const runWindows = useCallback(async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      const response = await windowsSecurityApi.events();
+      setResult({ ...response, row_cap: 100, referenced_tables: ['windows_security_events'], elapsed_ms: 0, executed_at: new Date().toISOString() } as LakeQueryResponse);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Windows events unavailable');
+      setResult(null);
+    } finally {
+      setRunning(false);
+    }
+  }, []);
+
   const translateAndRun = useCallback(
     async (q: string) => {
       const trimmed = q.trim();
@@ -237,7 +254,15 @@ function EventsExplorer() {
           spellCheck={false}
           className="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 font-mono text-xs text-slate-100"
         />
-        <div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={running}
+            onClick={() => { setSql(WINDOWS_EVENTS_SQL); void runWindows(); }}
+            className="rounded-lg border border-sky-600 px-4 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-50"
+          >
+            View Windows Security events
+          </button>
           <button
             type="button"
             disabled={running}

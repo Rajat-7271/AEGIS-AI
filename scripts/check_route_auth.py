@@ -167,6 +167,10 @@ PUBLIC_ROUTES: dict[str, str] = {
 #: Routes whose credential is verified inside the handler. ``(verifier, reason)``
 #: — the verifier must still be called or the exemption lapses.
 IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
+    "services/api/app/api/v1/endpoints/windows_security.py::ingest_windows": (
+        "_verify_windows_ingest_token",
+        "Windows collector verifies a revocable tenant-scoped connector-push token in the database, and an HMAC over the exact request bytes when configured; no browser session is required",
+    ),
     "services/agents/app/api/playbooks.py::answer_verification": (
         "resume_verification",
         "the signed answer link is the whole credential (depth 5.4): resume_verification recomputes the HMAC over "

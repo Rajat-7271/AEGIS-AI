@@ -750,6 +750,12 @@ jobs:
         working-directory: services/api
         run: python -m app.scripts.run_migrations
 
+      - name: Verify hosted Windows Security ingestion contract
+        working-directory: services/api
+        run: |
+          pip install --quiet "pytest==8.4.2" "pytest-asyncio==1.2.0"
+          python -m pytest tests/test_windows_security_hosted.py -q
+
       - name: Re-run must be a no-op (idempotency)
         working-directory: services/api
         run: |

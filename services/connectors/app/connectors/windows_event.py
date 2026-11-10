@@ -185,5 +185,10 @@ def _source_event_id(raw: dict[str, Any], system: dict[str, Any], computer: Any,
         return ""
     # Length-prefixed segments make boundaries unambiguous even if host or
     # channel names contain colons or other separators.
-    parts = (str(computer).strip().casefold(), str(channel).strip().casefold(), str(record).strip())
+    # Optional collector-managed epoch differentiates record IDs reused after log clear. 
+    # Never infer an epoch from event timestamps: that would break replay stability. 
+    epoch = raw.get("SourceEpoch") or raw.get("source_epoch") or system.get("SourceEpoch") 
+    parts = (str(computer).strip().casefold(), str(channel).strip().casefold(), str(record).strip()) 
+    if epoch is not None and str(epoch).strip(): 
+        parts += (str(epoch).strip(),)
     return "winrec:v1:" + "".join(f"{len(part)}:{part}" for part in parts)
