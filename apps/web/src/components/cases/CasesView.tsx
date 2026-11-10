@@ -410,7 +410,16 @@ export function CasesView() {
         <EmptyState
           icon={EmptyStateIcons.case}
           title="Could not load cases"
-          description="The case service did not answer. This is not a report that no cases exist — retry, or check the API is reachable."
+          description="The case service did not answer. This does not mean there are no cases. Retry or check the API service."
+          action={
+            <button
+              type="button"
+              onClick={() => void mutate()}
+              className="rounded-md border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-200 hover:bg-blue-500/20"
+            >
+              Retry loading cases
+            </button>
+          }
         />
       ) : cases.length === 0 ? (
         // WS-F5 — distinguish "filter miss" from "no cases ever". The former
