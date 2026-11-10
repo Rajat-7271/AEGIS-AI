@@ -1,5 +1,5 @@
 # AEGIS AI Windows Security pilot — local automatic export only.
-# Creates a scheduled task that periodically runs the read-only exporter.
+# Creates a scheduled task that periodically runs the local export and offline shipper dry-run pipeline.
 # It NEVER invokes the shipper, sends logs, or configures production.
 # Requires explicit -Install; default is a no-change preview.
 param(
@@ -11,7 +11,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ($Install -and $Remove) { throw 'Choose -Install or -Remove, not both.' }
-$exporter = Join-Path $PSScriptRoot 'export-security-events.ps1'
+$exporter = Join-Path $PSScriptRoot 'run_security_pipeline.ps1'
 if (-not (Test-Path -LiteralPath $exporter)) { throw 'Missing local exporter script.' }
 if ($Remove) {
     $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
