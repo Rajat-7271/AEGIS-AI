@@ -31,6 +31,12 @@ function parseEvents(result: Awaited<ReturnType<typeof windowsSecurityApi.events
   });
 }
 
+function formatUtcTimestamp(value: string): string {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return '—';
+  return new Date(timestamp).toISOString().replace('T', ' ').replace('Z', ' UTC');
+}
+
 export default function WindowsSecurityPage() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +103,7 @@ export default function WindowsSecurityPage() {
             <tbody>
               {events.map((event, index) => (
                 <tr key={`${event.hostname}-${event.record_id}-${index}`} className="border-b border-border-default last:border-0">
-                  <td className="whitespace-nowrap p-3">{event.event_time ? new Date(event.event_time).toISOString().replace('T', ' ').replace('.000Z', ' UTC') : '—'}</td>
+                  <td className="whitespace-nowrap p-3">{formatUtcTimestamp(event.event_time)}</td>
                   <td className="p-3">{event.event_code}</td>
                   <td className="p-3">{event.hostname}</td>
                   <td className="p-3 capitalize">{event.severity}</td>
