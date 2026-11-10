@@ -100,6 +100,38 @@ def main():
                 os.environ["AEGIS_WINDOWS_INGEST_HMAC_SECRET"] = previous_secret
         expected = hmac.new(b"synthetic-signing-key", calls[0].content, hashlib.sha256).hexdigest()
         assert calls[0].headers["X-Signature"] == "sha256=" + expected
+        # Hosted deployments use the FastAPI/Postgres route, not the Go ingest route.
+        hosted_calls = []
+        def hosted_handle(req):
+            hosted_calls.append(req)
+            assert req.url.path == "/api/v1/windows-security/batch"
+            assert req.headers["X-Tenant-ID"] == "11111111-1111-4111-8111-111111111111"
+            body = json.loads(req.content)
+            assert body["connector_type"] == "windows_event"
+            return httpx.Response(200, json={"accepted": len(body["events"]), "rejected": 0})
+
+        class HostedClient:
+            def __init__(self, **kwargs):
+                self.client = original(transport=httpx.MockTransport(hosted_handle))
+            async def __aenter__(self):
+                return await self.client.__aenter__()
+            async def __aexit__(self, *args):
+                return await self.client.__aexit__(*args)
+            async def post(self, *args, **kwargs):
+                return await self.client.post(*args, **kwargs)
+
+        shipper.httpx.AsyncClient = HostedClient
+        try:
+            hosted_ack = asyncio.run(shipper.send_batch(
+                "https://staging.invalid", "synthetic-token",
+                "11111111-1111-4111-8111-111111111111",
+                "22222222-2222-4222-8222-222222222222",
+                [{"external_id": "synthetic-hosted"}], direct_api=True,
+            ))
+        finally:
+            shipper.httpx.AsyncClient = original
+        assert hosted_ack == {"accepted": 1, "rejected": 0}
+        assert len(hosted_calls) == 1
         calls.clear()
         # A scheduled invocation must drain multiple batches and persist
         # the cursor after each fully acknowledged batch.
