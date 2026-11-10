@@ -102,7 +102,7 @@ def save_cursor(path: Path, cursor: int) -> None:
     os.replace(tmp, path)
 
 
-async def send_batch(url: str, token: str, tenant: str, connector: str, events: list[dict]) -> dict:
+async def send_batch(url: str, token: str, tenant: str, connector: str, events: list[dict], *, direct_api: bool = False) -> dict:
     # The Go ingest endpoint optionally requires an HMAC-SHA256 signature
     # over the exact request bytes for minted connector-push tokens.
     body = json.dumps(
@@ -118,7 +118,7 @@ async def send_batch(url: str, token: str, tenant: str, connector: str, events: 
         headers["X-Signature"] = "sha256=" + signature
     async with httpx.AsyncClient(timeout=30, trust_env=False) as client:
         response = await client.post(
-            url.rstrip("/") + "/v1/ingest/batch",
+            url.rstrip("/") + ("/api/v1/windows-security/batch" if direct_api else "/v1/ingest/batch"),
             headers=headers, content=body,
         )
         response.raise_for_status()
@@ -161,7 +161,7 @@ async def run(args: argparse.Namespace) -> None:
         if not raw:
             break
         events = [normalized.normalize(e) for e in raw]
-        await send_batch(url, token, tenant, connector, events)
+        await send_batch(url, token, tenant, connector, events, direct_api=getattr(args, 'direct_api', False))
         save_cursor(args.cursor, next_cursor)
         cursor = next_cursor
         acknowledged += len(events)
@@ -178,6 +178,7 @@ def main() -> None:
     parser.add_argument("--cursor", type=Path, default=default / "windows-shipper.cursor")
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--send", action="store_true", help="Explicitly enable HTTPS transmission")
+    parser.add_argument("--direct-api", action="store_true", help="Use lightweight FastAPI/Postgres endpoint instead of Go/Kafka ingest")
     parser.add_argument("--max-batches", type=int, default=5, help="Maximum acknowledged batches per run")
     parser.add_argument("--url", help="Approved staging ingest URL")
     parser.add_argument("--tenant", help="Tenant UUID")
