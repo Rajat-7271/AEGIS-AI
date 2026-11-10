@@ -31,6 +31,12 @@ def main():
         assert len(first) == 2 and cursor == 2
         remaining, cursor = shipper.read_batch(path, 2, 2)
         assert len(remaining) == 1 and cursor == 3
+        try:
+            shipper.read_batch(path, 4, 2)
+        except ValueError as exc:
+            assert "shorter than saved shipper cursor" in str(exc)
+        else:
+            raise AssertionError("Truncated export must not silently skip events")
         saved = Path(temp) / "cursor"
         shipper.save_cursor(saved, cursor)
         assert saved.read_text() == "3"
