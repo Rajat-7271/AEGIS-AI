@@ -41,14 +41,7 @@ class WindowsBatch(BaseModel):
     events: list[WindowsEvent] = Field(min_length=1, max_length=500)
 
 
-@router.post("/batch")
-async def ingest_windows(
-    request: Request,
-    db: Session,
-    authorization: Annotated[str | None, Header()] = None,
-    x_signature: Annotated[str | None, Header()] = None,
-    tenant_header: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
-):
+async def _verify_windows_ingest_token(db: AsyncSession, authorization: str | None, tenant_header: str | None, x_signature: str | None, raw: bytes) -> uuid.UUID:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Connector-push token required")
     token = authorization.removeprefix("Bearer ").strip()
@@ -71,7 +64,6 @@ async def ingest_windows(
         raise HTTPException(401, "Invalid ingest credential")
     if claimed != credential.tenant_id:
         raise HTTPException(403, "Token is not scoped to requested tenant")
-    raw = await request.body()
     if len(raw) > 2_000_000:
         raise HTTPException(413, "Batch too large")
     if credential.hmac_secret:
@@ -79,13 +71,26 @@ async def ingest_windows(
         supplied = (x_signature or "").removeprefix("sha256=")
         if not hmac.compare_digest(supplied, expected):
             raise HTTPException(401, "Invalid body signature")
+    return credential.tenant_id
+
+
+@router.post("/batch")
+async def ingest_windows(
+    request: Request,
+    db: Session,
+    authorization: Annotated[str | None, Header()] = None,
+    x_signature: Annotated[str | None, Header()] = None,
+    tenant_header: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
+):
+    raw = await request.body()
+    tenant_id = await _verify_windows_ingest_token(db, authorization, tenant_header, x_signature, raw)
     try:
         batch = WindowsBatch.model_validate_json(raw)
     except ValueError:
         raise HTTPException(422, "Invalid Windows event batch") from None
     if batch.connector_type != "windows_event" or batch.source_format != "raw_json":
         raise HTTPException(422, "Unsupported event format")
-    await set_rls_context(db, credential.tenant_id)
+    await set_rls_context(db, tenant_id)
     for event in batch.events:
         system = event.raw_event.get("System")
         if not isinstance(system, dict) or not {"System", "EventData"}.issubset(event.raw_event) or event.raw_event["EventData"] != {}:
@@ -111,7 +116,7 @@ async def ingest_windows(
                 (tenant_id,event_id,connector_id,event_time,event_code,hostname,severity,provider,record_id)
             VALUES (:tenant,:id,:connector,:time,:code,:host,:severity,:provider,:record)
             ON CONFLICT (tenant_id,event_id) DO NOTHING
-        """), dict(tenant=credential.tenant_id, id=event_id,
+        """), dict(tenant=tenant_id, id=event_id,
                    connector=batch.connector_id, time=event.created_at,
                    code=system["EventID"], host=event.hostname,
                    severity=event.severity, provider=system["Provider"],
