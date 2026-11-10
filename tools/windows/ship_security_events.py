@@ -125,15 +125,10 @@ async def run(args: argparse.Namespace) -> None:
         if not text.isdecimal():
             raise ValueError("Invalid shipper cursor; refusing to continue")
         cursor = int(text)
-    raw, next_cursor = read_batch(args.input, cursor, args.limit)
-    if not raw:
-        print(json.dumps({"mode": "send" if args.send else "dry-run",
-                          "events": 0, "cursor": cursor}))
-        return
-    # Normalize with the existing connector rather than inventing a new format.
-    normalized = WindowsEventConnector("https://unused.invalid", "unused")
-    events = [normalized.normalize(e) for e in raw]
     if not args.send:
+        raw, _ = read_batch(args.input, cursor, args.limit)
+        normalized = WindowsEventConnector("https://unused.invalid", "unused")
+        events = [normalized.normalize(e) for e in raw]
         print(json.dumps({"mode": "dry-run", "events": len(events),
                           "cursor_unchanged": cursor, "network_requests": 0}))
         return
@@ -144,10 +139,23 @@ async def run(args: argparse.Namespace) -> None:
         raise ValueError("Sending requires HTTPS --url and AEGIS_WINDOWS_INGEST_TOKEN")
     tenant = str(uuid.UUID(args.tenant))
     connector = str(uuid.UUID(args.connector))
-    await send_batch(url, token, tenant, connector, events)
-    save_cursor(args.cursor, next_cursor)
-    print(json.dumps({"mode": "send", "acknowledged": len(events),
-                      "cursor": next_cursor}))
+    normalized = WindowsEventConnector("https://unused.invalid", "unused")
+    acknowledged = 0
+    # Drain a bounded backlog each scheduled invocation, not just one batch.
+    # Each batch is checkpointed only after full server acknowledgement.
+    for _ in range(args.max_batches):
+        raw, next_cursor = read_batch(args.input, cursor, args.limit)
+        if not raw:
+            break
+        events = [normalized.normalize(e) for e in raw]
+        await send_batch(url, token, tenant, connector, events)
+        save_cursor(args.cursor, next_cursor)
+        cursor = next_cursor
+        acknowledged += len(events)
+        if len(raw) < args.limit:
+            break
+    print(json.dumps({"mode": "send", "acknowledged": acknowledged,
+                      "cursor": cursor}))
 
 
 def main() -> None:
@@ -157,12 +165,15 @@ def main() -> None:
     parser.add_argument("--cursor", type=Path, default=default / "windows-shipper.cursor")
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--send", action="store_true", help="Explicitly enable HTTPS transmission")
+    parser.add_argument("--max-batches", type=int, default=5, help="Maximum acknowledged batches per run")
     parser.add_argument("--url", help="Approved staging ingest URL")
     parser.add_argument("--tenant", help="Tenant UUID")
     parser.add_argument("--connector", help="Connector UUID")
     args = parser.parse_args()
     if not 1 <= args.limit <= 500:
         parser.error("--limit must be between 1 and 500")
+    if not 1 <= args.max_batches <= 20:
+        parser.error("--max-batches must be between 1 and 20")
     try:
         asyncio.run(run(args))
     except (ValueError, OSError, json.JSONDecodeError, httpx.HTTPError, RuntimeError) as exc:
