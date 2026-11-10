@@ -1,5 +1,7 @@
 """Offline regression for Windows shipper; synthetic JSONL and MockTransport only."""
 import asyncio
+import hashlib
+import hmac
 import importlib.util
 import json
 import os
@@ -77,6 +79,28 @@ def main():
             shipper.httpx.AsyncClient = original
         assert ack == {"accepted": 2, "rejected": 0}
         assert len(calls) == 1
+        # Minted connector-push tokens may require a signature of the
+        # exact transmitted JSON bytes, not a reserialized payload.
+        previous_secret = os.environ.get("AEGIS_WINDOWS_INGEST_HMAC_SECRET")
+        os.environ["AEGIS_WINDOWS_INGEST_HMAC_SECRET"] = "synthetic-signing-key"
+        calls.clear()
+        shipper.httpx.AsyncClient = MockClient
+        try:
+            asyncio.run(shipper.send_batch(
+                "https://staging.invalid", "synthetic-token",
+                "11111111-1111-4111-8111-111111111111",
+                "22222222-2222-4222-8222-222222222222",
+                [{"external_id": "synthetic-signed"}],
+            ))
+        finally:
+            shipper.httpx.AsyncClient = original
+            if previous_secret is None:
+                os.environ.pop("AEGIS_WINDOWS_INGEST_HMAC_SECRET", None)
+            else:
+                os.environ["AEGIS_WINDOWS_INGEST_HMAC_SECRET"] = previous_secret
+        expected = hmac.new(b"synthetic-signing-key", calls[0].content, hashlib.sha256).hexdigest()
+        assert calls[0].headers["X-Signature"] == "sha256=" + expected
+        calls.clear()
         # A scheduled invocation must drain multiple batches and persist
         # the cursor after each fully acknowledged batch.
         calls.clear()
