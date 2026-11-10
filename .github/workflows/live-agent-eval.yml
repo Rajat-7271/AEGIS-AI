@@ -206,8 +206,7 @@ jobs:
         run: python3 scripts/check_live_agent_floor.py --report live-agent-eval.wet.json
 
       - name: Summarise
-        if: steps.ollama_install.outputs.available == 'true'
-        if: always()
+        if: ${{ always() && steps.ollama_install.outputs.available == 'true' }}
         run: |
           set -uo pipefail
           if [ ! -f live-agent-eval.wet.json ]; then
@@ -251,8 +250,7 @@ jobs:
       # against an absent run is exactly the "not measured is not zero"
       # failure the comparator exists to refuse.
       - name: Delta against the previous run of this model
-        if: steps.ollama_install.outputs.available == 'true'
-        if: always()
+        if: ${{ always() && steps.ollama_install.outputs.available == 'true' }}
         continue-on-error: true
         id: delta
         env:
@@ -279,8 +277,7 @@ jobs:
             --out "delta-$slug.md" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload report
-        if: steps.ollama_install.outputs.available == 'true'
-        if: always()
+        if: ${{ always() && steps.ollama_install.outputs.available == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: live-agent-eval-${{ github.run_id }}
@@ -297,8 +294,7 @@ jobs:
       # like live-agent performance. The live half stays unpublished until
       # there is a funded provider key, which is an account action.
       - name: Append a substrate row to the public scoreboard
-        if: steps.ollama_install.outputs.available == 'true'
-        if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+        if: ${{ steps.ollama_install.outputs.available == 'true' && github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
         run: |
           set -euo pipefail
           cd services/agents
