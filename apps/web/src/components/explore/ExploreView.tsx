@@ -69,6 +69,8 @@ const SOURCES: SourceDef[] = [
   },
 ];
 
+const WINDOWS_EVENTS_SQL = "SELECT event_time, severity, src_hostname, connector_type, event_id FROM raw_events WHERE connector_type = 'windows_event' ORDER BY event_time DESC LIMIT 100";
+
 const EXAMPLE_QUESTIONS = [
   'Show critical events in the last 24 hours',
   'Count events by connector type today',
@@ -237,7 +239,15 @@ function EventsExplorer() {
           spellCheck={false}
           className="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 font-mono text-xs text-slate-100"
         />
-        <div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={running}
+            onClick={() => { setSql(WINDOWS_EVENTS_SQL); void runSql(WINDOWS_EVENTS_SQL); }}
+            className="rounded-lg border border-sky-600 px-4 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-50"
+          >
+            View Windows Security events
+          </button>
           <button
             type="button"
             disabled={running}
