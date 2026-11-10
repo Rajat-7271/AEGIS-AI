@@ -55,8 +55,10 @@ def read_batch(path: Path, cursor: int, limit: int) -> tuple[list[dict], int]:
         raise ValueError("JSONL export does not exist")
     events = []
     last_line = cursor
+    observed_lines = 0
     with path.open("r", encoding="utf-8-sig") as stream:
         for line_no, line in enumerate(stream, 1):
+            observed_lines = line_no
             if line_no <= cursor:
                 continue
             if not line.strip():
@@ -83,6 +85,8 @@ def read_batch(path: Path, cursor: int, limit: int) -> tuple[list[dict], int]:
             last_line = line_no
             if len(events) == limit:
                 break
+    if not events and cursor > observed_lines:
+        raise ValueError("JSONL export is shorter than saved shipper cursor; refusing to skip events")
     return events, last_line
 
 
