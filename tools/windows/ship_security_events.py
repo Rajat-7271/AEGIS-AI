@@ -14,6 +14,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import importlib.util
+import types
 import os
 import sys
 import uuid
@@ -22,8 +24,30 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "services" / "connectors"))
-from app.connectors.windows_event import WindowsEventConnector  # noqa: E402
+# Load only the Windows connector and its base module. Importing the package
+# initializer loads unrelated cloud connectors and their optional dependencies.
+CONNECTORS = ROOT / "services" / "connectors" / "app" / "connectors"
+app = types.ModuleType("app")
+app.__path__ = [str(CONNECTORS.parent)]
+package = types.ModuleType("app.connectors")
+package.__path__ = [str(CONNECTORS)]
+sys.modules["app"] = app
+sys.modules["app.connectors"] = package
+
+
+def load_connector_module(name: str):
+    fullname = f"app.connectors.{name}"
+    spec = importlib.util.spec_from_file_location(fullname, CONNECTORS / f"{name}.py")
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load {fullname}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[fullname] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+load_connector_module("base")
+WindowsEventConnector = load_connector_module("windows_event").WindowsEventConnector
 
 
 def read_batch(path: Path, cursor: int, limit: int) -> tuple[list[dict], int]:
