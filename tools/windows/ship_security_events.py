@@ -12,6 +12,8 @@ be verified before enabling production.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import asyncio
 import json
 import importlib.util
@@ -101,12 +103,23 @@ def save_cursor(path: Path, cursor: int) -> None:
 
 
 async def send_batch(url: str, token: str, tenant: str, connector: str, events: list[dict]) -> dict:
+    # The Go ingest endpoint optionally requires an HMAC-SHA256 signature
+    # over the exact request bytes for minted connector-push tokens.
+    body = json.dumps(
+        {"connector_id": connector, "connector_type": "windows_event",
+         "source_format": "raw_json", "events": events},
+        separators=(",", ":"), ensure_ascii=False,
+    ).encode("utf-8")
+    headers = {"Authorization": "Bearer " + token, "X-Tenant-ID": tenant,
+               "Content-Type": "application/json"}
+    secret = os.getenv("AEGIS_WINDOWS_INGEST_HMAC_SECRET", "")
+    if secret:
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+        headers["X-Signature"] = "sha256=" + signature
     async with httpx.AsyncClient(timeout=30, trust_env=False) as client:
         response = await client.post(
             url.rstrip("/") + "/v1/ingest/batch",
-            headers={"Authorization": "Bearer " + token, "X-Tenant-ID": tenant},
-            json={"connector_id": connector, "connector_type": "windows_event",
-                  "source_format": "raw_json", "events": events},
+            headers=headers, content=body,
         )
         response.raise_for_status()
         ack = response.json()
