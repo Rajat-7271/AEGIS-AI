@@ -96,7 +96,11 @@ async def ingest_windows(
             raise HTTPException(422, "Inconsistent host or provider")
         if set(system) != {"EventID", "Channel", "Computer", "EventRecordID", "TimeCreated", "Provider"}:
             raise HTTPException(422, "Unexpected Security metadata")
-        if event.created_at.isoformat() != datetime.fromisoformat(system["TimeCreated"].replace("Z", "+00:00")).isoformat():
+        try:
+            source_time = datetime.fromisoformat(system["TimeCreated"].replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "Invalid source timestamp") from None
+        if event.created_at != source_time:
             raise HTTPException(422, "Inconsistent event timestamp")
         # Stable across retries; tenant scope is part of the primary key.
         event_id = uuid.uuid5(uuid.NAMESPACE_URL, event.external_id)
