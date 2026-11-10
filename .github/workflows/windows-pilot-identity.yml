@@ -11,6 +11,8 @@ on:
       - "tools/windows/export-security-events.ps1"
       - "services/connectors/app/connectors/windows_event.py"
       - "services/connectors/app/connectors/base.py"
+      - "services/ingest/internal/normalizer/windows_pipeline_test.go"
+      - "services/ingest/internal/normalizer/normalizer.go"
       - ".github/workflows/windows-pilot-identity.yml"
   workflow_dispatch:
 
@@ -61,3 +63,20 @@ jobs:
             )
             if ($errors.Count -gt 0) { throw "$path parse failed: $($errors | Out-String)" }
           }
+
+  go-ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/ingest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/ingest/go.mod
+          cache-dependency-path: services/ingest/go.sum
+      - name: Verify Windows ingest normalization and replay identity
+        run: go test ./internal/normalizer -run TestWindowsShipperEnvelopeNormalizesAndReplays -count=1
