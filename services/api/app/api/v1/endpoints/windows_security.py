@@ -47,14 +47,21 @@ async def ingest_windows(
     db: Session,
     authorization: Annotated[str | None, Header()] = None,
     x_signature: Annotated[str | None, Header()] = None,
-    x_tenant_id: Annotated[str | None, Header()] = None,
+    tenant_header: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
 ):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Connector-push token required")
     token = authorization.removeprefix("Bearer ").strip()
     if not token or len(token) > 80:
         raise HTTPException(401, "Invalid ingest credential")
+    if not tenant_header:
+        raise HTTPException(400, "Tenant header required")
+    try:
+        claimed = uuid.UUID(tenant_header)
+    except ValueError:
+        raise HTTPException(400, "Invalid tenant UUID") from None
     result = await db.execute(select(TenantInboxToken).where(
+        TenantInboxToken.tenant_id == claimed,
         TenantInboxToken.token == token,
         TenantInboxToken.revoked_at.is_(None),
         TenantInboxToken.template_id == "connector-push",
@@ -62,13 +69,8 @@ async def ingest_windows(
     credential = result.scalar_one_or_none()
     if credential is None:
         raise HTTPException(401, "Invalid ingest credential")
-    if x_tenant_id:
-        try:
-            claimed = uuid.UUID(x_tenant_id)
-        except ValueError:
-            raise HTTPException(400, "Invalid tenant UUID") from None
-        if claimed != credential.tenant_id:
-            raise HTTPException(403, "Token is not scoped to requested tenant")
+    if claimed != credential.tenant_id:
+        raise HTTPException(403, "Token is not scoped to requested tenant")
     raw = await request.body()
     if len(raw) > 2_000_000:
         raise HTTPException(413, "Batch too large")
