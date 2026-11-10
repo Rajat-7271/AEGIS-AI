@@ -20,7 +20,7 @@ These checks do not demonstrate backend ingestion or dashboard delivery.
   its best-effort side effects are not an end-to-end commit transaction.
 - Go `generateEventID` derives deterministic UUIDs from tenant, connector
   and `external_id` when present. Windows `external_id` scopes host,
-  channel and record number, but **not log-clear epoch**.
+  channel and record number. The connector now accepts an optional explicit\n  `SourceEpoch` or `source_epoch` for identity scoping, but the current\n  exporter does not generate or persist a trustworthy epoch.
 
 ## Offline checks
 
@@ -40,7 +40,7 @@ of the Go algorithm, not a Go runtime or database idempotency test.
 
 ## Required before staging live connection
 
-1. Design and test source epochs for Security log clear/rotation, checkpoint
+1. Implement and test trusted exporter/collector source epochs for Security log clear/rotation, checkpoint
    recovery, truncation, and source identity migration.
 2. Verify actual Go normalizer and publisher behavior with synthetic events,
    including ambiguous Kafka publish outcomes.
