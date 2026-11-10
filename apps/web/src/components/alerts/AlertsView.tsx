@@ -693,6 +693,10 @@ function AlertsPagination({
   filters: AlertFilters;
   onFilterChange: (f: AlertFilters) => void;
 }) {
+  const currentPage = filters.page || 1;
+  const pageSize = filters.pageSize || 25;
+  const hasNextPage = currentPage * pageSize < total;
+
   return (
     <div className="flex items-center justify-between text-xs text-gray-500">
       <span>Showing {alerts.length} of {total} alerts</span>
@@ -707,7 +711,7 @@ function AlertsPagination({
         <span className="px-2">Page {filters.page || 1}</span>
         <button
           onClick={() => onFilterChange({ ...filters, page: (filters.page || 1) + 1 })}
-          disabled={alerts.length < (filters.pageSize || 25)}
+          disabled={!hasNextPage}
           className="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Next
