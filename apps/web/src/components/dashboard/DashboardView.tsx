@@ -264,7 +264,7 @@ function PanelUnavailable({
       <ErrorState
         title="Could not load this panel"
         description="The metrics API did not respond. Nothing is rendered here rather than a placeholder number."
-        error={error}
+        error={new Error('Metrics service unavailable')}
         onRetry={onRetry}
         className="px-4 py-6"
       />
