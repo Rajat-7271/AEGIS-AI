@@ -163,3 +163,15 @@ async def test_hosted_event_list_uses_authenticated_tenant(monkeypatch):
     assert response["rows"] == []
     assert response["row_count"] == 0
     assert any(params == {"tenant": TENANT, "limit": 100} for _, params in db.statements)
+
+
+def test_windows_security_rls_fails_closed_without_tenant_context():
+    """Regression: no tenant context must never become a cross-tenant read grant."""
+    from pathlib import Path
+
+    migration = (Path(__file__).resolve().parents[1] / "migrations" /
+                 "121_windows_security_events.sql").read_text()
+    assert "ALTER TABLE windows_security_events FORCE ROW LEVEL SECURITY" in migration
+    assert "current_tenant_id() IS NULL" not in migration
+    assert "USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)" in migration
+    assert "WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)" in migration
