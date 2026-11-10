@@ -68,7 +68,7 @@ def main():
         finally:
             shipper.httpx.AsyncClient = original
         assert ack == {"accepted": 2, "rejected": 0}
-        assert len(calls) == 1
+        assert len(calls) == 1\n\n        def partial(req):\n            return httpx.Response(200, json={"accepted": 1, "rejected": 1})\n\n        class PartialClient:\n            def __init__(self, **kwargs):\n                self.client = original(transport=httpx.MockTransport(partial))\n            async def __aenter__(self):\n                return await self.client.__aenter__()\n            async def __aexit__(self, *args):\n                return await self.client.__aexit__(*args)\n            async def post(self, *args, **kwargs):\n                return await self.client.post(*args, **kwargs)\n\n        shipper.httpx.AsyncClient = PartialClient\n        try:\n            try:\n                asyncio.run(shipper.send_batch(\n                    "https://staging.invalid", "synthetic-token",\n                    "11111111-1111-4111-8111-111111111111",\n                    "22222222-2222-4222-8222-222222222222",\n                    [{"external_id": "synthetic-1"}, {"external_id": "synthetic-2"}],\n                ))\n            except RuntimeError as exc:\n                assert "Incomplete ingestion acknowledgement" in str(exc)\n            else:\n                raise AssertionError("Partial acknowledgement must not succeed")\n        finally:\n            shipper.httpx.AsyncClient = original
     print(json.dumps({"status": "passed", "synthetic_records": 3,
                       "intercepted_requests": 1, "network_requests": 0,
                       "production_contacted": False}))
