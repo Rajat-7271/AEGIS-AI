@@ -5,15 +5,15 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import AuthUser, DBSession, get_current_user
+from app.api.v1.deps import AuthUser, DBSession, get_current_user, require_permission
 from app.core.config import settings
 from app.core.role_grants import wildcard_roles as WILDCARD_ROLES
 from app.core.security import (
@@ -25,8 +25,16 @@ from app.core.security import (
     verify_password,
 )
 from app.db.rls import set_rls_context
+from app.models.account_email_change import AccountEmailChangeRequest
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
+from app.services.account_email_confirmation import EmailChangeRejected, confirm_pending_email_change
+from app.services.account_email_delivery import verification_link
+from app.services.account_email_request import EmailChangeRequestRejected
+from app.services.account_email_step_up import EmailChangeStepUpRejected
+from app.services.account_email_workflow import EmailChangeDeliveryRejected, request_verified_email_change
+from app.services.audit import emit_audit
+from app.services.email_approval import MailgunClient
 from app.services.login_throttle import client_ip, get_login_throttle
 from app.services.waitlist import get_signup_rate_limiter
 
@@ -229,6 +237,25 @@ class UserMeResponse(BaseModel):
     preferences: dict[str, Any] = {}
 
     model_config = {"from_attributes": True}
+
+
+class ProfileNameUpdate(BaseModel):
+    username: str
+
+
+class EmailChangeStartRequest(BaseModel):
+    proposed_email: EmailStr
+    current_password: str
+    totp_code: str
+
+
+class EmailChangeConfirmRequest(BaseModel):
+    token: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class PreferencesPatch(BaseModel):
@@ -481,3 +508,194 @@ async def patch_me_preferences(
     result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = result.scalar_one_or_none()
     return UserMeResponse.model_validate(user)
+
+
+@router.patch("/me/name", response_model=UserMeResponse)
+async def change_own_display_name(
+    body: ProfileNameUpdate,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> UserMeResponse:
+    """Update only the authenticated user's display name, never their role."""
+    name = body.username.strip()
+    if (
+        not 1 <= len(name) <= 100
+        or any(ord(char) < 32 or ord(char) == 127 for char in name)
+    ):
+        raise HTTPException(status_code=400, detail="Display name must be 1-100 printable characters")
+    user = (
+        await db.execute(
+            select(User)
+            .where(User.id == current_user.user_id, User.tenant_id == current_user.tenant_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.username = name
+    await db.commit()
+    return UserMeResponse.model_validate(user)
+
+
+async def _limit_email_change_attempt(request: Request, user_id: uuid.UUID) -> None:
+    """Bound sensitive attempts by both caller source and account identity."""
+    limiter = get_signup_rate_limiter()
+    for key in (
+        f"account-email-change:source:{client_ip(request)}",
+        f"account-email-change:user:{user_id}",
+    ):
+        decision = await limiter.acquire(key)
+        if not decision.allowed:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many account-change attempts. Try again later.",
+                headers=decision.to_headers(),
+            )
+
+
+@router.post("/me/email-change/request", status_code=status.HTTP_202_ACCEPTED)
+async def request_own_email_change(
+    body: EmailChangeStartRequest,
+    request: Request,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> dict[str, str]:
+    """Send verification to the proposed address only after TOTP step-up."""
+    await _limit_email_change_attempt(request, current_user.user_id)
+    origin = (settings.CONSOLE_PUBLIC_BASE_URL or "").strip()
+    # Never derive verification hosts from attacker-controlled Host headers.
+    try:
+        verification_link(origin=origin, token="a" * 43)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="Email verification is not configured") from exc
+    mailer = MailgunClient()
+    try:
+        await request_verified_email_change(
+            db,
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            current_password=body.current_password,
+            proposed_email=str(body.proposed_email),
+            totp_code=body.totp_code,
+            origin=origin,
+            mailer=mailer,
+        )
+    except (EmailChangeRequestRejected, EmailChangeStepUpRejected) as exc:
+        raise HTTPException(status_code=403, detail="Email change could not be requested") from exc
+    except EmailChangeDeliveryRejected as exc:
+        raise HTTPException(status_code=503, detail="Email verification could not be delivered") from exc
+    finally:
+        await mailer.aclose()
+    await emit_audit(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        action="auth.email_change.requested",
+        resource="user",
+        resource_id=str(current_user.user_id),
+        changes={"verification_required": True},
+        request=request,
+    )
+    await db.commit()
+    return {"message": "Check your new email address for a verification link."}
+
+
+@router.post("/me/email-change/confirm", status_code=status.HTTP_204_NO_CONTENT)
+async def confirm_own_email_change(
+    body: EmailChangeConfirmRequest,
+    request: Request,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> None:
+    """Consume a verification token only for its authenticated owner."""
+    await _limit_email_change_attempt(request, current_user.user_id)
+    try:
+        await confirm_pending_email_change(
+            db,
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            token=body.token,
+        )
+    except EmailChangeRejected as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification") from exc
+    await emit_audit(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        action="auth.email_change.confirmed",
+        resource="user",
+        resource_id=str(current_user.user_id),
+        changes={"sessions_revoked": True},
+        request=request,
+    )
+    await db.commit()
+
+
+@router.delete("/me/pending-email-change", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_own_pending_email_change(
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> None:
+    """Revoke any unconfirmed email-change link for the current account.
+
+    No email-change token or user ID is accepted from the caller. This
+    operation is safe to repeat and never changes the active login address.
+    """
+    user = (
+        await db.execute(
+            select(User)
+            .where(User.id == current_user.user_id, User.tenant_id == current_user.tenant_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.execute(
+        update(AccountEmailChangeRequest)
+        .where(
+            AccountEmailChangeRequest.tenant_id == current_user.tenant_id,
+            AccountEmailChangeRequest.user_id == current_user.user_id,
+            AccountEmailChangeRequest.consumed_at.is_(None),
+            AccountEmailChangeRequest.cancelled_at.is_(None),
+        )
+        .values(cancelled_at=datetime.now(UTC))
+    )
+    await db.commit()
+
+
+@router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_own_password(
+    body: PasswordChangeRequest,
+    current_user: AuthUser,
+    db: DBSession,
+    _authorized: Annotated[Any, Depends(require_permission("settings:write"))],
+) -> None:
+    """Rotate the authenticated principal's password without changing identity or role.
+
+    Existing sessions are revoked, including this session. The caller must sign in
+    again with the new password. Never accept a user ID from the request body.
+    """
+    if len(body.new_password) < 12 or len(body.new_password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 12 characters and at most 72 UTF-8 bytes.",
+        )
+    user = (
+        await db.execute(
+            select(User).where(User.id == current_user.user_id, User.tenant_id == current_user.tenant_id).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not verify_password(body.current_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Current password is incorrect")
+    if verify_password(body.new_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a different password")
+
+    user.hashed_password = get_password_hash(body.new_password)
+    user.sessions_revoked_at = datetime.now(UTC)
+    await db.commit()

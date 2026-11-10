@@ -294,8 +294,11 @@ def judge(schema: Schema) -> list[str]:
             )
             continue
 
-        # The forward direction: the fail-open arm.
-        if not re.search(r"\bIS\s+NULL\b", body, re.I):
+        # Verification tokens are never read by cross-tenant background workers.
+        # Unlike operational tables, they must fail closed without a tenant.
+        sensitive_tenant_only = table == "account_email_change_requests"
+        # The forward direction: the fail-open arm for operational tables.
+        if not sensitive_tenant_only and not re.search(r"\bIS\s+NULL\b", body, re.I):
             problems.append(
                 f"{where} has no 'OR <tenant context> IS NULL' arm. Ingest, fusion, the retention purge and the "
                 "schedulers read this table on a connection that binds no tenant; without the arm they see zero "
@@ -426,6 +429,16 @@ def self_test() -> list[str]:
                 f"{label}: judge {'accepted' if passed else 'rejected (' + problems[0] + ')'}, "
                 f"expected it to {'accept' if should_pass else 'reject'}"
             )
+
+    # Sensitive verification requests must fail closed when no tenant is bound.
+    token_schema = replay([("<self-test: token isolation>",
+        "ALTER TABLE account_email_change_requests ENABLE ROW LEVEL SECURITY; "
+        "ALTER TABLE account_email_change_requests FORCE ROW LEVEL SECURITY; "
+        "CREATE POLICY account_email_change_tenant ON account_email_change_requests "
+        "USING (tenant_id = current_tenant_id()) "
+        "WITH CHECK (tenant_id = current_tenant_id());")])
+    if judge(token_schema):
+        failures.append(f"tenant-only verification token policy was rejected: {judge(token_schema)[0]}")
 
     # Supersession across two files, which is the real shape in this tree.
     broken = (

@@ -26,6 +26,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import {
   ApiError,
+  authApi,
   apiKeysApi,
   connectorsApi,
   deploymentApi,
@@ -51,7 +52,7 @@ import { RetroHuntSettingsPanel } from './RetroHuntSettings';
 import { ScimTokensPanel } from './ScimTokensPanel';
 import { useTheme, type ThemePreference } from '@/components/theme/ThemeProvider';
 import { canUseDemoData } from '@/lib/demoFallback';
-import { rbacApi, authApi } from '@/lib/api';
+import { rbacApi } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -527,9 +528,70 @@ function Toggle({
 function ProfilePanel() {
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
   const [dirty, setDirty] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [proposedEmail, setProposedEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailTotp, setEmailTotp] = useState('');
+  const [requestingEmail, setRequestingEmail] = useState(false);
+  const [cancellingEmail, setCancellingEmail] = useState(false);
+
+  const onRequestEmailChange = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setRequestingEmail(true);
+    try {
+      await authApi.requestEmailChange(proposedEmail, emailPassword, emailTotp);
+      setEmailPassword('');
+      setEmailTotp('');
+      toast.success('Verification requested. Check the new email address.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not request email change');
+    } finally {
+      setRequestingEmail(false);
+    }
+  };
+
+  const onCancelEmailChange = async () => {
+    setCancellingEmail(true);
+    try {
+      await authApi.cancelEmailChange();
+      toast.success('Pending email changes cancelled');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not cancel email change');
+    } finally {
+      setCancellingEmail(false);
+    }
+  };
+
+
+  const onChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Password updated. Please sign in again.');
+      window.location.assign('/login');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
-    setProfile(loadProfile());
+    const stored = loadProfile();
+    const account = authApi.currentUser();
+    setProfile({ ...stored, displayName: account?.username ?? stored.displayName });
   }, []);
 
   const update = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
@@ -537,11 +599,21 @@ function ProfilePanel() {
     setDirty(true);
   };
 
-  const onSave = () => {
-    saveProfile(profile);
-    window.dispatchEvent(new Event('aegis:profile-updated'));
-    setDirty(false);
-    toast.success('Profile updated');
+  const onSave = async () => {
+    if (savingProfile) return;
+    setSavingProfile(true);
+    try {
+      const updated = await authApi.changeDisplayName(profile.displayName);
+      const saved = { ...profile, displayName: updated.username };
+      saveProfile(saved);
+      setProfile(saved);
+      setDirty(false);
+      toast.success('Profile updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update profile');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const initials = profile.displayName
@@ -559,16 +631,16 @@ function ProfilePanel() {
         action={
           <button
             type="button"
-            disabled={!dirty}
+            disabled={!dirty || savingProfile}
             onClick={onSave}
             className={clsx(
               'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              dirty
+              dirty && !savingProfile
                 ? 'bg-blue-600 text-white hover:bg-blue-500'
                 : 'cursor-not-allowed bg-gray-800 text-gray-500',
             )}
           >
-            Save changes
+            {savingProfile ? 'Saving…' : 'Save changes'}
           </button>
         }
       />
@@ -606,14 +678,8 @@ function ProfilePanel() {
               placeholder="e.g. Avi Sharma"
             />
           </Field>
-          <Field label="Email" hint="Used for notifications and login.">
-            <input
-              type="email"
-              className={inputClass()}
-              value={profile.email}
-              onChange={(e) => update('email', e.target.value)}
-              placeholder="you@org.com"
-            />
+          <Field label="Login email" hint="Read-only. Editing profile preferences does not change authentication credentials.">
+            <input type="email" className={inputClass()} value={authApi.currentUser()?.email ?? ''} readOnly aria-label="Login email" />
           </Field>
           <Field label="Job title">
             <input
@@ -634,9 +700,33 @@ function ProfilePanel() {
         </div>
 
         <div className="rounded-lg border border-gray-800 bg-gray-950/40 p-4 text-xs text-gray-500">
-          Profile preferences are persisted to your user account and sync
-          across devices when you sign in.
+          Your display name is saved to your account. Job title and timezone remain browser-only preferences. Login email changes require separate verification.
         </div>
+        <form onSubmit={onRequestEmailChange} className="space-y-3 rounded-lg border border-gray-800 p-4">
+          <h3 className="text-sm font-semibold text-gray-100">Change login email</h3>
+          <p className="text-xs text-gray-400">Confirm your password and a fresh six-digit authenticator code. A verification link will be sent to your new email, and your current address will receive a security notice. Your login remains unchanged until you confirm.</p>
+          <Field label="New login email">
+            <input type="email" autoComplete="email" required className={inputClass()} value={proposedEmail} onChange={e => setProposedEmail(e.target.value)} />
+          </Field>
+          <Field label="Current password">
+            <input type="password" autoComplete="current-password" required className={inputClass()} value={emailPassword} onChange={e => setEmailPassword(e.target.value)} />
+          </Field>
+          <Field label="Authenticator code">
+            <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required className={inputClass()} value={emailTotp} onChange={e => setEmailTotp(e.target.value)} />
+          </Field>
+          <div className="flex flex-wrap gap-3">
+            <button type="submit" disabled={requestingEmail} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">{requestingEmail ? 'Requesting…' : 'Send verification email'}</button>
+            <button type="button" disabled={cancellingEmail} onClick={onCancelEmailChange} className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-200 disabled:opacity-50">{cancellingEmail ? 'Cancelling…' : 'Cancel pending change'}</button>
+          </div>
+        </form>
+        <form onSubmit={onChangePassword} className="space-y-3 rounded-lg border border-gray-800 p-4">
+          <h3 className="text-sm font-semibold text-gray-100">Change password</h3>
+          <p className="text-xs text-gray-400">Your current password is required. All existing sessions will be signed out.</p>
+          <Field label="Current password"><input type="password" autoComplete="current-password" required className={inputClass()} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></Field>
+          <Field label="New password"><input type="password" autoComplete="new-password" minLength={12} required className={inputClass()} value={newPassword} onChange={e => setNewPassword(e.target.value)} /></Field>
+          <Field label="Confirm new password"><input type="password" autoComplete="new-password" minLength={12} required className={inputClass()} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></Field>
+          <button type="submit" disabled={changingPassword} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">{changingPassword ? 'Updating…' : 'Change password'}</button>
+        </form>
       </div>
     </div>
   );
