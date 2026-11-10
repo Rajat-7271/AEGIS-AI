@@ -85,13 +85,26 @@ def main() -> None:
     assert after_clear["external_id"] == first["external_id"], (
         "Source epoch semantics changed: revisit this regression and rollout gate"
     )
-    # A trusted collector may explicitly assign a stable source epoch.\n    # The same epoch must replay identically; a new epoch separates reused IDs.\n    epoch_one = event("host-a", "Security", 42)\n    epoch_one["SourceEpoch"] = "epoch-1"\n    epoch_one_replay = event("host-a", "Security", 42, "2026-11-11T10:00:00Z")\n    epoch_one_replay["SourceEpoch"] = "epoch-1"\n    epoch_two = event("host-a", "Security", 42, "2026-11-11T10:00:00Z")\n    epoch_two["SourceEpoch"] = "epoch-2"\n    assert normalize(epoch_one)["external_id"] == normalize(epoch_one_replay)["external_id"]\n    assert normalize(epoch_one)["external_id"] != normalize(epoch_two)["external_id"]\n    assert normalize(epoch_one)["external_id"] != first["external_id"]\n\n    print(json.dumps({
+    # A trusted collector may explicitly assign a stable source epoch.
+    # The same epoch must replay identically; a new epoch separates reused IDs.
+    epoch_one = event("host-a", "Security", 42)
+    epoch_one["SourceEpoch"] = "epoch-1"
+    epoch_one_replay = event("host-a", "Security", 42, "2026-11-11T10:00:00Z")
+    epoch_one_replay["SourceEpoch"] = "epoch-1"
+    epoch_two = event("host-a", "Security", 42, "2026-11-11T10:00:00Z")
+    epoch_two["SourceEpoch"] = "epoch-2"
+    assert normalize(epoch_one)["external_id"] == normalize(epoch_one_replay)["external_id"]
+    assert normalize(epoch_one)["external_id"] != normalize(epoch_two)["external_id"]
+    assert normalize(epoch_one)["external_id"] != first["external_id"]
+
+    print(json.dumps({
         "status": "passed",
         "same_record_replay_stable": True,
         "cross_host_channel_record_separated": True,
         "tenant_and_connector_model_separated": True,
         "log_clear_record_reuse_collision": True,
-        "explicit_source_epoch_supported": True,\n        "log_clear_policy": "BLOCKER: exporter does not yet persist trusted source epochs",
+        "explicit_source_epoch_supported": True,
+        "log_clear_policy": "BLOCKER: exporter does not yet persist trusted source epochs",
         "go_runtime_verified": False,
         "downstream_storage_verified": False,
         "network_requests": 0,
