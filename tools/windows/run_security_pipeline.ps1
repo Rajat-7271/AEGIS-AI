@@ -16,8 +16,8 @@ $python = (Get-Command python -ErrorAction Stop).Source
 $arguments = @($shipper, '--limit', [string]$Limit)
 if ($Send) {
     # Scheduled tasks do not reliably inherit interactive PowerShell variables.
-    # Load only the four required settings from this Windows user's environment.
-    foreach ($key in @('AEGIS_WINDOWS_INGEST_URL', 'AEGIS_WINDOWS_TENANT_ID', 'AEGIS_WINDOWS_CONNECTOR_ID', 'AEGIS_WINDOWS_INGEST_TOKEN')) {
+    # Load ingest settings and optional signing secret from this Windows user's environment.
+    foreach ($key in @('AEGIS_WINDOWS_INGEST_URL', 'AEGIS_WINDOWS_TENANT_ID', 'AEGIS_WINDOWS_CONNECTOR_ID', 'AEGIS_WINDOWS_INGEST_TOKEN', 'AEGIS_WINDOWS_INGEST_HMAC_SECRET')) {
         if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($key, 'Process'))) {
             $stored = [Environment]::GetEnvironmentVariable($key, 'User')
             if (-not [string]::IsNullOrWhiteSpace($stored)) {
