@@ -53,6 +53,38 @@ jobs:
           SECRET_KEY: ci-dummy-secret-key-at-least-32bytes!
           DATABASE_URL: postgresql+asyncpg://x:x@localhost/x
 
+  openapi-sync-pr:
+    name: Regenerate OpenAPI on Windows development PR
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'dev/windows-staging-replay-gates'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install API dependencies
+        run: pip install --quiet ${{ env.OPENAPI_DEPS }}
+      - name: Generate exact OpenAPI artifact
+        env:
+          ENVIRONMENT: development
+          SECRET_KEY: ci-dummy-secret-key-at-least-32bytes!
+          DATABASE_URL: postgresql+asyncpg://x:x@localhost/x
+        run: python scripts/export_openapi.py
+      - name: Commit generated spec to development branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/openapi.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: synchronize Windows Security OpenAPI schema"
+            git push origin HEAD:dev/windows-staging-replay-gates
+          fi
+
   openapi-export:
     name: Auto-export OpenAPI on merge to main
     runs-on: ubuntu-latest
