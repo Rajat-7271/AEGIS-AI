@@ -86,7 +86,7 @@ async def ingest_windows(
     await set_rls_context(db, credential.tenant_id)
     for event in batch.events:
         system = event.raw_event.get("System")
-        if not isinstance(system, dict) or set(event.raw_event) != {"System", "EventData"} or event.raw_event["EventData"] != {}:
+        if not isinstance(system, dict) or not {"System", "EventData"}.issubset(event.raw_event) or event.raw_event["EventData"] != {}:
             raise HTTPException(422, "Unexpected event structure")
         if system.get("Channel") != "Security" or type(system.get("EventID")) is not int or system["EventID"] not in _ALLOWED:
             raise HTTPException(422, "Unsupported Security event")
@@ -94,6 +94,10 @@ async def ingest_windows(
             raise HTTPException(422, "Invalid record ID")
         if system.get("Computer") != event.hostname or not isinstance(system.get("Provider"), str):
             raise HTTPException(422, "Inconsistent host or provider")
+        if set(system) != {"EventID", "Channel", "Computer", "EventRecordID", "TimeCreated", "Provider"}:
+            raise HTTPException(422, "Unexpected Security metadata")
+        if event.created_at.isoformat() != datetime.fromisoformat(system["TimeCreated"].replace("Z", "+00:00")).isoformat():
+            raise HTTPException(422, "Inconsistent event timestamp")
         # Stable across retries; tenant scope is part of the primary key.
         event_id = uuid.uuid5(uuid.NAMESPACE_URL, event.external_id)
         await db.execute(text("""
