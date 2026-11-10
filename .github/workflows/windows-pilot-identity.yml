@@ -3,7 +3,7 @@ name: Windows pilot offline identity
 on:
   pull_request:
     paths:
-      - "tools/windows/test_windows_identity.py"\n      - "tools/windows/ship_security_events.py"\n      - "tools/windows/test_ship_security_events.py"
+      - "tools/windows/test_windows_identity.py"\n      - "tools/windows/ship_security_events.py"\n      - "tools/windows/test_ship_security_events.py"\n      - "tools/windows/schedule_security_export.ps1"
       - "services/connectors/app/connectors/windows_event.py"
       - "services/connectors/app/connectors/base.py"
       - ".github/workflows/windows-pilot-identity.yml"
