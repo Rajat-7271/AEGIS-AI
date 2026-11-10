@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   description:
     'AEGIS AI is an AI-powered Security Operations Center (SOC). Real-time threat detection, alert fusion, purple-team exercises, MITRE ATT&CK-aware autonomous investigation, and detection-as-code — MIT-licensed.',
   keywords: [...DISCOVERY_KEYWORDS],
-  authors: [{ name: 'AEGIS AI Community', url: 'https://github.com/beenuar/AiSOC' }],
+  authors: [{ name: 'AEGIS AI Community', url: 'https://github.com/Rajat-7271/AEGIS-AI' }],
   creator: 'AEGIS AI Community',
   publisher: 'AEGIS AI',
   category: 'cybersecurity',
@@ -64,8 +64,6 @@ export const metadata: Metadata = {
     title: 'AEGIS AI — AI SOC Platform',
     description:
       'AI-powered SOC: threat detection, alert fusion, purple team, MITRE ATT&CK mapping, detection-as-code, and eval harness in CI.',
-    site: '@aisoc_dev',
-    creator: '@aisoc_dev',
   },
   icons: {
     // Single SVG favicon — modern browsers (Chrome 80+, Safari 16+, Firefox 41+,
@@ -101,11 +99,11 @@ const jsonLd = {
       logo: `${siteUrl}/favicon.svg`,
       description:
         'AI security operations platform with a public demo and self-host path.',
-      sameAs: ['https://github.com/beenuar/AiSOC'],
+      sameAs: ['https://github.com/Rajat-7271/AEGIS-AI'],
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'technical support',
-        url: 'https://github.com/beenuar/AiSOC/issues',
+        url: 'https://github.com/Rajat-7271/AEGIS-AI/pulls',
       },
     },
     {
@@ -123,9 +121,9 @@ const jsonLd = {
         description: 'Free, open-source, self-hostable',
       },
       url: siteUrl,
-      downloadUrl: 'https://github.com/beenuar/AiSOC',
+      downloadUrl: 'https://github.com/Rajat-7271/AEGIS-AI',
       installUrl: docs('quickstart'),
-      releaseNotes: 'https://github.com/beenuar/AiSOC/releases',
+      releaseNotes: 'https://github.com/Rajat-7271/AEGIS-AI/releases',
       featureList: [
         `Click-and-connect ${CONNECTOR_COUNT} security sources (EDR, SIEM, cloud, IAM, SaaS) with encrypted credential vault`,
         'Real-time threat detection and alert fusion',
