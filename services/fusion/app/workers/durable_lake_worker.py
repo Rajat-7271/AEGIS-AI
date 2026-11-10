@@ -115,7 +115,14 @@ class DurableLakeWorker:
 
                     key = (tp.topic, tp.partition)
                     if key not in self._offsets._partitions:
-                        continue
+                        # A fetched but unassigned record must never be
+                        # silently discarded: the consumer position may have
+                        # advanced even though no Kafka offset was committed.
+                        self._failures_total += 1
+                        self._running = False
+                        raise RuntimeError(
+                            "Durable lake fetched a record without partition ownership"
+                        )
 
                     try:
                         await self._processor.process(
