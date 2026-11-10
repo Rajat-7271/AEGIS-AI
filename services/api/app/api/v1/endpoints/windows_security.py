@@ -53,6 +53,7 @@ async def _verify_windows_ingest_token(db: AsyncSession, authorization: str | No
         claimed = uuid.UUID(tenant_header)
     except ValueError:
         raise HTTPException(400, "Invalid tenant UUID") from None
+    await set_rls_context(db, claimed)
     result = await db.execute(select(TenantInboxToken).where(
         TenantInboxToken.tenant_id == claimed,
         TenantInboxToken.token == token,
