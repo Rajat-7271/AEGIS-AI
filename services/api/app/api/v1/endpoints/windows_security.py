@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
 import uuid
 from datetime import datetime
 from typing import Annotated
@@ -126,6 +125,6 @@ async def list_windows_events(
         WHERE tenant_id = :tenant
         ORDER BY event_time DESC LIMIT :limit
     """), {"tenant": user.tenant_id, "limit": limit})
+    rows = [[v.isoformat() if isinstance(v, datetime) else v for v in row] for row in result]
     return {"columns": ["event_time", "severity", "hostname", "event_code", "provider", "record_id"],
-            "rows": [[v.isoformat() if isinstance(v, datetime) else v for v in row] for row in result],
-            "row_count": len(result.fetchall()) if False else None}
+            "rows": rows, "row_count": len(rows)}
