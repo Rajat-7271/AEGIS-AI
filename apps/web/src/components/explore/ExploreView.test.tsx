@@ -110,8 +110,8 @@ describe('ExploreView', () => {
       sql: expect.stringContaining("connector_type = 'windows_event'"),
       row_cap: 100,
     });
-    expect(screen.getByLabelText('SQL')).toHaveValue(
-      expect.stringContaining("connector_type = 'windows_event'"),
+    expect((screen.getByLabelText('SQL') as HTMLTextAreaElement).value).toContain(
+      "connector_type = 'windows_event'",
     );
     expect(await screen.findByRole('table')).toBeInTheDocument();
   });
