@@ -587,6 +587,11 @@ function AlertsTableGrid({
   onToggleChecked: (id: string) => void;
   onSetChecked: (next: Set<string>) => void;
 }) {
+  const { mutate } = useSWRConfig();
+  const retryAlerts = useCallback(() => {
+    void mutate(['alerts', filters]);
+  }, [mutate, filters]);
+
   const pageIds = alerts.map((a) => a.id);
   const allOnPageChecked = pageIds.length > 0 && pageIds.every((id) => checkedIds.has(id));
 
@@ -626,7 +631,8 @@ function AlertsTableGrid({
           <ErrorState
             title="Couldn't load alerts"
             description="The alerts feed didn't respond. Check the API service or try again."
-            error={error}
+            error={new Error('Alerts service unavailable')}
+            onRetry={retryAlerts}
           />
         </div>
       ) : alerts.length === 0 ? (
