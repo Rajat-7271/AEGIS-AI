@@ -1,6 +1,6 @@
 # AEGIS AI Windows Security pilot — local automatic export only.
 # Creates a scheduled task that periodically runs the local export and offline shipper dry-run pipeline.
-# It NEVER invokes the shipper, sends logs, or configures production.
+# Defaults to offline validation. HTTPS delivery requires explicit -Install -Send.
 # Requires explicit -Install; default is a no-change preview.
 param(
     [switch]$Install,
@@ -39,5 +39,5 @@ $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ("-NoProfi
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 4)
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-Write-Output "Installed local-only Windows Security exporter task $TaskName every $IntervalMinutes minute(s)."
+Write-Output "Installed Windows Security pipeline task $TaskName every $IntervalMinutes minute(s)."
 if ($Send) { Write-Output "HTTPS delivery enabled in task arguments. Ensure the task account has scoped ingest environment variables configured." } else { Write-Output "No cloud transmission configured." }
