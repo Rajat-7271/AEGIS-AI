@@ -24,18 +24,46 @@ SECRET = "test-hmac-secret"
 
 
 def payload() -> bytes:
-    stamp = "2026-11-10T12:34:56.0000000Z"
-    system = {
-        "EventID": 1102, "Channel": "Security", "Computer": "test-windows-host",
-        "EventRecordID": 42, "TimeCreated": stamp,
-        "Provider": "Microsoft-Windows-Eventlog",
-    }
-    event = {
-        "external_id": "windows:test-windows-host:Security:42",
-        "severity": "high", "hostname": "test-windows-host",
-        "created_at": stamp,
-        "raw_event": {**system, "System": system, "EventData": {}},
-    }
+    """Use the actual Windows connector normalization, not a hand-built API event."""
+    from pathlib import Path
+    import importlib.util
+    import sys
+    import types
+
+    root = Path(__file__).resolve().parents[3]
+    connector_dir = root / "services" / "connectors" / "app" / "connectors"
+    original = {name: sys.modules.get(name) for name in
+                ("app", "app.connectors", "app.connectors.base", "app.connectors.windows_event")}
+    try:
+        app = types.ModuleType("app")
+        app.__path__ = [str(connector_dir.parent)]
+        package = types.ModuleType("app.connectors")
+        package.__path__ = [str(connector_dir)]
+        sys.modules["app"] = app
+        sys.modules["app.connectors"] = package
+        for name in ("base", "windows_event"):
+            spec = importlib.util.spec_from_file_location(
+                "app.connectors." + name, connector_dir / (name + ".py")
+            )
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[spec.name] = module
+            spec.loader.exec_module(module)
+        connector = sys.modules["app.connectors.windows_event"].WindowsEventConnector(
+            "https://unused.invalid", "unused"
+        )
+        stamp = "2026-11-10T12:34:56.0000000Z"
+        system = {
+            "EventID": 1102, "Channel": "Security", "Computer": "test-windows-host",
+            "EventRecordID": 42, "TimeCreated": stamp,
+            "Provider": "Microsoft-Windows-Eventlog",
+        }
+        event = connector.normalize({"System": system, "EventData": {}})
+    finally:
+        for name, old in original.items():
+            if old is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = old
     return json.dumps({
         "connector_id": str(CONNECTOR),
         "connector_type": "windows_event", "source_format": "raw_json",
