@@ -82,10 +82,10 @@ do {
     try {
         # RecordId filtering avoids repeatedly fetching an entire Security log.
         $xpath = "*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=1102) and EventRecordID > $checkpoint]]"
-        $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -MaxEvents 500 -ErrorAction SilentlyContinue |
+        $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -Oldest -MaxEvents 500 -ErrorAction SilentlyContinue |
             Sort-Object RecordId)
         if ($entries.Count -gt 0) {
-            # Newest 500 are returned by Get-WinEvent; checkpoint only after an acknowledged batch.
+            # Process the oldest pending records first; checkpoint only after an acknowledged batch.
             $events = @($entries | ForEach-Object { Make-Event $_ })
             if ($EnableSend) {
                 Send-Batch $events
