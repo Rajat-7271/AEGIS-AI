@@ -41,4 +41,6 @@ Run without `-Once` for repeated polling every 5 seconds. A successful API ackno
 5. Repeat the same batch and verify no duplicate appears.
 6. Temporarily block API access; verify the checkpoint does not advance, then restore access and confirm delivery.
 
-**Known limits:** This is a polling pilot, not a Windows service. Log rollover/reset, concurrent collector instances, offline backlog retention, and full end-to-end Windows validation require further work. It does not yet establish real-time production readiness.
+The collector acquires a named Windows mutex scoped to the checkpoint path, preventing concurrent runs from advancing the same checkpoint. It fails closed if the Security log's latest record ID is below the saved checkpoint; investigate log clearing or rollover before resetting the checkpoint. A transient network failure preserves the checkpoint for a subsequent retry, but the collector is not installed as a background service.
+
+**Known limits:** This is a polling pilot, not a Windows service. Log rollover/reset recovery, offline backlog retention beyond the Windows log's capacity, secure persistent credential provisioning, and unattended restart require further work. The mutex and reset guard require validation on Windows. It does not yet establish real-time production readiness.
