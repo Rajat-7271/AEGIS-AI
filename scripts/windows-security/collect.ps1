@@ -9,6 +9,7 @@ param(
     [string]$HmacSecret = $env:AEGIS_CONNECTOR_HMAC_SECRET,
     [string]$CheckpointPath = "$env:LOCALAPPDATA\AEGIS-AI\windows-security-checkpoint.txt",
     [int]$IntervalSeconds = 5,
+    [ValidateRange(1,500)][int]$MaxEvents = 500,
     [switch]$EnableSend,
     [switch]$Once
 )
@@ -40,7 +41,7 @@ function Save-Checkpoint([long]$value) {
     }
 }
 function Make-Event($entry) {
-    $when = $entry.TimeCreated.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+    $when = $entry.TimeCreated.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ', [System.Globalization.CultureInfo]::InvariantCulture)
     $system = @{
         EventID = [int]$entry.Id
         Channel = 'Security'
@@ -85,7 +86,7 @@ do {
     try {
         # RecordId filtering avoids repeatedly fetching an entire Security log.
         $xpath = "*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=1102) and EventRecordID > $checkpoint]]"
-        $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -Oldest -MaxEvents 500 -ErrorAction Stop |
+        $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -Oldest -MaxEvents $MaxEvents -ErrorAction Stop |
             Sort-Object RecordId)
         if ($entries.Count -gt 0) {
             # Process the oldest pending records first; checkpoint only after an acknowledged batch.
