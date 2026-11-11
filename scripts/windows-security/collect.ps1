@@ -81,9 +81,34 @@ function Send-Batch($events) {
         throw 'Server did not acknowledge the entire batch; checkpoint not advanced'
     }
 }
+# One active collector per checkpoint path; never race checkpoint updates.
+$fullCheckpointPath = [IO.Path]::GetFullPath($CheckpointPath).ToLowerInvariant()
+$sha = [Security.Cryptography.SHA256]::Create()
+try {
+    $digest = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($fullCheckpointPath))
+    $mutexName = 'Local\\AEGIS-WindowsSecurity-' + [BitConverter]::ToString($digest).Replace('-', '')
+} finally { $sha.Dispose() }
+$mutex = New-Object System.Threading.Mutex($false, $mutexName)
+$ownsMutex = $false
+try {
+    try {
+        $ownsMutex = $mutex.WaitOne(0)
+    } catch [System.Threading.AbandonedMutexException] {
+        $ownsMutex = $true
+    }
+    if (-not $ownsMutex) { throw 'Another collector is using this checkpoint path' }
+    # Re-read under the lock so the checkpoint is never stale.
+    if (Test-Path -LiteralPath $CheckpointPath) {
+        $checkpoint = [long]([IO.File]::ReadAllText($CheckpointPath).Trim())
+    }
 Write-Host $(if ($EnableSend) { 'AEGIS collector: sending metadata only' } else { 'AEGIS collector: DRY RUN (no network requests)' })
 do {
     try {
+        # Fail closed on log clear/reset: never silently restart at a reused record ID.
+        $newest = Get-WinEvent -LogName Security -MaxEvents 1 -ErrorAction Stop
+        if ([long]$newest.RecordId -lt $checkpoint) {
+            throw 'Security log record IDs moved backwards; manual checkpoint review required'
+        }
         # RecordId filtering avoids repeatedly fetching an entire Security log.
         $xpath = "*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=1102) and EventRecordID > $checkpoint]]"
         $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -Oldest -MaxEvents $MaxEvents -ErrorAction Stop |
@@ -111,3 +136,7 @@ do {
     }
     if (-not $Once) { Start-Sleep -Seconds $IntervalSeconds }
 } while (-not $Once)
+} finally {
+    if ($ownsMutex) { $mutex.ReleaseMutex() }
+    $mutex.Dispose()
+}
