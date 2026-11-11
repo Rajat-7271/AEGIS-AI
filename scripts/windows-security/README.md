@@ -28,6 +28,8 @@ Do **not** paste credentials into chat, commit them, or store them in command hi
 powershell.exe -NoProfile -File .\scripts\windows-security\collect.ps1 -Once -EnableSend
 ```
 
+For a strictly bounded pilot, pass `-MaxEvents 2` with `-Once`; the default batch cap is 500. Use a dedicated checkpoint path for pilot tests. PowerShell's invariant-culture UTC formatting is required so JSON timestamps validate correctly regardless of regional settings.
+
 Run without `-Once` for repeated polling every 5 seconds. A successful API acknowledgement advances the local record-ID checkpoint; failed requests leave it unchanged. The API is idempotent by tenant and event external ID. The dashboard separately polls the API every 5 seconds.
 
 ## MVP acceptance test
