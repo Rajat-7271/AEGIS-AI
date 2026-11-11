@@ -30,24 +30,6 @@ try {
 // `http://realtime:4000`).
 const REALTIME_HOST = process.env.REALTIME_URL || 'http://localhost:8086';
 const API_HOST = process.env.API_URL || 'http://localhost:8000';
-// Build-time diagnostic for preview routing. Never print API_URL or credentials.
-if (process.env.VERCEL_ENV === 'preview') {
-  const configured = process.env.API_URL;
-  let destinationStatus = 'missing';
-  if (configured) {
-    try {
-      const parsed = new URL(configured);
-      destinationStatus =
-        parsed.protocol === 'https:' && parsed.hostname === 'aegis-ai.rajat.prod.page'
-          ? 'expected-backend'
-          : 'different-backend';
-    } catch {
-      destinationStatus = 'invalid-url';
-    }
-  }
-  console.info('[AEGIS preview API rewrite diagnostic]', destinationStatus);
-}
-
 const AGENTS_HOST = process.env.AGENTS_URL || 'http://localhost:8001';
 // Fusion service exposes /entity-risk/*, /ml/*, /metrics, /health at root.
 // We surface those to the browser under the same-origin namespace
