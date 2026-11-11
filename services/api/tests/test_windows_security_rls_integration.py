@@ -1,10 +1,10 @@
 """Optional isolated PostgreSQL RLS integration test.
 
 Run against a disposable LOCAL PostgreSQL database:
-  AEGIS_TEST_POSTGRES_DSN=postgresql://postgres:...@127.0.0.1:5432/aegis_rls_test \
+  DATABASE_MIGRATION_URL=postgresql://postgres:...@127.0.0.1:5432/aegis_rls_test \
     pytest -q tests/test_windows_security_rls_integration.py
 
-Never point this test at Supabase, staging, or production. It creates only a
+Never point this test at Supabase, staging, or production. The privileged\nconnection is used only to create test objects; assertions run under SET ROLE\nwith an unprivileged NOLOGIN role. It creates only a
 transaction-scoped test table and role, then rolls everything back.
 """
 import os
@@ -16,9 +16,9 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_windows_security_cross_tenant_rls_in_disposable_postgres():
-    dsn = os.getenv("AEGIS_TEST_POSTGRES_DSN")
+    dsn = os.getenv("DATABASE_MIGRATION_URL")
     if not dsn:
-        pytest.skip("Requires explicit AEGIS_TEST_POSTGRES_DSN for disposable local Postgres")
+        pytest.skip("Requires explicit DATABASE_MIGRATION_URL for disposable local Postgres")
     parsed = urlparse(dsn)
     if parsed.scheme not in {"postgresql", "postgres"} or parsed.hostname not in {
         "localhost", "127.0.0.1", "::1"
