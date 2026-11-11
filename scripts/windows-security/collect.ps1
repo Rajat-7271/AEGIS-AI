@@ -86,7 +86,7 @@ $fullCheckpointPath = [IO.Path]::GetFullPath($CheckpointPath).ToLowerInvariant()
 $sha = [Security.Cryptography.SHA256]::Create()
 try {
     $digest = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($fullCheckpointPath))
-    $mutexName = 'Local\\AEGIS-WindowsSecurity-' + [BitConverter]::ToString($digest).Replace('-', '')
+    $mutexName = 'Local\AEGIS-WindowsSecurity-' + [BitConverter]::ToString($digest).Replace('-', '')
 } finally { $sha.Dispose() }
 $mutex = New-Object System.Threading.Mutex($false, $mutexName)
 $ownsMutex = $false
