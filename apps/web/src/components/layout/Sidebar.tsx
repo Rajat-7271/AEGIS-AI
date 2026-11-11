@@ -184,6 +184,11 @@ const navSections: NavSection[] = [
         badgeColor: 'bg-red-500',
       },
       {
+        label: 'Windows Security',
+        href: '/windows-security',
+        icon: <ShieldIcon />,
+      },
+      {
         label: 'Investigation Queue',
         href: '/queue',
         icon: <InboxIcon />,
