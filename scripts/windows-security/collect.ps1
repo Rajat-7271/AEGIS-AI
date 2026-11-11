@@ -13,7 +13,6 @@ param(
     [switch]$Once
 )
 $ErrorActionPreference = 'Stop'
-$allowed = @(4624, 4625, 4672, 4688, 4720, 1102)
 if ($IntervalSeconds -lt 1) { throw 'IntervalSeconds must be positive' }
 if ($EnableSend) {
     if (-not $ApiBaseUrl -or -not $TenantId -or -not $ConnectorId -or -not $Token) {
@@ -32,9 +31,13 @@ function Save-Checkpoint([long]$value) {
     if (-not (Test-Path -LiteralPath $directory)) {
         $null = New-Item -ItemType Directory -Path $directory -Force
     }
-    $tmp = "$CheckpointPath.tmp"
-    [IO.File]::WriteAllText($tmp, [string]$value)
-    Move-Item -LiteralPath $tmp -Destination $CheckpointPath -Force
+    $tmp = "$CheckpointPath.$PID.tmp"
+    try {
+        [IO.File]::WriteAllText($tmp, [string]$value)
+        Move-Item -LiteralPath $tmp -Destination $CheckpointPath -Force
+    } finally {
+        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
+    }
 }
 function Make-Event($entry) {
     $when = $entry.TimeCreated.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
@@ -82,7 +85,7 @@ do {
     try {
         # RecordId filtering avoids repeatedly fetching an entire Security log.
         $xpath = "*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=1102) and EventRecordID > $checkpoint]]"
-        $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -Oldest -MaxEvents 500 -ErrorAction SilentlyContinue |
+        $entries = @(Get-WinEvent -LogName Security -FilterXPath $xpath -Oldest -MaxEvents 500 -ErrorAction Stop |
             Sort-Object RecordId)
         if ($entries.Count -gt 0) {
             # Process the oldest pending records first; checkpoint only after an acknowledged batch.
@@ -97,7 +100,13 @@ do {
             }
         }
     } catch {
-        Write-Warning "Collector cycle failed (checkpoint unchanged): $($_.Exception.Message)"
+        # No matching records is normal; permission, query and transport failures are not.
+        if ($_.FullyQualifiedErrorId -match 'NoMatchingEventsFound') {
+            if ($Once) { Write-Host 'No matching Security events' }
+        } else {
+            Write-Warning "Collector cycle failed (checkpoint unchanged): $($_.Exception.Message)"
+            if ($Once) { throw }
+        }
     }
     if (-not $Once) { Start-Sleep -Seconds $IntervalSeconds }
 } while (-not $Once)
