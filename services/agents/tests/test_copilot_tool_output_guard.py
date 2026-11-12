@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient
         'bash(command="whoami")',
         pytest.param({"content": "Review the timeline.", "tool_calls": [{"id": "call_1"}]}, id="structured-tool"),
         pytest.param({"content": ["malformed"]}, id="malformed-content"),
+        pytest.param(None, id="null-provider-content"),
         pytest.param("  ", id="blank"),
     ],
 )
