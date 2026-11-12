@@ -312,3 +312,19 @@ def test_contextual_alert_preserves_grounding_for_educational_question():
     )
     assert result is not None
     assert result["uncited"]
+
+
+def test_copilot_markdown_repairs_escaped_headings_and_tables():
+    raw = r"\### Windows Event IDs" + "\n" + r"\| Event | Source \|" + "\n" + r"\| --- | --- \|"
+    expected = "### Windows Event IDs\n| Event | Source |\n| --- | --- |"
+    assert copilot._normalize_copilot_markdown(raw) == expected
+
+
+def test_copilot_markdown_preserves_code_fences_and_windows_paths():
+    raw = "```powershell\n" + r"\### literal" + "\n" + r"\| not a table \|" + "\n```\n" + r"C:\Windows\System32\cmd.exe"
+    assert copilot._normalize_copilot_markdown(raw) == raw
+
+
+def test_copilot_markdown_preserves_regular_prose_escapes():
+    raw = r"Use \* literally, and keep C:\Users\Admin."
+    assert copilot._normalize_copilot_markdown(raw) == raw
