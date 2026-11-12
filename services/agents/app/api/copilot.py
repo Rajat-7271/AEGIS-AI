@@ -232,7 +232,7 @@ async def _get_openai_reply(
             {
                 "role": "system",
                 "content": (
-                    "You are AiSOC Copilot, an AI assistant for security operations. "
+                    "You are AEGIS AI Copilot, an AI assistant for security operations. "
                     "Help analysts investigate alerts, correlate events, and respond to threats. "
                     "Be concise, technical, and actionable. Reference MITRE ATT&CK techniques "
                     "when relevant. Format recommendations as numbered steps when appropriate."
@@ -250,7 +250,21 @@ async def _get_openai_reply(
             url=chat_completions_url(model),
             max_tokens=512,
         )
-        return body["choices"][0]["message"]["content"], "llm", None
+        content = body["choices"][0]["message"].get("content") or ""
+        # Some routed models emit unexecuted tool-call markup as plain text.
+        # Never present that as an investigation or an executed query.
+        if not isinstance(content, str) or not content.strip() or any(
+            marker in content for marker in ("<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>")
+        ):
+            logger.warning("copilot.unexecuted_tool_call", model=model)
+            return (
+                "I cannot query live security telemetry from this chat response. "
+                "Open the Alerts or Explore view to inspect actual events, "
+                "then share the relevant findings for analysis.",
+                "template",
+                CALL_FAILED,
+            )
+        return content, "llm", None
     except Exception as exc:
         # `str(exc)` is empty for several httpx timeout classes, which is
         # how the report ended up with `copilot.openai_error` carrying no
