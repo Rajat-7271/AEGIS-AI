@@ -189,6 +189,18 @@ def build_cors_kwargs(
         "allow_methods": methods,
         "allow_headers": headers,
     }
+    # Optional narrowly-scoped regex for rotating deployment preview origins.
+    # Keep the production console origin in AISOC_CORS_ORIGINS; this regex is
+    # only for explicitly opted-in preview hosts.
+    origin_regex = os.getenv("AISOC_CORS_ORIGIN_REGEX", "").strip()
+    if origin_regex:
+        import re
+
+        try:
+            re.compile(origin_regex)
+        except re.error as exc:
+            raise CORSConfigurationError(f"{service_name}: invalid AISOC_CORS_ORIGIN_REGEX: {exc}") from exc
+        kwargs["allow_origin_regex"] = origin_regex
     if expose_headers is not None:
         kwargs["expose_headers"] = list(expose_headers)
 

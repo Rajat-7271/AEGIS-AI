@@ -252,7 +252,9 @@ ceilings:
     # v10 lesson). The same pass found and fixed litellm's missing config
     # volumeMount, which no static scan flags and which made the gateway
     # unable to boot at all.
-    failed: 272
+    # CI on 2026-11-12 measured 133 with the same pinned Checkov version.
+    # Keep the ratchet shrink-only; do not retain 139 findings of headroom.
+    failed: 133
     measured_with: "3.2.334"
   tfsec:
     total: 32

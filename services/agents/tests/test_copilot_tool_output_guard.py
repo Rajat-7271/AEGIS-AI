@@ -312,3 +312,40 @@ def test_contextual_alert_preserves_grounding_for_educational_question():
     )
     assert result is not None
     assert result["uncited"]
+
+
+def test_copilot_markdown_repairs_escaped_headings_and_tables():
+    raw = r"\### Windows Event IDs" + "\n" + r"\| Event | Source \|" + "\n" + r"\| --- | --- \|"
+    expected = "### Windows Event IDs\n| Event | Source |\n| --- | --- |"
+    assert copilot._normalize_copilot_markdown(raw) == expected
+
+
+def test_copilot_markdown_preserves_code_fences_and_windows_paths():
+    raw = "```powershell\n" + r"\### literal" + "\n" + r"\| not a table \|" + "\n```\n" + r"C:\Windows\System32\cmd.exe"
+    assert copilot._normalize_copilot_markdown(raw) == raw
+
+
+def test_copilot_markdown_preserves_regular_prose_escapes():
+    raw = r"Use \* literally, and keep C:\Users\Admin."
+    assert copilot._normalize_copilot_markdown(raw) == raw
+
+
+def test_escaped_table_with_blank_lines_becomes_contiguous_markdown():
+    raw = (r"\---" + "\n" + r"\| Priority | Event ID | Notes \|" + "\n\n"
+           + r"\| :--- | :--- | :--- \|" + "\n\n"
+           + r"\| High | 4104 | \*Script block\* logging \|" + "\n")
+    expected = ("---\n| Priority | Event ID | Notes |\n"
+                "| :--- | :--- | :--- |\n"
+                "| High | 4104 | *Script block* logging |\n")
+    assert copilot._normalize_copilot_markdown(raw) == expected
+
+
+def test_event_id_list_is_educational_not_uncited_telemetry():
+    question = ("List the most important Windows Event IDs for detecting MITRE ATT&CK T1059. "
+                "Format the answer as a Markdown table with headings.")
+    assert copilot._ground_copilot_reply("PowerShell T1059", question, None) is None
+
+
+def test_escaped_inline_code_line_outside_fence():
+    raw = r"\`Turn on PowerShell Transcription\`"
+    assert copilot._normalize_copilot_markdown(raw) == "`Turn on PowerShell Transcription`"

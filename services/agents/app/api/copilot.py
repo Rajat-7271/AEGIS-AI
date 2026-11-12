@@ -225,7 +225,7 @@ def _is_general_knowledge_question(question: str, context: dict[str, Any] | None
     return bool(re.match(
         r"^(?:please\s+)?(?:explain|define|describe|what\s+is|what\s+are|"
         r"how\s+does|how\s+do|which\s+windows\s+event\s+ids|"
-        r"what\s+windows\s+event\s+ids)\b",
+        r"what\s+windows\s+event\s+ids|list\s+(?:the\s+)?(?:most\s+important\s+)?windows\s+event\s+ids)\b",
         q,
     ))
 
@@ -236,6 +236,38 @@ def _ground_copilot_reply(reply: str, question: str, context: dict[str, Any] | N
         return None
     return ground_answer(reply, sources_from_context(context)).as_dict()
 
+
+def _normalize_copilot_markdown(content: str) -> str:
+    """Repair model-escaped Markdown tables without touching code or paths."""
+    result: list[str] = []
+    pending_blank: list[str] = []
+    in_fence = False
+    previous_table = False
+    for line in content.splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.startswith(("```", "~~~")):
+            in_fence = not in_fence
+        if not in_fence and not stripped.startswith(("```", "~~~")):
+            if re.match(r"^\\#{1,6}\s", stripped):
+                line = line.replace(r"\#", "#", 6)
+            elif re.match(r"^\\-{3,}\s*$", stripped):
+                line = line.replace(r"\-", "-")
+            elif stripped.startswith(r"\|") and stripped.count(r"\|") >= 2:
+                line = line.replace(r"\|", "|").replace(r"\*", "*")
+            elif stripped.startswith(r"\`") and stripped.count(r"\`") >= 2:
+                line = line.replace(r"\`", "`")
+        is_table = not in_fence and line.lstrip().startswith("|") and line.count("|") >= 3
+        if not line.strip() and not in_fence:
+            pending_blank.append(line)
+            continue
+        if pending_blank:
+            if not (previous_table and is_table):
+                result.extend(pending_blank)
+            pending_blank.clear()
+        result.append(line)
+        previous_table = is_table
+    result.extend(pending_blank)
+    return "".join(result)
 
 def _looks_like_unexecuted_tool_call(content: str) -> bool:
     """Reject tool invocation syntax, not ordinary discussion of commands."""
@@ -314,7 +346,17 @@ async def _get_openai_reply(
                     "You cannot execute shell commands or query live hosts through this chat. "
                     "Never emit tool-call syntax or claim to have run tools. "
                     "If current telemetry is unavailable, say so and explain how to inspect it. "
-                    "Answer general questions directly and ground any claims about the environment in supplied evidence."
+                    "Answer general questions directly and ground any claims about the environment in supplied evidence. "
+                    "Use normal Markdown headings and tables without escaping punctuation outside code blocks. "
+                    "Preserve literal backslashes in commands and fenced code. "
+                    "For Windows PowerShell logging, distinguish Event ID 4103 (Module Logging: pipeline execution details) "
+                    "from Event ID 4104 (Script Block Logging: script block content). "
+                    "They are not script-block start/end events. Do not invent event fields, "
+                    "fixed truncation limits, guaranteed deobfuscation, or assert that every execution is logged. "
+                    "When exact event semantics are uncertain, state the uncertainty and recommend "
+                    "checking Microsoft documentation or the actual event schema. "
+                    "For code fences, place the language tag alone on the opening fence line, "
+                    "followed by a newline before code."
                     + (" Return the user-facing answer in the JSON field answer." if use_json_schema else "")
                 ),
             }
@@ -358,7 +400,7 @@ async def _get_openai_reply(
             logger.warning("copilot.unexecuted_tool_call", model=model)
             detail = "The model attempted to use a tool. Copilot chat cannot query live security telemetry."
         elif isinstance(content, str) and content.strip():
-            return content, "llm", None
+            return _normalize_copilot_markdown(content), "llm", None
         else:
             detail = "The model returned no usable answer."
     except Exception as exc:

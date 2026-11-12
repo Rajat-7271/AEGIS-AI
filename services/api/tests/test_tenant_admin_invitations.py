@@ -12,14 +12,13 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from fastapi import HTTPException
-from fastapi.requests import Request
-from sqlalchemy import delete
-
 from app.api.v1.endpoints import auth
 from app.core.security import verify_password
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
+from fastapi import HTTPException
+from fastapi.requests import Request
+from sqlalchemy import delete
 
 _RAW_TOKEN = "a" * 43
 
@@ -371,6 +370,9 @@ def test_postgres_concurrent_invitation_redemption_is_single_use() -> None:
                         preferences={},
                     )
                 )
+                # Persist the tenant and user before the invitation's FK is checked.
+                # These fixtures have no ORM relationship linking flush order.
+                await session.flush()
                 session.add(
                     TenantAdminInvitation(
                         id=invite_id,
