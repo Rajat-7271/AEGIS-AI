@@ -167,6 +167,29 @@ PUBLIC_ROUTES: dict[str, str] = {
 #: Routes whose credential is verified inside the handler. ``(verifier, reason)``
 #: — the verifier must still be called or the exemption lapses.
 IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
+    # Drain control is authenticated inside each handler, not by Depends.
+    # _authorize fails closed when AISOC_DRAIN_TOKEN is absent and uses
+    # hmac.compare_digest to check the caller's X-AiSOC-Drain-Token.
+    "services/agents/app/api/drain.py::begin_drain": (
+        "_authorize",
+        "operator drain token is required and verified in-band before any worker state changes",
+    ),
+    "services/agents/app/api/drain.py::drain_status": (
+        "_authorize",
+        "operator drain token is required and verified in-band before work counts are returned",
+    ),
+    # Invitation validation and redemption are pre-login flows: the invite
+    # token is the credential. _invitation_target verifies token hash,
+    # expiry, revocation, consumption, tenant binding, and inactive user.
+    # Both handlers also enforce invitation rate limits.
+    "services/api/app/api/v1/endpoints/auth.py::validate_admin_invitation": (
+        "_invitation_target",
+        "pre-login invitation bearer token is validated in-band with tenant binding and rate limiting",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::redeem_admin_invitation": (
+        "_invitation_target",
+        "single-use invitation token is checked in-band before atomic redemption and account activation",
+    ),
     "services/agents/app/api/playbooks.py::answer_verification": (
         "resume_verification",
         "the signed answer link is the whole credential (depth 5.4): resume_verification recomputes the HMAC over "
