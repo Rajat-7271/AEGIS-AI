@@ -44,11 +44,11 @@ if (process.env.VERCEL_ENV === 'production') {
   } catch {
     throw new Error('AGENTS_URL must be a valid absolute HTTPS URL in production.');
   }
-  if (agentsOrigin.protocol !== 'https:' || agentsOrigin.username || agentsOrigin.password || agentsOrigin.pathname !== '/' || agentsOrigin.search || agentsOrigin.hash || /^(localhost|127\\.|0\\.0\\.0\\.0$|\\[?::1\\]?$)/i.test(agentsOrigin.hostname)) {
+  if (agentsOrigin.protocol !== 'https:' || agentsOrigin.username || agentsOrigin.password || agentsOrigin.pathname !== '/' || agentsOrigin.search || agentsOrigin.hash || /^(localhost|127\.|0\.0\.0\.0$|\[?::1\]?$)/i.test(agentsOrigin.hostname)) {
     throw new Error('AGENTS_URL must be a public HTTPS origin without credentials, paths or query parameters.');
   }
 }
-const AGENTS_HOST = (configuredAgentsUrl || 'http://localhost:8001').replace(/\\/$/, '');
+const AGENTS_HOST = (configuredAgentsUrl || 'http://localhost:8001').replace(/\/$/, '');
 // Fusion service exposes /entity-risk/*, /ml/*, /metrics, /health at root.
 // We surface those to the browser under the same-origin namespace
 // /api/v1/fusion/* so the bundle stays host-agnostic.
