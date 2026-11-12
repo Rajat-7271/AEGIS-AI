@@ -372,6 +372,10 @@ def test_postgres_concurrent_invitation_redemption_is_single_use() -> None:
                         preferences={},
                     )
                 )
+                # Explicit flush establishes the referenced user row before
+                # inserting the invitation; independent ORM objects have no
+                # relationship edge for SQLAlchemy to order automatically.
+                await session.flush()
                 session.add(
                     TenantAdminInvitation(
                         id=invite_id,
