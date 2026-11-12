@@ -127,6 +127,22 @@ def _render_enrichment(state: InvestigatorState) -> list[str]:
     return lines or ["No reportable enrichment data was returned."]
 
 
+_BLOCK_IOC_ACTION = re.compile(
+    r"\b(?:block|blacklist|denylist)\b.{0,120}\b(?:iocs?|indicators?|hash(?:es)?|domains?|ips?|c2)\b"
+    r"|\b(?:iocs?|indicators?|hash(?:es)?|domains?|ips?|c2)\b.{0,120}\b(?:block|blacklist|denylist)\b",
+    re.I,
+)
+_WITHHELD_IOC_BLOCK = (
+    "An indicator-blocking proposal was withheld because no structured indicators "
+    "were returned. Identify and verify specific hashes, addresses, or domains "
+    "before proposing a block."
+)
+
+
+def _has_structured_iocs(state: InvestigatorState) -> bool:
+    return bool(_render_iocs(state))
+
+
 def _safe_recommendations(state: InvestigatorState) -> list[str]:
     lines: list[str] = []
     for action in state.responder.recommended_actions[:20]:
@@ -135,24 +151,84 @@ def _safe_recommendations(state: InvestigatorState) -> list[str]:
         text = action.get("action")
         if not isinstance(text, str) or not text.strip():
             continue
+        if _BLOCK_IOC_ACTION.search(text) and not _has_structured_iocs(state):
+            lines.append(f"- {_WITHHELD_IOC_BLOCK}")
+            continue
         if _DESTRUCTIVE_VERB.search(text) and _EXECUTABLE.search(text):
             lines.append(_WITHHELD_DESTRUCTIVE_GUIDANCE)
             continue
         rationale = action.get("rationale")
-        suffix = f" Rationale: {_md_value(rationale, limit=300)}" if isinstance(rationale, str) and rationale.strip() else ""
+        # A model's rationale can silently turn an actor lead into an attribution.
+        # Keep the action as an unreviewed proposal, but do not publish a
+        # rationale that invokes an unconfirmed actor as an established cause.
+        actor_leads = sanitize_iterable_of_strings(state.recon.threat_actors, max_item_len=128, max_items=20)
+        unsupported_actor = (
+            isinstance(rationale, str)
+            and any(re.search(r"(?<!\w)" + re.escape(actor) + r"(?!\w)", rationale, re.I) for actor in actor_leads if actor)
+        )
+        suffix = (
+            " Rationale withheld: unconfirmed threat-actor attribution."
+            if unsupported_actor else
+            f" Rationale (unverified): {_md_value(rationale, limit=300)}"
+            if isinstance(rationale, str) and rationale.strip() else ""
+        )
         lines.append(f"- **Unreviewed AI proposal:** {_md_value(text, limit=400)}{suffix}")
     return lines
 
 
-def _render_plan_steps(steps: list[str]) -> list[str]:
+def _render_plan_steps(steps: list[str], *, has_iocs: bool = True) -> list[str]:
     """Keep destructive executable-removal guidance out of every plan section."""
     rendered: list[str] = []
     for step in sanitize_iterable_of_strings(steps, max_item_len=400, max_items=10):
-        if _DESTRUCTIVE_VERB.search(step) and _EXECUTABLE.search(step):
+        if _BLOCK_IOC_ACTION.search(step) and not has_iocs:
+            rendered.append(f"- {_WITHHELD_IOC_BLOCK}")
+        elif _DESTRUCTIVE_VERB.search(step) and _EXECUTABLE.search(step):
             rendered.append(_WITHHELD_DESTRUCTIVE_GUIDANCE)
         else:
             rendered.append(f"- {_md_value(step, limit=400)}")
     return rendered
+
+
+def _executive_summary(state: InvestigatorState) -> list[str]:
+    """Evidence-first snapshot; never promote agent hypotheses into verified facts."""
+    lines = [f"- **Investigation case:** {_md_value(state.case_id, limit=128)}"]
+    alert = _md_value(state.alert_summary, limit=500)
+    if alert:
+        lines.append(f"- **Source alert (unverified):** {alert}")
+    else:
+        lines.append("- **Source alert:** No source alert description was supplied.")
+
+    iocs = _render_iocs(state)
+    lines.append(
+        f"- **Indicators:** {len(iocs)} structured entries returned (not independently validated)."
+        if iocs else "- **Indicators:** No validated indicators of compromise were returned."
+    )
+    timeline = [
+        event for event in state.forensic.timeline[:50]
+        if isinstance(event, dict) and isinstance(event.get("event"), str) and event["event"].strip()
+    ]
+    lines.append(
+        f"- **Timeline:** {len(timeline)} automated entries (timestamps require source verification)."
+        if timeline else "- **Timeline:** No timeline events were returned."
+    )
+    techniques = {
+        value.strip().upper() for value in state.recon.mitre_techniques
+        if isinstance(value, str) and _MITRE_ID.fullmatch(value.strip().upper())
+    }
+    lines.append(
+        f"- **ATT&CK:** {len(techniques)} candidate technique IDs (unconfirmed mappings)."
+        if techniques else "- **ATT&CK:** No valid ATT&CK technique IDs were returned."
+    )
+    if state.forensic.summary:
+        finding = sanitize_text(state.forensic.summary, max_len=500)
+        finding = _CONFIDENCE_CLAIM.sub("unverified confidence claim", finding)
+        lines.append(f"- **Forensic assessment (automated hypothesis):** {_md_value(finding, limit=500)}")
+    else:
+        lines.append("- **Forensic assessment:** No forensic assessment was returned.")
+    lines.append(
+        "- **Response status:** Proposed actions only; no response action was executed."
+    )
+    return lines
 
 
 def render_incident_report_md(state: InvestigatorState) -> str:
@@ -168,8 +244,7 @@ def render_incident_report_md(state: InvestigatorState) -> str:
         "",
         "## Executive Summary",
         "",
-        "Source alert summary (not independently validated): "
-        + (_md_value(state.alert_summary, limit=2_000) or "No alert summary was supplied."),
+        *_executive_summary(state),
         "",
         "## Timeline of Events",
         "",
@@ -261,6 +336,7 @@ def render_incident_report_md(state: InvestigatorState) -> str:
         ]
     )
     actor_hypotheses = sanitize_iterable_of_strings(state.recon.threat_actors, max_item_len=128, max_items=20)
+    lines.append("")
     if actor_hypotheses:
         lines.append("- Unconfirmed model-generated leads: " + ", ".join(_md_value(actor, limit=128) for actor in actor_hypotheses))
     else:
@@ -270,20 +346,17 @@ def render_incident_report_md(state: InvestigatorState) -> str:
     containment = sanitize_iterable_of_strings(state.responder.containment_steps, max_item_len=400, max_items=10)
     if containment:
         lines.append("### Proposed containment (review before approval)")
-        lines.extend(_render_plan_steps(containment))
-    lines.extend(
-        [
-            "",
-            "### Eradication",
-            "",
-            "No destructive eradication is endorsed without a specifically identified and "
-            "verified malicious artifact. Do not remove a system or application executable based only on its process name.",
-        ]
-    )
+        lines.extend(_render_plan_steps(containment, has_iocs=_has_structured_iocs(state)))
+    lines.extend([
+        "",
+        "### Eradication",
+        "",
+        "No destructive eradication is endorsed without a specifically identified and verified malicious artifact. Do not remove a system or application executable based only on its process name.",
+    ])
     recovery = sanitize_iterable_of_strings(state.responder.recovery_steps, max_item_len=400, max_items=10)
     if recovery:
         lines.extend(["", "### Proposed recovery (review before approval)"])
-        lines.extend(_render_plan_steps(recovery))
+        lines.extend(_render_plan_steps(recovery, has_iocs=_has_structured_iocs(state)))
     recommendations = _safe_recommendations(state)
     if recommendations:
         lines.extend(["", "### Additional proposals"])
@@ -325,11 +398,18 @@ def _md_to_html(md: str, case_id: str) -> str:
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>AiSOC Incident Report — {case_id}</title>
+<title>AEGIS AI Incident Report — {case_id}</title>
 <style>
   body {{ font-family: 'Segoe UI', Arial, sans-serif; max-width: 960px; margin: 40px auto; color: #1a1a1a; }}
   h1 {{ color: #c0392b; }} h2 {{ color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; }}
-  table {{ border-collapse: collapse; width: 100%; }} th,td {{ border: 1px solid #ddd; padding: 8px; }}
+  table {{ border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 0.85em; }}
+  th,td {{ border: 1px solid #ddd; padding: 7px; vertical-align: top; overflow-wrap: anywhere; }}
+  @page {{ size: A4; margin: 16mm; }}
+  h1,h2,h3 {{ break-after: avoid; }}
+  ul,ol {{ padding-left: 1.6em; margin: 0.7em 0 1em; }}
+  li {{ margin: 0.3em 0; line-height: 1.35; }}
+  p {{ line-height: 1.4; }}
+  tr {{ break-inside: avoid; }}
   th {{ background: #2c3e50; color: white; }}
   code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }}
   pre {{ background: #f4f4f4; padding: 16px; overflow-x: auto; border-radius: 4px; }}
@@ -338,7 +418,7 @@ def _md_to_html(md: str, case_id: str) -> str:
 </head>
 <body>
 {body}
-<div class="footer">Generated by AiSOC on {ts}</div>
+<div class="footer">Generated by AEGIS AI on {ts}</div>
 </body>
 </html>"""
 

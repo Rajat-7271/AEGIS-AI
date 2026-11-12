@@ -295,7 +295,12 @@ def judge(schema: Schema) -> list[str]:
             continue
 
         # The forward direction: the fail-open arm.
-        if not re.search(r"\bIS\s+NULL\b", body, re.I):
+        # Windows Security is consumed only through explicitly tenant-scoped API paths.
+        # Unlike legacy worker tables, it must deny unbound sessions.
+        if table == "windows_security_events":
+            if re.search(r"\bOR\s+[^;]*\bIS\s+NULL\b", body, re.I):
+                problems.append(f"{where} permits an unbound tenant to read Windows Security events")
+        elif not re.search(r"\bIS\s+NULL\b", body, re.I):
             problems.append(
                 f"{where} has no 'OR <tenant context> IS NULL' arm. Ingest, fusion, the retention purge and the "
                 "schedulers read this table on a connection that binds no tenant; without the arm they see zero "
@@ -326,6 +331,22 @@ _GOOD = (
 
 _FIXTURES: tuple[tuple[str, str, bool], ...] = (
     ("the canonical shape passes", _GOOD, True),
+    (
+        "Windows Security rejects missing tenant context",
+        "ALTER TABLE windows_security_events ENABLE ROW LEVEL SECURITY;\n"
+        "ALTER TABLE windows_security_events FORCE ROW LEVEL SECURITY;\n"
+        "CREATE POLICY windows_events_tenant_select ON windows_security_events "
+        "USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);",
+        True,
+    ),
+    (
+        "Windows Security must not allow missing tenant context",
+        "ALTER TABLE windows_security_events ENABLE ROW LEVEL SECURITY;\n"
+        "ALTER TABLE windows_security_events FORCE ROW LEVEL SECURITY;\n"
+        "CREATE POLICY windows_events_tenant_select ON windows_security_events "
+        "USING (tenant_id = current_tenant_id() OR current_tenant_id() IS NULL);",
+        False,
+    ),
     (
         "a commented-out policy is prose, not a statement",
         "-- CREATE POLICY ghost_tenant ON ghost USING (tenant_id = current_tenant_id());\n"

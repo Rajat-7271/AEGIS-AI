@@ -150,14 +150,16 @@ async function landingRoute(requested: string): Promise<string> {
       setPhase('success');
       router.replace(await landingRoute(next));
     } catch (err) {
-      console.error('[login] failed', err);
+      // Avoid exposing raw API error bodies (which may contain internal
+      // details) in the login UI or browser console.
       setPhase('error');
-      const message = err instanceof Error ? err.message : 'Login failed.';
-      // Map the common 401 to something a human understands.
-      if (/401|incorrect/i.test(message)) {
+      const message = err instanceof Error ? err.message : '';
+      if (/\\b401\\b|incorrect/i.test(message)) {
         setError('Email or password incorrect.');
+      } else if (/\\b429\\b/.test(message)) {
+        setError('Too many sign-in attempts. Please wait and try again.');
       } else {
-        setError(message);
+        setError('Sign-in is unavailable right now. Please try again later.');
       }
     }
   };

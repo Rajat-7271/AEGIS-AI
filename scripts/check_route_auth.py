@@ -184,6 +184,9 @@ IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
         "_invitation_target",
         "pre-login invitation redemption is rate-limited, validates the hashed invitation "
         "token and atomically consumes it before activating the bound admin",
+    "services/api/app/api/v1/endpoints/windows_security.py::ingest_windows": (
+        "_verify_windows_ingest_token",
+        "Windows collector verifies a revocable tenant-scoped connector-push token in the database, and an HMAC over the exact request bytes when configured; no browser session is required",
     ),
     "services/agents/app/api/playbooks.py::answer_verification": (
         "resume_verification",
@@ -191,6 +194,22 @@ IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
         "(token, answer, stage) with hmac.compare_digest and refuses with one sentence for every failure shape, so "
         "the route is not an oracle for whether a token was ever valid. The person clicking holds no AiSOC session "
         "by design — the prompt went to chat or email",
+    ),
+    "services/agents/app/api/drain.py::begin_drain": (
+        "_authorize",
+        "operator-only drain control; _authorize requires the configured X-AiSOC-Drain-Token and fails closed with 503 when unset",
+    ),
+    "services/agents/app/api/drain.py::drain_status": (
+        "_authorize",
+        "operator-only drain status; _authorize requires the configured X-AiSOC-Drain-Token and fails closed with 503 when unset",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::validate_admin_invitation": (
+        "_invitation_target",
+        "public invitation preflight; _invitation_target validates the high-entropy, single-use bearer invite against the tenant and inactive initial-admin account, and the response reveals only a boolean",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::redeem_admin_invitation": (
+        "_invitation_target",
+        "public invitation redemption; _invitation_target validates the high-entropy, single-use bearer invite and tenant-bound inactive initial-admin account before atomic consumption and password activation",
     ),
     "services/slack-bot/app/main.py::slack_events": (
         "SlackRequestHandler",

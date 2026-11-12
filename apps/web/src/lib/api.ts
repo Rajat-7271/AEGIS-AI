@@ -282,6 +282,14 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
+    // Proxies can return a full HTML error page (including internal hostnames
+    // and request metadata). Never forward that markup into UI error states.
+    const isHtmlError =
+      /text\/html/i.test(response.headers.get("content-type") ?? "") ||
+      /^\s*(?:<!doctype\s+html|<html[\s>])/i.test(errorText);
+    const safeErrorBody = isHtmlError
+      ? "The upstream service is temporarily unavailable. Please retry shortly."
+      : errorText;
     if (response.status === 401) {
       // Self-heal rather than leaving the user on a page where every
       // panel fails silently and nothing offers a way back.
@@ -290,7 +298,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     throw new ApiError(
       `API ${response.status} ${response.statusText} — ${path}`,
       response.status,
-      errorText
+      safeErrorBody
     );
   }
 
@@ -4213,6 +4221,10 @@ export interface LakeTableInfo {
 export interface LakeSchemaResponse {
   tables: LakeTableInfo[];
 }
+
+export const windowsSecurityApi = {
+  events: () => request<{ columns: string[]; rows: (string | number | null)[][]; row_count: number }>("/api/v1/windows-security/events"),
+};
 
 export const lakeApi = {
   sql: (body: LakeQueryRequest) =>

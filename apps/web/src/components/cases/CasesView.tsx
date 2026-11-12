@@ -220,7 +220,10 @@ export function CasesView() {
     mutate,
   } = useSWR(
     ["cases", statusFilter, severityFilter],
-    () => casesApi.list({ status: statusFilter !== "all" ? statusFilter : undefined }),
+    () => casesApi.list({
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      severity: severityFilter !== "all" ? severityFilter : undefined,
+    }),
     {
       fallbackData: sampleCases,
       revalidateOnMount: true,
@@ -229,26 +232,21 @@ export function CasesView() {
 
   const cases = (casesData?.cases || []).filter((c) => {
     if (search && !c.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (severityFilter !== "all" && c.severity !== severityFilter) return false;
     return true;
   });
 
-  // The list above already falls back to `[]`; this counted MOCK_CASES, so a
-  // failed request rendered an empty table under stat cards claiming 18 cases.
-  const allCases = casesData?.cases ?? [];
-  // Substituting `[]` for MOCK_CASES stopped the fabrication but moved the
-  // defect: the grid sits above the `isLoading` branch, so five confident
-  // zeros rendered on first paint and stayed there when the read failed.
+  // The API response is paginated and filtered. Counting returned rows as
+  // global status totals mislabels partial pages (and filtered subsets) as
+  // authoritative. Only display a count where the server provides a total
+  // for the corresponding filter; unknown global counts remain unreported.
   const countsUnknown = !casesData;
-  const statCounts: Record<string, number | null> = countsUnknown
-    ? { all: null, new: null, investigating: null, resolved: null, closed: null }
-    : {
-        all: allCases.length,
-        new: allCases.filter((c) => c.status === "new").length,
-        investigating: allCases.filter((c) => c.status === "investigating").length,
-        resolved: allCases.filter((c) => c.status === "resolved").length,
-        closed: allCases.filter((c) => c.status === "closed").length,
-      };
+  const statCounts: Record<string, number | null> = {
+    all: statusFilter === "all" && severityFilter === "all" ? casesData?.total ?? null : null,
+    new: statusFilter === "new" && severityFilter === "all" ? casesData?.total ?? null : null,
+    investigating: statusFilter === "investigating" && severityFilter === "all" ? casesData?.total ?? null : null,
+    resolved: statusFilter === "resolved" && severityFilter === "all" ? casesData?.total ?? null : null,
+    closed: statusFilter === "closed" && severityFilter === "all" ? casesData?.total ?? null : null,
+  };
 
   return (
     <div className="space-y-5">
@@ -410,7 +408,16 @@ export function CasesView() {
         <EmptyState
           icon={EmptyStateIcons.case}
           title="Could not load cases"
-          description="The case service did not answer. This is not a report that no cases exist — retry, or check the API is reachable."
+          description="The case service did not answer. This does not mean there are no cases. Retry or check the API service."
+          action={
+            <button
+              type="button"
+              onClick={() => void mutate()}
+              className="rounded-md border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-200 hover:bg-blue-500/20"
+            >
+              Retry loading cases
+            </button>
+          }
         />
       ) : cases.length === 0 ? (
         // WS-F5 — distinguish "filter miss" from "no cases ever". The former

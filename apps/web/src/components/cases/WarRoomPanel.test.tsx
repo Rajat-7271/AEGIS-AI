@@ -133,13 +133,30 @@ describe('WarRoomPanel', () => {
     expect(mutate).toHaveBeenCalled();
   });
 
-  it('a refused open surfaces the vendor sentence verbatim, not a generic apology', async () => {
+  it('a 502 refused open hides upstream details', async () => {
     swrState.data = [];
     openMock.mockRejectedValue(new ApiError('Bad Gateway', 502, 'Slack refused to create #aisoc-case-0001: restricted_action'));
     render(<WarRoomPanel caseId="c1" />);
     await userEvent.click(screen.getByRole('button', { name: 'Open in Slack' }));
-    expect(await screen.findByText(/restricted_action/)).toBeInTheDocument();
+    expect(await screen.findByText('War room unavailable. Please retry later.')).toBeInTheDocument();
+    expect(screen.queryByText(/restricted_action/)).not.toBeInTheDocument();
     expect(screen.queryByText('Open failed.')).not.toBeInTheDocument();
+  });
+
+  it('a Cloudflare 502 HTML response is never displayed', async () => {
+    swrState.data = [];
+    openMock.mockRejectedValue(new ApiError('Bad Gateway', 502, '<html><body>aisoc.rajat.prod.page</body></html>'));
+    render(<WarRoomPanel caseId="c1" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open in Slack' }));
+    expect(await screen.findByText('War room unavailable. Please retry later.')).toBeInTheDocument();
+    expect(screen.queryByText(/aisoc\.rajat\.prod\.page/)).not.toBeInTheDocument();
+  });
+
+  it('does not render HTML stored in a failed sync reason', () => {
+    swrState.data = [room({ last_error: '<html>aisoc.rajat.prod.page</html>' })];
+    render(<WarRoomPanel caseId="c1" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('War room unavailable. Please retry later.');
+    expect(screen.queryByText(/aisoc\.rajat\.prod\.page/)).not.toBeInTheDocument();
   });
 
   it('the teams button asks for teams', async () => {
@@ -155,6 +172,6 @@ describe('WarRoomPanel', () => {
     openMock.mockRejectedValue('wat');
     render(<WarRoomPanel caseId="c1" />);
     await userEvent.click(screen.getByRole('button', { name: 'Open in Slack' }));
-    expect(await screen.findByText('Open failed.')).toBeInTheDocument();
+    expect(await screen.findByText('War room unavailable. Please retry later.')).toBeInTheDocument();
   });
 });

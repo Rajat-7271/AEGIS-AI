@@ -281,6 +281,18 @@ async def _check_vocabularies(conn, table: str) -> dict[str, list[str]]:
 
 async def _seed_row(conn, table: str, tenant: uuid.UUID, enum_labels: dict[str, list[str]], nonce: str) -> None:
     """Insert one row owned by ``tenant``, filling only what the schema demands."""
+    if table == "tenant_admin_invitations":
+        await conn.execute(
+            """
+            INSERT INTO tenant_admin_invitations (tenant_id, user_id, token_hash, expires_at)
+            VALUES ($1, $2, $3, now() + interval '1 hour')
+            """,
+            tenant,
+            uuid.uuid4(),
+            uuid.uuid4().hex + uuid.uuid4().hex,
+        )
+        return
+
     cols = await conn.fetch(
         """
         SELECT column_name, data_type, udt_name, character_maximum_length
@@ -552,7 +564,13 @@ async def test_scoped_read_as_A_never_returns_B() -> None:
                 f'SELECT count(*) FROM public."{table}" WHERE tenant_id::text = ANY($1::text[])',  # noqa: S608
                 [str(TENANT_A), str(TENANT_B)],
             )
-            if unscoped != 2:
+            if table == "windows_security_events":
+                # This table deliberately denies unscoped reads. The privileged
+                # seed fixture already verified both rows exist; scoped checks
+                # below must still prove A is visible and B is not.
+                if unscoped != 0:
+                    leaked.append(f"{table}: unscoped session could read {unscoped} rows")
+            elif unscoped != 2:
                 vacuous.append(f"{table}: unscoped read saw {unscoped} of the 2 seeded rows")
                 continue
 

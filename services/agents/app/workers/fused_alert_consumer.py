@@ -48,7 +48,7 @@ from app.agents.triage_agent import run_triage
 from app.confidence.groundedness import score_groundedness
 from app.context import dispositions as dispositions_module
 from app.context import identity as identity_module
-from app.context import knowledge_base
+from app.context import knowledge_base, vendor_evidence
 from app.context.tenant_skills import select_skill
 from app.core.cost_governor import Decision, get_governor
 from app.core.cost_telemetry import CostSummary, CostTracker
@@ -138,6 +138,7 @@ _METRICS = {
     "runbooks_retrieved": 0,
     "runbooks_refused_for_injection": 0,
     "recent_dispositions_read": 0,
+    "vendor_reads_executed": 0,
     "identity_context_read": 0,
     "errors": 0,
 }
@@ -688,6 +689,7 @@ class FusedAlertTriageWorker:
                 # here.
                 await self._attach_recent_dispositions(state)
                 await self._attach_identity_context(state)
+                await self._attach_vendor_evidence(state)
             # Bind a CostTracker so every LLM call on this path records its
             # token/cost (safe_ainvoke -> record_llm_call) — previously the
             # highest-volume LLM spend was recorded as $0 and invisible.
@@ -1137,6 +1139,24 @@ class FusedAlertTriageWorker:
         state.recent_dispositions = found.as_state()
         _METRICS["recent_dispositions_read"] += len(found.decisions)
 
+    async def _attach_vendor_evidence(self, state: InvestigationState) -> None:
+        """Fetch bounded, deterministic vendor evidence before LLM triage.
+
+        Off by default because this contacts customer vendor APIs. When
+        enabled, reads are selected from typed alert entities, not model
+        generated arguments, and failures never prevent triage.
+        """
+        if not vendor_evidence.enabled():
+            return
+        try:
+            state.vendor_evidence = await vendor_evidence.collect(
+                state.raw_alert,
+                tenant_id=str(state.tenant_id or ""),
+            )
+            _METRICS["vendor_reads_executed"] += len(state.vendor_evidence.executed_capabilities)
+        except Exception as exc:  # noqa: BLE001 — context is additive
+            logger.warning("auto_triage_worker.vendor_evidence_failed", error=str(exc)[:200])
+
     async def _attach_identity_context(self, state: InvestigationState) -> None:
         """Record who is behind the accounts this alert names, if anyone knows.
 
@@ -1415,6 +1435,11 @@ class FusedAlertTriageWorker:
             rationale=rationale,
             findings=list(state.findings),
             proposed_actions=recommendations,
+            vendor_reads=(
+                state.vendor_evidence.as_state()["reads"]
+                if getattr(state, "vendor_evidence", None) is not None
+                else None
+            ),
             auto_closed=state.status is AgentStatus.COMPLETED,
             iterations=state.iteration_count,
             tokens=tokens,

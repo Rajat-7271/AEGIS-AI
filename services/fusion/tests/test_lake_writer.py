@@ -149,6 +149,7 @@ async def test_flush_failure_drops_batch_and_does_not_raise():
     await w.write_event(_message())
     await w.write_event(_message())  # triggers flush -> fails
     assert w.flush_failures == 1
+    assert w.metrics()["rows_dropped"] == 2
     assert w.rows_written == 0
     assert w.metrics()["buffered"] == 0  # batch was dropped, not re-buffered
 
@@ -258,3 +259,69 @@ async def test_an_attacker_chosen_user_agent_is_bounded():
     row = event_to_row(_with_activity(location={"client": {"raw": "x" * 50_000}}))
     assert row is not None
     assert len(row["client_raw"]) <= 1024
+
+
+# ── Windows pilot: raw-event replay semantics ────────────────────────────────
+
+
+async def test_distinct_windows_record_ids_remain_distinct_lake_rows():
+    """Distinct normalized UUIDs must survive the lake projection."""
+    first = _message()
+    second = _message()
+    second["id"] = "33333333-3333-3333-3333-333333333333"
+    first_row = event_to_row(first)
+    second_row = event_to_row(second)
+    assert first_row is not None and second_row is not None
+    assert first_row["event_id"] != second_row["event_id"]
+    w, fake = _writer_with_fake(batch_size=2)
+    await w.write_event(first)
+    await w.write_event(second)
+    assert len(fake.inserted) == 2
+    assert len({row["event_id"] for row in fake.inserted}) == 2
+
+
+async def test_exact_replay_currently_inserts_duplicate_lake_rows():
+    """Characterization: MergeTree does not enforce unique event_id."""
+    w, fake = _writer_with_fake(batch_size=2)
+    event = _message()
+    await w.write_event(event)
+    await w.write_event(event)
+    assert len(fake.inserted) == 2
+    assert fake.inserted[0]["event_id"] == fake.inserted[1]["event_id"]
+
+
+async def test_flush_without_client_counts_discarded_rows():
+    w = LakeWriter(host="x", batch_size=2)
+    await w.write_event(_message())
+    await w.write_event(_message())
+    assert w.metrics()["rows_dropped"] == 2
+    assert w.metrics()["rows_written"] == 0
+    assert w.metrics()["buffered"] == 0
+
+
+async def test_windows_security_event_is_queryable_in_lake():
+    """The Windows Data Explorer shortcut relies on these exact lake columns."""
+    msg = _message(
+        class_uid=1001,
+        category_uid=1,
+        severity_id=4,
+        severity="high",
+        time="2026-11-10T10:00:00Z",
+        metadata={"product": {"name": "windows_event", "vendor_name": "windows_event"}},
+        device={"name": "synthetic-windows-host"},
+        raw_data='{"System":{"EventID":1102,"Channel":"Security"}}',
+    )
+    row = event_to_row(msg)
+    assert row is not None
+    assert row["connector_type"] == "windows_event"
+    assert row["src_hostname"] == "synthetic-windows-host"
+    assert row["severity"] == "high"
+    assert row["event_time"].isoformat() == "2026-11-10T10:00:00"
+    assert row["event_id"] == msg["id"]
+    assert row["tenant_id"] == TENANT
+
+    writer, client = _writer_with_fake(batch_size=1)
+    await writer.write_event(msg)
+    assert writer.rows_written == 1
+    assert len(client.inserted) == 1
+    assert client.inserted[0]["connector_type"] == "windows_event"

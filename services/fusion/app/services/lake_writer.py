@@ -383,6 +383,7 @@ class LakeWriter:
         self._disabled = False
         self.rows_written = 0
         self.flush_failures = 0
+        self.rows_dropped = 0
 
     async def start(self) -> None:
         if self._disabled:
@@ -443,6 +444,8 @@ class LakeWriter:
         self._buffer = []
         client = self._client
         if client is None:
+            self.rows_dropped += len(batch)
+            logger.error("lake_writer.no_client", dropped=len(batch))
             return
 
         def _insert() -> None:
@@ -462,11 +465,13 @@ class LakeWriter:
             self.rows_written += len(batch)
         except Exception as exc:  # noqa: BLE001 — best-effort archival; drop the batch
             self.flush_failures += 1
+            self.rows_dropped += len(batch)
             logger.error("lake_writer.flush_failed", error=str(exc), dropped=len(batch))
 
     def metrics(self) -> dict[str, int]:
         return {
             "rows_written": self.rows_written,
             "flush_failures": self.flush_failures,
+            "rows_dropped": self.rows_dropped,
             "buffered": len(self._buffer),
         }

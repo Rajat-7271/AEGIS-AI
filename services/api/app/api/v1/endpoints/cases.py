@@ -1659,51 +1659,12 @@ async def case_investigate(
     # is scoped by tenant_id, so without this the whole run is never persisted.
     # Service-token path requires the acting tenant on the header, not just
     # in the body: tenant_scope refuses a service token with no tenant.
-    # The agents service stores raw_alert on the run and every downstream
-    # agent reads it; forwarding {} meant the forensic/report models got an
-    # empty payload and filled the gap with fabricated artefacts
-    # (C:\\Windows\\Temp\\malware.exe and friends). Load the case's linked
-    # alerts and pass their real content, truncated so the prompt stays
-    # bounded and free of multi-MB raw blobs.
-    raw_alert_payload: dict[str, Any] = {}
-    try:
-        if case_alert_ids:
-            rows = (
-                (
-                    await db.execute(
-                        text(
-                            "SELECT id, title, description, severity, connector_type, "
-                            "affected_ips, affected_hosts, affected_users, event_time, raw_event "
-                            "FROM alerts WHERE id::text = ANY(:ids) AND tenant_id = :tenant_id "
-                            "ORDER BY event_time DESC LIMIT 3"
-                        ).bindparams(ids=case_alert_ids, tenant_id=user.tenant_id)
-                    )
-                )
-                .mappings()
-                .all()
-            )
-            alerts_out = []
-            for r in rows:
-                raw = r["raw_event"] if isinstance(r["raw_event"], dict) else {}
-                full_log = raw.get("full_log") or ""
-                alerts_out.append(
-                    {
-                        "id": str(r["id"]),
-                        "title": r["title"],
-                        "description": (r["description"] or "")[:1000],
-                        "severity": r["severity"],
-                        "source": r["connector_type"],
-                        "affected_ips": list(r["affected_ips"] or [])[:20],
-                        "affected_hosts": list(r["affected_hosts"] or [])[:20],
-                        "affected_users": list(r["affected_users"] or [])[:20],
-                        "event_time": r["event_time"].isoformat() if r["event_time"] else None,
-                        "full_log": str(full_log)[:4000],
-                    }
-                )
-            if alerts_out:
-                raw_alert_payload = {"alerts": alerts_out}
-    except Exception:  # noqa: BLE001 - never block launch on enrichment
-        logger.warning("investigate.launch.raw_alert_enrichment_failed case_id=%s", cid, exc_info=True)
+    # _investigation_evidence already loaded the case's linked alerts with
+    # their original raw_event, structured entities, source metadata, and
+    # truncation counts. Reuse that canonical payload rather than issuing a
+    # second, narrower query that discarded all but full_log and the newest
+    # three alerts.
+    raw_alert_payload = raw_alert
 
     # Launching an agent investigation IS an analyst action: advance
     # new/triaged cases to 'investigating' in the same request so the

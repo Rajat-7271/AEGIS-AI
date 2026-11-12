@@ -79,8 +79,18 @@ class _InvitationSession:
                 None,
             )
             invite = self.invitation
+            requested_slug = next(
+                (
+                    value
+                    for value in params.values()
+                    if isinstance(value, str) and value == self.tenant.slug
+                ),
+                None,
+            )
             valid = (
                 requested_hash == invite.token_hash
+                and requested_slug == self.tenant.slug
+                and invite.tenant_id == self.tenant.id
                 and invite.expires_at > datetime.now(UTC)
                 and invite.consumed_at is None
                 and invite.revoked_at is None
@@ -332,8 +342,9 @@ def test_postgres_concurrent_invitation_redemption_is_single_use() -> None:
                         preferences={},
                     )
                 )
-                # Persist the tenant and user before the invitation's FK is checked.
-                # These fixtures have no ORM relationship linking flush order.
+                # Flush the referenced rows explicitly: these fixtures
+                # intentionally use scalar foreign keys rather than ORM
+                # relationships, so unit-of-work ordering is not implied.
                 await session.flush()
                 session.add(
                     TenantAdminInvitation(

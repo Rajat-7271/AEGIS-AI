@@ -13,6 +13,24 @@ on:
     paths:
       - "services/api/**"
 
+# Shared install step extracted as a composite action would be cleaner, but for
+# simplicity we duplicate the pip install across both jobs. Generator versions
+# are pinned to services/api/poetry.lock: FastAPI/Pydantic versions affect the
+# serialized OpenAPI schema, so floating ranges create false drift.
+env:
+  OPENAPI_DEPS: >-
+    "fastapi==0.141.1" uvicorn "pydantic[email]==2.14.0" "pydantic-settings==2.15.0"
+    "sqlalchemy[asyncio]" asyncpg structlog
+    "PyJWT>=2.8,<3" "cryptography>=46,<51" "passlib[bcrypt]"
+    tenacity pyyaml prometheus-client
+    neo4j redis celery aiofiles aiokafka
+    boto3 clickhouse-driver
+    opentelemetry-sdk opentelemetry-api
+    opentelemetry-exporter-otlp-proto-grpc
+    "opentelemetry-instrumentation-fastapi"
+    "strawberry-graphql[fastapi]" httpx email-validator "PyJWT>=2.8,<3"
+    "sqlglot>=30,<31"
+
 jobs:
   openapi-check:
     name: Verify docs/openapi.yaml is up to date
@@ -38,6 +56,38 @@ jobs:
           ENVIRONMENT: development
           SECRET_KEY: ci-dummy-secret-key-at-least-32bytes!
           DATABASE_URL: postgresql+asyncpg://x:x@localhost/x
+
+  openapi-sync-pr:
+    name: Regenerate OpenAPI on Windows development PR
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'dev/windows-staging-replay-gates'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install API dependencies
+        run: pip install --quiet ${{ env.OPENAPI_DEPS }}
+      - name: Generate exact OpenAPI artifact
+        env:
+          ENVIRONMENT: development
+          SECRET_KEY: ci-dummy-secret-key-at-least-32bytes!
+          DATABASE_URL: postgresql+asyncpg://x:x@localhost/x
+        run: python scripts/export_openapi.py
+      - name: Commit generated spec to development branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/openapi.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: synchronize Windows Security OpenAPI schema"
+            git push origin HEAD:dev/windows-staging-replay-gates
+          fi
 
   openapi-export:
     name: Auto-export OpenAPI on merge to main

@@ -105,6 +105,7 @@ from app.api.v1.endpoints import (
     waitlist,
     war_rooms,
     workload_identities,
+    windows_security,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -452,3 +453,6 @@ api_router.include_router(ai_assets.router)
 # in main.py. Same story as ai_assets: #1315 shipped the module with no
 # include site, so POST /war-rooms/cases/{id} was unreachable until here.
 api_router.include_router(war_rooms.router)
+
+# Lightweight Windows Security events for Kafka-free hosted deployments.
+api_router.include_router(windows_security.router)

@@ -757,6 +757,12 @@ jobs:
         working-directory: services/api
         run: python -m app.scripts.run_migrations
 
+      - name: Verify hosted Windows Security ingestion contract
+        working-directory: services/api
+        run: |
+          pip install --quiet "pytest==8.4.2" "pytest-asyncio==1.2.0"
+          python -m pytest tests/test_windows_security_hosted.py -q
+
       - name: Re-run must be a no-op (idempotency)
         working-directory: services/api
         run: |
@@ -1059,6 +1065,8 @@ jobs:
 
       - name: Install tooling (awscli + postgres client)
         if: needs.changes.outputs.backup == 'true'
+        env:
+          POSTGRES_CONTAINER_ID: ${{ job.services.postgres.id }}
         run: |
           pip install --quiet awscli "cryptography>=46,<51"
           # A newer pg_dump can read PG16 but emits SQL that PG16 cannot
@@ -1373,8 +1381,12 @@ jobs:
           git update-ref "refs/upgrade-baselines/${RELEASE_REF}" "$RELEASE_SHA"
 
       - name: Install the released schema (${{ matrix.from_ref }})
+        env:
+          UPSTREAM_COMMIT: ${{ matrix.upstream_commit }}
         run: |
           set -euo pipefail
+          # Forks may lack the release tags. Fetch the pinned upstream commit.
+          git fetch --no-tags --depth=1 https://github.com/beenuar/AiSOC.git "$UPSTREAM_COMMIT"
           # `git checkout <ref> -- <path>` only overwrites paths present in
           # <ref>; it will NOT delete files added since. rm -rf first so the
           # migrations dir exactly matches the released set (otherwise HEAD's

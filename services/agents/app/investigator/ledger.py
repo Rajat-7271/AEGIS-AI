@@ -649,10 +649,13 @@ async def persist_auto_triage(
     ungrounded: bool | None = None,
     shadow: bool = False,
     llm_exchanges: list[dict[str, Any]] | None = None,
+    vendor_reads: list[dict[str, Any]] | None = None,
 ) -> bool:
     """Durably record an auto-triage outcome (issue #571) in ONE transaction:
 
     * upsert the ``investigation_runs`` row (idempotent on ``id``),
+    * append bounded vendor-read outcomes at negative sequence slots (before
+      the model call at seq 0 and verdict at seq 1; escalation starts at seq 2),
     * append the verdict as an immutable ``investigation_events`` row (seq 1),
     * mark the run completed, and
     * write the disposition/verdict + rationale + recommendations back onto the
@@ -740,6 +743,37 @@ async def persist_auto_triage(
                         exchange.get("input_hash"),
                         exchange.get("output_hash"),
                         int(exchange.get("duration_ms") or 0),
+                    )
+
+                # Vendor reads happened before the model call. Their
+                # negative sequence slots place them before llm_call (0) and
+                # triage_verdict (1), while leaving seq >= 2 untouched for
+                # run_escalation, which shares this deterministic run_id.
+                # For N reads, offsets map to -N ... -1 in plan order.
+                # Failed reads remain visibility gaps, not clean results.
+                reads = vendor_reads or []
+                for offset, read in enumerate(reads):
+                    await conn.execute(
+                        """
+                        INSERT INTO investigation_events
+                          (id, run_id, tenant_id, seq, ts, kind, agent, summary,
+                           payload, duration_ms, created_at)
+                        VALUES
+                          ($1, $2, $3, $4, now(), 'tool_call', $5, $6, $7::jsonb, $8, now())
+                        ON CONFLICT (run_id, seq) DO NOTHING
+                        """,
+                        uuid.uuid4(),
+                        run_id,
+                        tenant_id,
+                        offset - len(reads),
+                        "auto_triage:vendor_evidence",
+                        (
+                            f"{read.get('capability')} {read.get('target')} -> "
+                            f"{'executed' if read.get('executed') else 'could not check'}"
+                            f" ({read.get('status')})"
+                        )[:8000],
+                        json.dumps(read, default=str),
+                        int(read.get("elapsed_ms") or 0),
                     )
 
                 verdict_event_id = uuid.uuid4()

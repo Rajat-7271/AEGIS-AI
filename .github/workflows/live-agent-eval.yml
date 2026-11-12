@@ -126,12 +126,27 @@ jobs:
           poetry install --no-root --no-interaction
 
       - name: Install Ollama
+        id: ollama_install
         run: |
           set -euo pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
+          if ! curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors \
+            https://ollama.com/install.sh -o /tmp/ollama-install.sh 2>/tmp/ollama-download.log; then
+            cat /tmp/ollama-download.log
+            if grep -Eq '(^|[^0-9])50[234]([^0-9]|$)' /tmp/ollama-download.log; then
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "::warning title=Live eval unverified::Ollama installer returned HTTP 5xx. Evaluation NOT RUN; retry before model sign-off."
+              echo "### ⚠ Live agent evaluation NOT RUN — Ollama CDN HTTP 5xx" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::Ollama installer failed for a non-transient reason"
+            exit 1
+          fi
+          sh /tmp/ollama-install.sh
           ollama --version
+          echo "available=true" >> "$GITHUB_OUTPUT"
 
       - name: Serve the model
+        if: steps.ollama_install.outputs.available == 'true'
         run: |
           set -euo pipefail
           nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
@@ -149,6 +164,7 @@ jobs:
           ollama pull "$OLLAMA_MODEL"
 
       - name: Dispatch the agent
+        if: steps.ollama_install.outputs.available == 'true'
         env:
           # The harness reads its key from this dedicated slot; the value is
           # irrelevant to Ollama but the SDK requires one to be present.
@@ -186,10 +202,11 @@ jobs:
       # records the runs it was derived from, so the number cannot be edited
       # apart from its evidence.
       - name: The measured groundedness floor
+        if: steps.ollama_install.outputs.available == 'true'
         run: python3 scripts/check_live_agent_floor.py --report live-agent-eval.wet.json
 
       - name: Summarise
-        if: always()
+        if: ${{ always() && steps.ollama_install.outputs.available == 'true' }}
         run: |
           set -uo pipefail
           if [ ! -f live-agent-eval.wet.json ]; then
@@ -233,7 +250,7 @@ jobs:
       # against an absent run is exactly the "not measured is not zero"
       # failure the comparator exists to refuse.
       - name: Delta against the previous run of this model
-        if: always()
+        if: ${{ always() && steps.ollama_install.outputs.available == 'true' }}
         continue-on-error: true
         id: delta
         env:
@@ -260,7 +277,7 @@ jobs:
             --out "delta-$slug.md" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload report
-        if: always()
+        if: ${{ always() && steps.ollama_install.outputs.available == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: live-agent-eval-${{ github.run_id }}
@@ -277,7 +294,7 @@ jobs:
       # like live-agent performance. The live half stays unpublished until
       # there is a funded provider key, which is an account action.
       - name: Append a substrate row to the public scoreboard
-        if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+        if: ${{ steps.ollama_install.outputs.available == 'true' && github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
         run: |
           set -euo pipefail
           cd services/agents
@@ -347,10 +364,24 @@ jobs:
           poetry install --no-root --no-interaction
 
       - name: Install Ollama
+        id: ollama_install
         run: |
           set -euo pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
+          if ! curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors \
+            https://ollama.com/install.sh -o /tmp/ollama-install.sh 2>/tmp/ollama-download.log; then
+            cat /tmp/ollama-download.log
+            if grep -Eq '(^|[^0-9])50[234]([^0-9]|$)' /tmp/ollama-download.log; then
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "::warning title=Live eval unverified::Ollama installer returned HTTP 5xx. Evaluation NOT RUN; retry before model sign-off."
+              echo "### ⚠ Live agent evaluation NOT RUN — Ollama CDN HTTP 5xx" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::Ollama installer failed for a non-transient reason"
+            exit 1
+          fi
+          sh /tmp/ollama-install.sh
           ollama --version
+          echo "available=true" >> "$GITHUB_OUTPUT"
 
       - name: Serve the model
         run: |
@@ -370,6 +401,7 @@ jobs:
           ollama pull "$OLLAMA_MODEL"
 
       - name: Dispatch the agent on one incident
+        if: steps.ollama_install.outputs.available == 'true'
         env:
           WET_EVAL_OPENAI_KEY: ollama
           OPENAI_API_KEY: ollama
@@ -399,6 +431,7 @@ jobs:
       # without a provider ever being reached — a run that looks measured
       # and measured nothing.
       - name: A real LLM call was placed
+        if: steps.ollama_install.outputs.available == 'true'
         run: |
           set -euo pipefail
           python3 - <<'PY'

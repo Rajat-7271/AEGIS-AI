@@ -226,6 +226,7 @@ ALLOWED: dict[str, tuple[int, str]] = {
     "tests/e2e/golden_pipeline/run_golden_pipeline.py": (1, _UUID_SEED),
     "services/agents/app/orchestrator/router.py": (2, _UUID_SEED),
     "services/agents/app/workers/fused_alert_consumer.py": (1, _UUID_SEED),
+    "tests/e2e/golden_pipeline/run_golden_pipeline.py": (1, _UUID_SEED),
     # --- documentation about the managed instance --------------------------
     "apps/docs/docs/operations/managed-instance.md": (14, _DOCS),
     # 2 before the header stopped advertising `docs.tryaisoc.com` as a second

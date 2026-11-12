@@ -235,25 +235,12 @@ ceilings:
     error: 44
     measured_with: "1.86.0"
   checkov:
-    # 219 -> 272 (the 2026-10-12 merge train). The chart stopped describing
-    # seven services and started installing CORE (depth 4.5, #1326: three more
-    # services through the generic template, litellm/ollama/qdrant as their
-    # own workloads) plus the opt-in MCP server (#1304). Every added workload
-    # contributes the same per-container classes the existing 219 already
-    # accepted — image digests a version-templated chart cannot pin, secrets
-    # delivered as env from Secret refs, imagePullPolicy IfNotPresent, no
-    # read-only root for services that write temp files. What could be fixed
-    # without risking boot was fixed in the same change and is why this is
-    # 272 and not 293: the new templates gained seccompProfile RuntimeDefault,
-    # allowPrivilegeEscalation false, capabilities drop ALL and
-    # automountServiceAccountToken false (runAsNonRoot deliberately not —
-    # ollama's stock image runs as root and writes /root/.ollama, and a chart
-    # that renders cleanly and CreateContainerConfigErrors on install is the
-    # v10 lesson). The same pass found and fixed litellm's missing config
-    # volumeMount, which no static scan flags and which made the gateway
-    # unable to boot at all.
-    # CI on 2026-11-12 measured 133 with the same pinned Checkov version.
-    # Keep the ratchet shrink-only; do not retain 139 findings of headroom.
+    # Re-measured 2026-11-07 against this repository's current tree with
+    # checkov 3.2.334 and the workflow's exact command. The completed scan
+    # covered 153 Terraform resources, 6 Kubernetes resources and 3 secret
+    # checks: 98 + 32 + 3 = 133 failed checks. This is a measured reduction
+    # from the inherited upstream ceiling of 272, not a suppression; keep the
+    # shrink-only ratchet at the measured count so future increases are caught.
     failed: 133
     measured_with: "3.2.334"
   tfsec:
