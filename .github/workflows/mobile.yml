@@ -6,19 +6,18 @@ name: Mobile
 # them. So it gets its own workflow, and it only runs when it or the SDK it
 # depends on changes.
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'apps/mobile/**'
       - 'packages/sdk-ts/**'
       - 'scripts/check_no_audio_egress.py'
-      - '.github/workflows/mobile.yml'
   pull_request:
     paths:
       - 'apps/mobile/**'
       - 'packages/sdk-ts/**'
       - 'scripts/check_no_audio_egress.py'
-      - '.github/workflows/mobile.yml'
 
 concurrency:
   # Supersede a pull request's own earlier runs; never supersede a push.
