@@ -347,7 +347,7 @@ async def chat(
         "timestamp": now,
     }
 
-    history = {"messages": [*(existing.messages if existing else []), user_msg]}
+    history = {"messages": list(existing.messages) if existing else []}
     reply_text, reply_source, reply_reason = await _get_openai_reply(history, req.message)
 
     assistant_msg: dict[str, Any] = {
@@ -403,7 +403,7 @@ async def chat_stream(
         "content": req.message,
         "timestamp": now,
     }
-    history = {"messages": [*(existing.messages if existing else []), user_msg]}
+    history = {"messages": list(existing.messages) if existing else []}
 
     reply_text, reply_source, reply_reason = await _get_openai_reply(history, req.message)
     msg_id = str(uuid.uuid4())
