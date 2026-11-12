@@ -418,6 +418,8 @@ export function CopilotView() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  // State updates are asynchronous; this ref blocks a second submit in the same tick.
+  const requestInFlight = useRef(false);
   const [error, setError] = useState<unknown>(null);
   // The prompt whose request failed, so the retry re-issues *that* request
   // rather than making the operator retype it.
@@ -445,7 +447,8 @@ export function CopilotView() {
    */
   const send = async (prompt: string, { replay = false }: { replay?: boolean } = {}) => {
     const trimmed = prompt.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || requestInFlight.current) return;
+    requestInFlight.current = true;
 
     if (!replay) {
       const userMsg: CopilotMessage = {
@@ -525,6 +528,7 @@ export function CopilotView() {
       setError(err);
       setFailedPrompt(trimmed);
     } finally {
+      requestInFlight.current = false;
       setSending(false);
     }
   };
