@@ -344,3 +344,8 @@ def test_event_id_list_is_educational_not_uncited_telemetry():
     question = ("List the most important Windows Event IDs for detecting MITRE ATT&CK T1059. "
                 "Format the answer as a Markdown table with headings.")
     assert copilot._ground_copilot_reply("PowerShell T1059", question, None) is None
+
+
+def test_escaped_inline_code_line_outside_fence():
+    raw = r"\`Turn on PowerShell Transcription\`"
+    assert copilot._normalize_copilot_markdown(raw) == "`Turn on PowerShell Transcription`"
