@@ -254,6 +254,8 @@ def _normalize_copilot_markdown(content: str) -> str:
                 line = line.replace(r"\-", "-")
             elif stripped.startswith(r"\|") and stripped.count(r"\|") >= 2:
                 line = line.replace(r"\|", "|").replace(r"\*", "*")
+            elif stripped.startswith(r"\`") and stripped.count(r"\`") >= 2:
+                line = line.replace(r"\`", "`")
         is_table = not in_fence and line.lstrip().startswith("|") and line.count("|") >= 3
         if not line.strip() and not in_fence:
             pending_blank.append(line)
