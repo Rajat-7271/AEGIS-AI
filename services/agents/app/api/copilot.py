@@ -237,6 +237,22 @@ def _ground_copilot_reply(reply: str, question: str, context: dict[str, Any] | N
     return ground_answer(reply, sources_from_context(context)).as_dict()
 
 
+def _normalize_copilot_markdown(content: str) -> str:
+    """Repair escaped Markdown structure outside fenced code blocks only."""
+    result: list[str] = []
+    in_fence = False
+    for line in content.splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.startswith(("```", "~~~")):
+            in_fence = not in_fence
+        elif not in_fence:
+            if re.match(r"^\\#{1,6}\s", stripped):
+                line = line.replace(r"\#", "#", 6)
+            elif stripped.startswith(r"\|") and stripped.count(r"\|") >= 2:
+                line = line.replace(r"\|", "|")
+        result.append(line)
+    return "".join(result)
+
 def _looks_like_unexecuted_tool_call(content: str) -> bool:
     """Reject tool invocation syntax, not ordinary discussion of commands."""
     if any(marker in content for marker in ("<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>")):
@@ -314,7 +330,9 @@ async def _get_openai_reply(
                     "You cannot execute shell commands or query live hosts through this chat. "
                     "Never emit tool-call syntax or claim to have run tools. "
                     "If current telemetry is unavailable, say so and explain how to inspect it. "
-                    "Answer general questions directly and ground any claims about the environment in supplied evidence."
+                    "Answer general questions directly and ground any claims about the environment in supplied evidence. "
+                    "Use normal Markdown headings and tables without escaping punctuation outside code blocks. "
+                    "Preserve literal backslashes in commands and fenced code."
                     + (" Return the user-facing answer in the JSON field answer." if use_json_schema else "")
                 ),
             }
@@ -358,7 +376,7 @@ async def _get_openai_reply(
             logger.warning("copilot.unexecuted_tool_call", model=model)
             detail = "The model attempted to use a tool. Copilot chat cannot query live security telemetry."
         elif isinstance(content, str) and content.strip():
-            return content, "llm", None
+            return _normalize_copilot_markdown(content), "llm", None
         else:
             detail = "The model returned no usable answer."
     except Exception as exc:
