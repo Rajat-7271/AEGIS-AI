@@ -371,6 +371,9 @@ def test_postgres_concurrent_invitation_redemption_is_single_use() -> None:
                         preferences={},
                     )
                 )
+                # Persist the tenant and user before the invitation's FK is checked.
+                # These fixtures have no ORM relationship linking flush order.
+                await session.flush()
                 session.add(
                     TenantAdminInvitation(
                         id=invite_id,
