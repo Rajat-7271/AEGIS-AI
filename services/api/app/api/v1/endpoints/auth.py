@@ -68,7 +68,11 @@ async def _invitation_target(
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     invitation = (
         await db.execute(
-            select(TenantAdminInvitation).where(
+            select(TenantAdminInvitation).join(
+                Tenant, Tenant.id == TenantAdminInvitation.tenant_id
+            ).where(
+                Tenant.slug == tenant_slug,
+                Tenant.is_active.is_(True),
                 TenantAdminInvitation.token_hash == token_hash,
                 TenantAdminInvitation.expires_at > func.now(),
                 TenantAdminInvitation.consumed_at.is_(None),
