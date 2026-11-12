@@ -87,6 +87,7 @@ class _InvitationSession:
             invite = self.invitation
             valid = (
                 requested_hash == invite.token_hash
+                and self.tenant.id in params.values()
                 and invite.expires_at > datetime.now(UTC)
                 and invite.consumed_at is None
                 and invite.revoked_at is None
@@ -113,7 +114,7 @@ class _InvitationSession:
                 None,
             )
             valid = (
-                requested_id == self.tenant.id
+                (requested_id is None or requested_id == self.tenant.id)
                 and requested_slug == self.tenant.slug
                 and self.tenant.is_active
             )
