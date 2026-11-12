@@ -18,7 +18,6 @@ from app.api.v1.deps import AuthUser, DBSession, get_current_user
 __all__ = ["router", "get_current_user"]
 from app.core.config import settings
 from app.core.role_grants import wildcard_roles as WILDCARD_ROLES
-from app.db.rls import set_rls_context
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -27,6 +26,7 @@ from app.core.security import (
     token_is_revoked,
     verify_password,
 )
+from app.db.rls import set_rls_context
 from app.models.tenant import Tenant, User
 from app.models.tenant_admin_invitation import TenantAdminInvitation
 from app.services.login_throttle import client_ip, get_login_throttle
@@ -65,10 +65,25 @@ async def _invitation_target(
     if not isinstance(tenant_slug, str) or not _TENANT_SLUG_RE.fullmatch(tenant_slug):
         return None
 
+    # Resolve the tenant from the supplied slug before touching tenant-scoped
+    # invitation rows. A valid bearer token alone must not select another
+    # tenant's invitation.
+    tenant = (
+        await db.execute(
+            select(Tenant).where(
+                Tenant.slug == tenant_slug,
+                Tenant.is_active.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+    if tenant is None:
+        return None
+
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     invitation = (
         await db.execute(
             select(TenantAdminInvitation).where(
+                TenantAdminInvitation.tenant_id == tenant.id,
                 TenantAdminInvitation.token_hash == token_hash,
                 TenantAdminInvitation.expires_at > func.now(),
                 TenantAdminInvitation.consumed_at.is_(None),
@@ -77,18 +92,6 @@ async def _invitation_target(
         )
     ).scalar_one_or_none()
     if invitation is None:
-        return None
-
-    tenant = (
-        await db.execute(
-            select(Tenant).where(
-                Tenant.id == invitation.tenant_id,
-                Tenant.slug == tenant_slug,
-                Tenant.is_active.is_(True),
-            )
-        )
-    ).scalar_one_or_none()
-    if tenant is None:
         return None
 
     user = (
