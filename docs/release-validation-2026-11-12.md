@@ -327,3 +327,71 @@ session did not inspect or change them. Fixes introduce no database migration or
 production secret changes. Revert fix commits through a development PR if needed;
 any later production rollback should restore the previously recorded deployment
 artifact, not rebuild an unpinned tree.
+
+## PR 53 integration follow-up from 60766e2
+
+Integration run 43272625906 passed the rebuilt event spine, including lake,
+detection and chaos assertions, and the four-service replay evaluation. Its
+four failing jobs were the two historical upgrades, migration RLS seeding,
+and disaster recovery. Logs were read for jobs 131372919321, 131372919431,
+131372919551 and 131372919683 before changing their paths.
+
+The fork lacks upstream tags v7.3.1 and v7.5.0. The upgrade matrix now fetches
+those upstream tags explicitly and verifies their peeled commit identities:
+abff3d06cfb2bc93fb6442fe54a88e876768d0a1 and
+c00088fc426873529a2be4ae6e8e2039170cac20 respectively. Only the migration
+directory is installed from each historical commit; the current runner and
+the data-survival and complete-ledger assertions remain in place.
+
+The invitation seeder now supplies a unique SHA-256 digest and an expiry
+strictly after the transaction timestamp. Neither schema constraints nor RLS
+policies changed, and every protected table must still be populated for both
+tenants. Disaster-recovery CI selects PostgreSQL 16 client binaries explicitly
+and checks the client and server major versions. A newer pg_dump had emitted
+transaction_timeout, which PostgreSQL 16 rejected. Restore now disables local
+psql startup files, stops on SQL errors, and retains its single transaction.
+Client options precede the connection URL so Windows clients honor them too.
+
+New local validation used an isolated portable PostgreSQL 16.11 server on
+127.0.0.1:55453, temporary databases and no production credentials:
+
+- All 135 SQL migrations applied in strict mode; a second pass had zero
+  pending migrations and the ledger count matched the files.
+- Both real historical migration sets (47 and 55 files) upgraded to all 135
+  current migrations. All 250 probe rows and their complete payloads survived
+  each upgrade, compared before and after.
+- The shipped-role RLS suite, MSSP RLS suite and API portfolio-isolation suite
+  passed: 67 tests. Replaying the original seeder against the same real
+  database failed on tenant_admin_invitations_check again, as required by
+  the negative-control rule.
+- UEBA, honeytokens, purple-team and osquery-TLS each passed owner-only
+  upgrade/downgrade/upgrade. Applying all four chains to one fresh database
+  created all seven tables asserted by the Integration workflow.
+- The actual backup.sh and restore.sh ran through AWS CLI against a local
+  Moto HTTP S3 test endpoint. AES-256-GCM artifact/header, unreadable table
+  name and SHA-256 manifest checks passed. After destroying the fixture
+  schema, all 500 rows returned with the same ordered payload digest.
+  This is a local S3 test endpoint result, not a Versity container result.
+- An authenticated, correctly manifested artifact containing invalid SQL
+  (SET transaction_timeout on PG16) failed restore and rolled back its prior
+  CREATE TABLE. The original restore script accepted the same artifact and
+  falsely reported success. A bit-flipped ciphertext artifact was refused.
+- All 24 encryption tests passed. A local pytest display-ID hook shortened
+  byte-valued parameter names to avoid Windows' 32,767-character environment
+  limit; all test cases and assertions ran unchanged.
+- Pinned Ruff lint/format, shell syntax, backup/restore parity, workflow
+  concurrency and whitespace checks passed. The dedicated-tools mypy gate
+  reproduced the previously recorded 992 findings and remains failing;
+  its baseline and configuration were not changed.
+
+Mobile run 43272626150 is separate. iOS job 131372792838 was cancelled after
+about 16 minutes with runner_id=0, no runner name and no steps. It never
+compiled source. A targeted retry was accepted as job 131384850781 and was
+last observed queued without a runner. This supports an allocation problem;
+the cancellation's exact cause is not established. Android and mobile unit
+and type checks passed. No mobile workflow was weakened or changed.
+
+New-head Linux Integration remains required: local Windows validation does
+not prove Ubuntu package installation, the Versity container, or the macOS
+simulator build. Keep PR 53 draft. Nothing was merged, deployed, or changed
+in production.

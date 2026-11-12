@@ -1061,7 +1061,19 @@ jobs:
         if: needs.changes.outputs.backup == 'true'
         run: |
           pip install --quiet awscli "cryptography>=46,<51"
-          sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+          # A newer pg_dump can read PG16 but emits SQL that PG16 cannot
+          # restore (for example transaction_timeout). Match the server.
+          sudo apt-get update -q && sudo apt-get install -y -q postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+
+      - name: Verify disaster-recovery client and server versions
+        if: needs.changes.outputs.backup == 'true'
+        run: |
+          set -euo pipefail
+          pg_dump --version | grep -E 'PostgreSQL\) 16\.'
+          psql --version | grep -E 'PostgreSQL\) 16\.'
+          version=$(PGPASSWORD=aisoc_ci_secret psql -X -h localhost -U aisoc -d aisoc -tAc 'SHOW server_version_num')
+          test "$((version / 10000))" = 16
 
       # The S3 endpoint is a fixture: what this job tests is backup.sh and
       # restore.sh, not the object store. It still has to be a real S3 server,
@@ -1276,7 +1288,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        from_ref: ['v7.3.1', 'v7.5.0']
+        include:
+          - from_ref: v7.3.1
+            from_sha: abff3d06cfb2bc93fb6442fe54a88e876768d0a1
+          - from_ref: v7.5.0
+            from_sha: c00088fc426873529a2be4ae6e8e2039170cac20
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:16
@@ -1328,6 +1344,18 @@ jobs:
         id: head
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Fetch and verify the upstream release baseline
+        env:
+          RELEASE_REF: ${{ matrix.from_ref }}
+          RELEASE_SHA: ${{ matrix.from_sha }}
+        run: |
+          set -euo pipefail
+          # Forks need not publish upstream release tags. Fetch only the
+          # historical schema, and reject a moved tag before using it.
+          git fetch --no-tags https://github.com/beenuar/AiSOC.git "refs/tags/${RELEASE_REF}"
+          test "$(git rev-parse FETCH_HEAD^{commit})" = "$RELEASE_SHA"
+          git update-ref "refs/upgrade-baselines/${RELEASE_REF}" "$RELEASE_SHA"
+
       - name: Install the released schema (${{ matrix.from_ref }})
         run: |
           set -euo pipefail
@@ -1336,7 +1364,7 @@ jobs:
           # migrations dir exactly matches the released set (otherwise HEAD's
           # newer files leak in and pass 1 silently becomes a fresh apply).
           rm -rf services/api/migrations
-          git checkout "${{ matrix.from_ref }}" -- services/api/migrations
+          git checkout "refs/upgrade-baselines/${{ matrix.from_ref }}" -- services/api/migrations
           echo "migration files at ${{ matrix.from_ref }}: $(ls services/api/migrations/*.sql | wc -l)"
           ( cd services/api && python -m app.scripts.run_migrations )
 
