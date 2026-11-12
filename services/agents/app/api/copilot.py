@@ -211,6 +211,32 @@ def _is_fallback_message(message: dict[str, Any]) -> bool:
     )
 
 
+def _is_general_knowledge_question(question: str, context: dict[str, Any] | None) -> bool:
+    """Only exempt clearly educational questions without tenant evidence.
+
+    An explicit alert/case context or estate-specific wording must retain
+    the uncited-evidence warning, even when the question mentions ATT&CK.
+    """
+    if sources_from_context(context):
+        return False
+    q = question.strip().lower()
+    if re.search(r"\\b(my|our|this|these|current|actual)\\s+(alerts?|hosts?|devices?|network|environment|cases?|incidents?|logs?|events?)\\b", q):
+        return False
+    return bool(re.match(
+        r"^(?:please\\s+)?(?:explain|define|describe|what\\s+is|what\\s+are|"
+        r"how\\s+does|how\\s+do|which\\s+windows\\s+event\\s+ids|"
+        r"what\\s+windows\\s+event\\s+ids)\\b",
+        q,
+    ))
+
+
+def _ground_copilot_reply(reply: str, question: str, context: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Do not treat general reference terms as uncited tenant findings."""
+    if _is_general_knowledge_question(question, context):
+        return None
+    return ground_answer(reply, sources_from_context(context)).as_dict()
+
+
 def _looks_like_unexecuted_tool_call(content: str) -> bool:
     """Reject tool invocation syntax, not ordinary discussion of commands."""
     if any(marker in content for marker in ("<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>")):
@@ -422,7 +448,7 @@ async def chat(
     # A template reply is not graded: it asserts nothing about this
     # estate, and labelling generic guidance "uncited" would put a
     # warning where there is no claim to warn about.
-    grounding = ground_answer(reply_text, sources_from_context(req.context)).as_dict() if reply_source == "llm" else None
+    grounding = _ground_copilot_reply(reply_text, req.message, req.context) if reply_source == "llm" else None
 
     return CopilotChatResponse(
         conversationId=stored.id,
