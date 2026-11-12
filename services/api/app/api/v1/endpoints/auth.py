@@ -65,10 +65,25 @@ async def _invitation_target(
     if not isinstance(tenant_slug, str) or not _TENANT_SLUG_RE.fullmatch(tenant_slug):
         return None
 
+    # Resolve the tenant from the supplied slug before touching tenant-scoped
+    # invitation rows. A valid bearer token alone must not select another
+    # tenant's invitation.
+    tenant = (
+        await db.execute(
+            select(Tenant).where(
+                Tenant.slug == tenant_slug,
+                Tenant.is_active.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+    if tenant is None:
+        return None
+
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     invitation = (
         await db.execute(
             select(TenantAdminInvitation).where(
+                TenantAdminInvitation.tenant_id == tenant.id,
                 TenantAdminInvitation.token_hash == token_hash,
                 TenantAdminInvitation.expires_at > func.now(),
                 TenantAdminInvitation.consumed_at.is_(None),
@@ -77,18 +92,6 @@ async def _invitation_target(
         )
     ).scalar_one_or_none()
     if invitation is None:
-        return None
-
-    tenant = (
-        await db.execute(
-            select(Tenant).where(
-                Tenant.id == invitation.tenant_id,
-                Tenant.slug == tenant_slug,
-                Tenant.is_active.is_(True),
-            )
-        )
-    ).scalar_one_or_none()
-    if tenant is None:
         return None
 
     user = (
