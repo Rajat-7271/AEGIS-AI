@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, windowsSecurityApi } from '@/lib/api';
 
 type EventRow = {
@@ -39,15 +39,20 @@ function formatUtcTimestamp(value: string): string {
 
 export default function WindowsSecurityPage() {
   const [events, setEvents] = useState<EventRow[]>([]);
+  const refreshInFlight = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (silent = false) => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const response = await windowsSecurityApi.events();
       setEvents(parseEvents(response));
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       const message = err instanceof ApiError && err.status === 403
         ? 'Your account needs the lake:query permission to view Windows Security events.'
@@ -56,11 +61,18 @@ export default function WindowsSecurityPage() {
           : 'Could not load Windows Security events. Try refreshing.';
       setError(message);
     } finally {
+      refreshInFlight.current = false;
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh(true);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
   return (
     <main className="space-y-6 p-6">
@@ -71,10 +83,15 @@ export default function WindowsSecurityPage() {
             Tenant-scoped Windows Security metadata. Events are not automatically alerts.
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          <span role="status" className="text-xs text-fg-secondary">
+            Auto-refresh every 5 seconds{lastUpdated ? ` · Last checked ${lastUpdated}` : ''}
+          </span>
         <button type="button" onClick={() => void refresh()} disabled={loading}
           className="rounded-lg border border-border-default px-4 py-2 text-sm text-fg-primary disabled:opacity-50">
           {loading ? 'Loading…' : 'Refresh'}
         </button>
+        </div>
       </div>
 
       {error ? (
