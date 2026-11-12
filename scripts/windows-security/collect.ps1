@@ -102,7 +102,9 @@ try {
         $checkpoint = [long]([IO.File]::ReadAllText($CheckpointPath).Trim())
     }
 Write-Host $(if ($EnableSend) { 'AEGIS collector: sending metadata only' } else { 'AEGIS collector: DRY RUN (no network requests)' })
+$failureCount = 0
 do {
+    $cycleFailed = $false
     try {
         # Fail closed on log clear/reset: never silently restart at a reused record ID.
         $newest = Get-WinEvent -LogName Security -MaxEvents 1 -ErrorAction Stop
@@ -125,16 +127,23 @@ do {
                 Write-Host "Dry run: $($events.Count) metadata event(s), newest record $($entries[-1].RecordId); checkpoint unchanged"
             }
         }
+        $failureCount = 0
     } catch {
         # No matching records is normal; permission, query and transport failures are not.
         if ($_.FullyQualifiedErrorId -match 'NoMatchingEventsFound') {
             if ($Once) { Write-Host 'No matching Security events' }
         } else {
+            $cycleFailed = $true
+            $failureCount = [Math]::Min($failureCount + 1, 6)
             Write-Warning "Collector cycle failed (checkpoint unchanged): $($_.Exception.Message)"
             if ($Once) { throw }
         }
     }
-    if (-not $Once) { Start-Sleep -Seconds $IntervalSeconds }
+    if (-not $Once) {
+        # Back off on repeated API/log failures without busy-looping; reset after success.
+        $delay = if ($cycleFailed) { [Math]::Min(60, [Math]::Max($IntervalSeconds, [Math]::Pow(2, $failureCount))) } else { $IntervalSeconds }
+        Start-Sleep -Seconds ([int]$delay)
+    }
 } while (-not $Once)
 } finally {
     if ($ownsMutex) { $mutex.ReleaseMutex() }
