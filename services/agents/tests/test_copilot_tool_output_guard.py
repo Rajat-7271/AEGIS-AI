@@ -275,3 +275,40 @@ async def test_llm_prompt_includes_current_question_once(monkeypatch):
     assert (reply, source, reason) == ("Understood.", "llm", None)
     assert all(message["role"] != "assistant" for message in captured["messages"])
     assert [m["content"] for m in captured["messages"] if m["role"] == "user"] == ["Previous question", "Current question"]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Explain MITRE ATT&CK technique T1059 in simple terms.",
+        "What Windows Event IDs should I check?",
+        "What is PowerShell script block logging?",
+    ],
+)
+def test_general_knowledge_does_not_claim_missing_tenant_evidence(question):
+    answer = "T1059 and powershell.exe are reference examples, not observed incidents."
+    assert copilot._ground_copilot_reply(answer, question, None) is None
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Explain this alert T1059",
+        "What happened on my host?",
+        "Which Windows Event IDs should I check for our incidents?",
+    ],
+)
+def test_environment_questions_keep_uncited_evidence_warning(question):
+    result = copilot._ground_copilot_reply("T1059 occurred on host 198.51.100.4", question, None)
+    assert result is not None
+    assert result["uncited"]
+
+
+def test_contextual_alert_preserves_grounding_for_educational_question():
+    result = copilot._ground_copilot_reply(
+        "T1059 occurred on host 198.51.100.4",
+        "Explain T1059",
+        {"alert": {"id": "alert-1", "title": "Suspicious execution"}},
+    )
+    assert result is not None
+    assert result["uncited"]
