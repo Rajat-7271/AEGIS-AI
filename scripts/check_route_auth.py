@@ -167,6 +167,22 @@ PUBLIC_ROUTES: dict[str, str] = {
 #: Routes whose credential is verified inside the handler. ``(verifier, reason)``
 #: — the verifier must still be called or the exemption lapses.
 IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
+    "services/agents/app/api/drain.py::begin_drain": (
+        "_authorize",
+        "operator-only drain control checks X-AiSOC-Drain-Token using a constant-time comparison; rejects requests if the token is unset",
+    ),
+    "services/agents/app/api/drain.py::drain_status": (
+        "_authorize",
+        "operator-only drain status requires the same fail-closed X-AiSOC-Drain-Token check",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::validate_admin_invitation": (
+        "_invitation_target",
+        "pre-login invitation validation is rate-limited and verifies an unexpired unconsumed hashed bearer token bound to a tenant and pending admin",
+    ),
+    "services/api/app/api/v1/endpoints/auth.py::redeem_admin_invitation": (
+        "_invitation_target",
+        "pre-login invitation redemption is rate-limited, validates the hashed invitation token and atomically consumes it before activating the bound admin",
+    ),
     "services/agents/app/api/playbooks.py::answer_verification": (
         "resume_verification",
         "the signed answer link is the whole credential (depth 5.4): resume_verification recomputes the HMAC over "
