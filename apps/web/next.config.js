@@ -30,7 +30,25 @@ try {
 // `http://realtime:4000`).
 const REALTIME_HOST = process.env.REALTIME_URL || 'http://localhost:8086';
 const API_HOST = process.env.API_URL || 'http://localhost:8000';
-const AGENTS_HOST = process.env.AGENTS_URL || 'http://localhost:8001';
+// Production rewrites are compiled during the build. A missing AGENTS_URL used
+// to silently bake localhost into the deployment, which Vercel rejects with
+// DNS_HOSTNAME_RESOLVED_PRIVATE when Copilot is called.
+const configuredAgentsUrl = process.env.AGENTS_URL?.trim();
+if (process.env.VERCEL_ENV === 'production') {
+  if (!configuredAgentsUrl) {
+    throw new Error('AGENTS_URL must be set for production builds (public HTTPS agents origin).');
+  }
+  let agentsOrigin;
+  try {
+    agentsOrigin = new URL(configuredAgentsUrl);
+  } catch {
+    throw new Error('AGENTS_URL must be a valid absolute HTTPS URL in production.');
+  }
+  if (agentsOrigin.protocol !== 'https:' || agentsOrigin.username || agentsOrigin.password || agentsOrigin.pathname !== '/' || agentsOrigin.search || agentsOrigin.hash || /^(localhost|127\.|0\.0\.0\.0$|\[?::1\]?$)/i.test(agentsOrigin.hostname)) {
+    throw new Error('AGENTS_URL must be a public HTTPS origin without credentials, paths or query parameters.');
+  }
+}
+const AGENTS_HOST = (configuredAgentsUrl || 'http://localhost:8001').replace(/\/$/, '');
 // Fusion service exposes /entity-risk/*, /ml/*, /metrics, /health at root.
 // We surface those to the browser under the same-origin namespace
 // /api/v1/fusion/* so the bundle stays host-agnostic.
