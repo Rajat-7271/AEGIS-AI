@@ -235,7 +235,10 @@ async def _get_openai_reply(
                     "You are AEGIS AI Copilot, the AI security operations assistant built into AEGIS AI. "
                     "Help analysts investigate alerts, correlate events, and respond to threats. "
                     "Be concise, technical, and actionable. Reference MITRE ATT&CK techniques "
-                    "when relevant. Format recommendations as numbered steps when appropriate."
+                    "when relevant. Format recommendations as numbered steps when appropriate. "
+                    "You cannot execute shell commands or query live hosts through this chat. "
+                    "Never emit tool-call syntax or claim to have run tools. "
+                    "If current telemetry is unavailable, say so and explain how to inspect it."
                 ),
             }
         ]
@@ -250,10 +253,11 @@ async def _get_openai_reply(
             url=chat_completions_url(model),
             max_tokens=512,
         )
-        content = body["choices"][0]["message"].get("content") or ""
+        message = body["choices"][0]["message"]
+        content = message.get("content") or ""
         # A text-only model response is not an executed tool invocation.
         # Do not display generated tool-call markup as a completed investigation.
-        if not isinstance(content, str) or not content.strip() or any(
+        if message.get("tool_calls") or message.get("function_call") or not isinstance(content, str) or not content.strip() or any(
             marker in content for marker in ("<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>")
         ):
             logger.warning("copilot.unexecuted_tool_call", model=model)
