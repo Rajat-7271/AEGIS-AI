@@ -192,6 +192,22 @@ def _notice_for(reason: str | None) -> str | None:
     return None
 
 
+def _looks_like_unexecuted_tool_call(content: str) -> bool:
+    """Reject tool invocation syntax, not ordinary discussion of commands."""
+    import re
+
+    if any(marker in content for marker in (
+        "<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>",
+    )):
+        return True
+    # Some providers return an invocation as plain text rather than structured
+    # tool_calls. Do not show these as if an operation actually ran.
+    return bool(re.search(
+        r"(?m)^\\s*(?:bash|query_system)\\s*\\(\\s*(?:command|hostname|query)\\s*=",
+        content,
+    ))
+
+
 async def _get_openai_reply(
     conversation: dict[str, Any],
     user_message: str,
@@ -257,9 +273,7 @@ async def _get_openai_reply(
         content = message.get("content") or ""
         # A text-only model response is not an executed tool invocation.
         # Do not display generated tool-call markup as a completed investigation.
-        if message.get("tool_calls") or message.get("function_call") or not isinstance(content, str) or not content.strip() or any(
-            marker in content for marker in ("<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>")
-        ):
+        if message.get("tool_calls") or message.get("function_call") or not isinstance(content, str) or not content.strip() or _looks_like_unexecuted_tool_call(content):
             logger.warning("copilot.unexecuted_tool_call", model=model)
             return (
                 "I cannot query live security telemetry from this chat response. "
