@@ -5,6 +5,91 @@ configuration change, database mutation, or protected-branch push was performed.
 
 ## PR 53 follow-up: schema, embeddings and Windows validation
 
+### Event spine and Mobile investigation at 861b09e
+
+Integration run 43267998770, job 131357180038 checked out the PR merge
+revision `505a3bb061794446e2303dd978a6d51a15fbb51f`, combining head
+`861b09e3b32b18d9c9ec55a1f53ebd0c8ca3e6e7` with base
+`338f0d304f55b96282d67b917229e93bf1fedcd3`. It pulled
+`ghcr.io/beenuar/aisoc-core-api:main` at 17:22:11 UTC and built only fusion
+and ingest. The API was healthy, and sign-in succeeded, but the spine's alert
+query failed on `alerts.src_ip_class`; the SELECT also references
+`src_ip_class_dataset_version`. Neither column exists in this checkout's
+model or migration chain. The old log records no API image digest or OCI source
+revision. Its exact immutable image and source revision cannot be recovered
+from that evidence; resolving today's mutable tag would not establish them.
+
+Database initialization is local to the checked-out tree: Compose mounts
+`infra/postgres/initdb` into `/docker-entrypoint-initdb.d`, and
+`services/api/migrations` into `/aisoc/migrations`. On an empty volume,
+`10_apply_migrations.sh` applies every SQL file in filename order with
+`ON_ERROR_STOP`, then `20_runtime_app_role.sh` sets the runtime role password.
+The chain ends at `120_tenant_admin_invitations.sql`. API development startup
+can additionally invoke `run_migrations`: it sorts SQL filenames, consults
+`aisoc_schema_migrations`, applies pending files and records successes. The
+init hook itself does not populate that ledger, so a first runner invocation
+may reapply the chain. The API Dockerfile starts `app.scripts.serve`, not a
+separate unconditional migration command. Startup behavior of the historical
+published image is unverified. `create_all` cannot add columns to an existing
+table. Adding invented columns here would conceal the mixed-source failure.
+
+The workflow fix builds API, fusion and ingest after the pull, so API code and
+mounted SQL come from the same checkout. API and init-hook changes now trigger
+the spine job. Image ID, repository digests, labels, checkout SHA and SQL hashes
+are recorded before boot. No migration, production setting or schema changed.
+YAML parsing and the source/build ordering contract pass; the committed old
+workflow fails the same contract as a negative control. Docker is unavailable
+locally, so a passing real-container rerun is still required; static validation
+does not establish that the complete spine or chaos steps pass.
+
+Mobile run 43267998947's iOS job 131356653781 was cancelled after about
+15 minutes with no steps, runner ID zero and an empty runner name. This is
+runner allocation/infrastructure evidence, not a compiler diagnostic. The
+workflow cancels superseded PR runs, but this evidence does not establish
+concurrency as the cause: the sibling Android and unit jobs succeeded and the
+run concluded failure. A targeted iOS rerun was accepted; replacement job
+131369781473 is queued without a runner at this review. No mobile code change
+or timeout increase is justified by the available evidence.
+
+At 861b09e, 39 workflows succeeded, Integration and Mobile failed, and one
+Attribution run was cancelled. Backup/restore's successful job skipped its
+actual backup operations because those paths were unchanged; this is not a
+fresh restore test. Replay evaluation executed successfully. Migration and
+upgrade jobs skipped. These details supersede broader pass claims below.
+
+### Classification of the 35 additional mypy findings
+
+The earlier description of all 35 as genuine stack regressions was too broad.
+The recorded Windows run uses mypy 2.4.0, Python 3.11 and the unchanged
+no-site-packages flags. Counts below are additional findings, not all existing
+baseline debt. No baseline, ignore, scope or checker configuration was changed.
+
+| File or group | Count | Classification |
+| --- | ---: | --- |
+| check_console_route_contract.py, check_route_duplicates.py | 6 | Windows platform API differences: os.killpg, os.getpgid, signal.SIGKILL are POSIX-only. Linux comparison required; these are not route-object errors. |
+| golden_pipeline/run_golden_pipeline.py | 7 | Optional values: six union-attr and one operator; validation flow needs explicit narrowing. |
+| agents/api/conversation_store.py | 1 | Duplicate parsed annotation across memory and database branches; annotation structure. |
+| agents/api/investigate.py | 3 | persisted_run implies run exists, but the boolean does not narrow the optional dictionary for mypy. |
+| agents/investigator/report_writer_agent.py | 1 | Repeated dictionary get does not retain string narrowing in the source-name comprehension. |
+| agents/main.py | 1 | Real interface mismatch: HuntScheduler has no public running attribute; startup logging reads it. |
+| agents/tests/test_drain.py | 2 | Optional lease and assignment of FakeLanes to EntityLanes; test contracts. |
+| agents/tests/test_explain_endpoint.py | 2 | Nonreturning async stub and AsyncIterator annotation lacking aclose; test/stream typing contracts. |
+| agents/tests/test_orchestrator_router_stream.py | 2 | anext returns Awaitable, while create_task requires a coroutine; inferred task annotation also fails. |
+| api/endpoints/playbook_steps.py, api/services/alert_synthesis.py | 2 | Repeated get calls do not narrow optional list/dictionary values. |
+| api/tests/api/v1/endpoints/test_alerts_submit.py | 3 | Helpers imported through endpoint module are not declared exports; test import contract. |
+| connectors/tests/test_auditd_connector.py, test_kubernetes_audit.py | 2 | Windows platform difference: os.geteuid is unavailable, at lines 660 and 485 respectively. |
+| fusion/tests/brute_force_scenario.py, test_brute_force_scenario.py | 3 | Fixture argument typing and replacing a bound worker method; test contracts. |
+
+Totals: eight platform-dependent findings, seven golden-pipeline optional-value
+findings, eight application findings and twelve other test/fixture findings.
+Application findings include six narrowing/annotation issues, one duplicate
+annotation and one scheduler interface mismatch. Classification is not runtime
+verification or authorization to suppress errors. A fresh complete run reproduced
+992 total findings and the same 35 additional findings across 22 entries. The
+baseline remains a blocker. Pinned Ruff lint and formatting pass (2,605 files);
+the concurrency gate passes over 89 workflows. The required-check-substance gate
+could not run without GH_TOKEN/GITHUB_TOKEN; no pass is claimed for it.
+
 This section supersedes the earlier Pillow and Windows blocker descriptions
 below, which record the initial `e4a1f17` validation.
 
