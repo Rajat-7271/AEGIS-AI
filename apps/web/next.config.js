@@ -33,7 +33,10 @@ const API_HOST = process.env.API_URL || 'http://localhost:8000';
 // Production rewrites are compiled during the build. A missing AGENTS_URL used
 // to silently bake localhost into the deployment, which Vercel rejects with
 // DNS_HOSTNAME_RESOLVED_PRIVATE when Copilot is called.
-const configuredAgentsUrl = process.env.AGENTS_URL?.trim();
+// On Vercel the public agents origin is also configured for the client bundle.
+// Use it for the server-side rewrite if AGENTS_URL is unavailable at build time.
+// Keep the production HTTPS-origin validation below for either source.
+const configuredAgentsUrl = (process.env.AGENTS_URL?.trim() || process.env.NEXT_PUBLIC_AGENTS_URL?.trim());
 if (process.env.VERCEL_ENV === 'production') {
   if (!configuredAgentsUrl) {
     throw new Error('AGENTS_URL must be set for production builds (public HTTPS agents origin).');
