@@ -250,7 +250,7 @@ def _normalize_copilot_markdown(content: str) -> str:
         if not in_fence and not stripped.startswith(("```", "~~~")):
             if re.match(r"^\\#{1,6}\s", stripped):
                 line = line.replace(r"\#", "#", 6)
-            elif re.match(r"^\\-{3,}\s*$", stripped):
+            elif re.match(r"^\\(?:-\\?){3,}\s*$", stripped):
                 line = line.replace(r"\-", "-")
             elif stripped.startswith(r"\|") and stripped.count(r"\|") >= 2:
                 line = line.replace(r"\|", "|").replace(r"\*", "*")
