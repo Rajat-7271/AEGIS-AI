@@ -37,7 +37,12 @@ from app.services.alert_rail import (
     build_rail_envelope,
 )
 from app.services.alert_status import is_unresolved
-from app.services.alert_synthesis import synthesise_alert_from_events as _synthesise_alert_from_events
+from app.services.alert_synthesis import (
+    _coerce_published,
+    _max_severity,
+    _normalize_severity,
+    synthesise_alert_from_events as _synthesise_alert_from_events,
+)
 from app.services.audit import emit_audit
 from app.services.event_sanitiser import (
     SubmitPayloadTooLarge,
