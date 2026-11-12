@@ -203,7 +203,7 @@ def _looks_like_unexecuted_tool_call(content: str) -> bool:
     # Some providers return an invocation as plain text rather than structured
     # tool_calls. Do not show these as if an operation actually ran.
     return bool(re.search(
-        r"(?m)^\\s*(?:bash|query_system)\\s*\\(\\s*(?:command|hostname|query)\\s*=",
+        r"(?m)^\s*(?:bash|query_system)\s*\(\s*(?:command|hostname|query)\s*=",
         content,
     ))
 
