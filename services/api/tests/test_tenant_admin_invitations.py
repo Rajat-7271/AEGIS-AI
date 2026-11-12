@@ -12,7 +12,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
 from app.api.v1.endpoints import auth
 from app.core.security import verify_password
 from app.models.tenant import Tenant, User
