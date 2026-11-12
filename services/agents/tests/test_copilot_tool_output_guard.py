@@ -74,3 +74,27 @@ async def test_normal_model_response_is_preserved(monkeypatch):
     monkeypatch.setattr(contract, "safe_chat_completions_request", fake_completion)
     reply, source, reason = await _get_openai_reply({"messages": []}, "Investigate alert")
     assert (reply, source, reason) == ("Review the alert timeline first.", "llm", None)
+
+
+@pytest.mark.asyncio
+async def test_llm_prompt_includes_current_question_once(monkeypatch):
+    from app.llm import contract, factory
+
+    monkeypatch.setattr(factory, "resolve_model_alias", lambda role: "test-model")
+    monkeypatch.setattr(factory, "resolve_api_key", lambda model: "test-key")
+    monkeypatch.setattr(factory, "chat_completions_url", lambda model: "https://example.test/chat")
+    captured = {}
+
+    async def fake_completion(**kwargs):
+        captured["messages"] = kwargs["messages"]
+        return {"choices": [{"message": {"content": "Understood."}}]}
+
+    monkeypatch.setattr(contract, "safe_chat_completions_request", fake_completion)
+    reply, source, reason = await _get_openai_reply(
+        {"messages": [{"role": "user", "content": "Previous question"}]},
+        "Current question",
+    )
+    assert (reply, source, reason) == ("Understood.", "llm", None)
+    assert [m["content"] for m in captured["messages"] if m["role"] == "user"] == [
+        "Previous question", "Current question"
+    ]
