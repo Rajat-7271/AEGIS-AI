@@ -220,12 +220,12 @@ def _is_general_knowledge_question(question: str, context: dict[str, Any] | None
     if sources_from_context(context):
         return False
     q = question.strip().lower()
-    if re.search(r"\\b(my|our|this|these|current|actual)\\s+(alerts?|hosts?|devices?|network|environment|cases?|incidents?|logs?|events?)\\b", q):
+    if re.search(r"\b(my|our|this|these|current|actual)\s+(alerts?|hosts?|devices?|network|environment|cases?|incidents?|logs?|events?)\b", q):
         return False
     return bool(re.match(
-        r"^(?:please\\s+)?(?:explain|define|describe|what\\s+is|what\\s+are|"
-        r"how\\s+does|how\\s+do|which\\s+windows\\s+event\\s+ids|"
-        r"what\\s+windows\\s+event\\s+ids)\\b",
+        r"^(?:please\s+)?(?:explain|define|describe|what\s+is|what\s+are|"
+        r"how\s+does|how\s+do|which\s+windows\s+event\s+ids|"
+        r"what\s+windows\s+event\s+ids)\b",
         q,
     ))
 
