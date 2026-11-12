@@ -41300,11 +41300,9 @@ components:
           title: Is Enabled
         auth_config:
           anyOf:
-          - {}
+          - additionalProperties: true
+            type: object
           - type: 'null'
-          additionalProperties:
-            type: string
-          type: object
           title: Auth Config
           description: Partial secret-field replacements. Blank values preserve the
             stored credentials.

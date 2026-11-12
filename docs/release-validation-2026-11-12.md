@@ -3,6 +3,93 @@
 Release verdict: **NOT READY**. No merge, deployment, promotion, production
 configuration change, database mutation, or protected-branch push was performed.
 
+## PR 53 follow-up: schema, embeddings and Windows validation
+
+This section supersedes the earlier Pillow and Windows blocker descriptions
+below, which record the initial `e4a1f17` validation.
+
+`UpdateConnectorRequest.auth_config` deliberately accepts raw input so the
+endpoint can reject malformed credentials without Pydantic echoing secrets.
+The published contract is still object-or-null: null means no credential
+update; object keys must be catalog secret fields, and blank or null values
+preserve stored secrets. `json_schema_extra` left an empty `Any` branch in
+`anyOf`. `WithJsonSchema` now replaces the complete field schema while keeping
+the redaction behavior. The locked API exporter produces exactly the base
+schema: the unchanged breaking-change detector reports zero total changes
+against `338f0d304f55b96282d67b917229e93bf1fedcd3`.
+
+The compatible secure dependency path is Qdrant client 1.20.0, FastEmbed 0.9.1,
+and Pillow 13.0.0 in both agents and threatintel. Qdrant 1.19.1's extra required
+FastEmbed below 0.9; 1.20.0 permits 0.9, and FastEmbed 0.9.1 permits Pillow below
+14. Poetry resolved both locks natively, with explicit security floors and no
+incompatible overrides. Exactly these three package versions changed in each
+lock. Both service environments pass `pip check`.
+
+A test using the real installed SDK and its local vector database exposed the
+storage adapter's obsolete `search` call, which permissive mocks had accepted.
+The adapter now uses `query_points` and reads `results.points`; the local test
+proves retrieval and cross-tenant exclusion. Real CPU inference with the
+configured `BAAI/bge-small-en-v1.5` model produced a finite, normalized
+384-dimensional vector. Inference in the local database regression itself is
+substituted with an explicitly synthetic test vector.
+
+| Follow-up validation | Result |
+| --- | --- |
+| Connector, endpoint and credential vault tests | 43 passed |
+| OpenAPI detector regression suite | 29 passed |
+| Locked OpenAPI export check and base comparison | Pass; zero schema changes |
+| Agents memory and report suites | 40 passed, 1 skipped |
+| Threatintel complete suite, including real local vector database | 128 passed |
+| Qdrant isolation suite | 7 passed |
+| Ingest Go suite on Windows, `go test ./... -count=1` | Pass |
+| Mypy path self-test, using real mypy subprocesses | 25 cases passed |
+| Pinned Trivy 0.74.0, tracked snapshot, unchanged CI policy | Zero reportable vulnerabilities; previously 21 Pillow findings |
+| Ruff lint and whole-tree format check | Pass |
+| Negative controls | Schema, broker advice, vector search and mypy paths all failed for their expected reasons with fixes reverted; all restored |
+
+The broker fix recognizes Windows' `actively refused` reader-log text in the
+shared classifier. The real unreachable-broker test now offers operator advice
+on Windows. Mypy diagnostics are normalized to forward slashes before baseline
+comparison and unmanaged-scope membership checks. Credential test fixtures now
+use the real ORM class, and secret-field names retain their non-null type.
+
+### Remaining blockers and latest original-head CI
+
+All 40 workflow runs for `e4a1f17` were reviewed: 36 succeeded and four failed.
+The failed workflows were OpenAPI compatibility, Security (only Trivy),
+Integration (event spine), and Mobile (the iOS job was cancelled). Android APK
+and mobile typecheck/unit-test jobs succeeded. The cancelled iOS log could not
+be retrieved: the log endpoint returned BlobNotFound. No iOS pass is claimed.
+
+The spine job builds fusion and ingest from this branch but deliberately runs
+the published `main` API image. That image selects `alerts.src_ip_class` and
+`alerts.src_ip_class_dataset_version`; neither is in this branch's Alert model
+or migrations, and its database rejects the SELECT. This is a mixed-version
+image/schema failure, not evidence that this branch's ORM requires new columns.
+The workflow and migrations were not weakened or changed to accommodate it.
+The backup/restore and replay-evaluation integration jobs passed.
+
+The main `CI` workflow did not run for PR 53: its pull-request filter only
+targets `main` and `develop`, while this draft targets PR 52's branch. Its
+absence is not a passing lint/typecheck/build verdict.
+
+With the exact recorded mypy 2.4.0 on Python 3.11, after the path fix, the
+baseline still fails with 35 additional findings across 22 file/error-code
+entries (992 findings total). These include route-gate attribute access,
+golden-pipeline optional values, conversation-store redefinition, investigation
+optional results, scheduler state, report-writer types, and existing tests in
+agents/API/connectors/fusion. The same issues remain with mypy 2.4.1; changing
+checker versions does not repair them. No baseline increases, ignores or
+scope exclusions were added.
+
+Real Postgres-backed connector validation and a complete authenticated browser
+flow remain unverified; no local database/container stack was available. An
+attempt to collect the entire repository test tree in the threatintel-only
+environment failed at collection on an unavailable backup-crypt dependency;
+only the explicitly listed suites are reported as passing. Fresh pushed-head
+CI, successful iOS validation and the unresolved type/integration issues remain
+release requirements. The PR stays draft; no merge or deployment is authorized.
+
 ## Verified stack
 
 All three PRs were open drafts and mergeable when inspected. The checkout was

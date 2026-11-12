@@ -68,7 +68,7 @@ def _safe_connector_type(value: str) -> str:
 
 import httpx  # noqa: E402
 from fastapi import APIRouter, Depends, HTTPException, status  # noqa: E402
-from pydantic import BaseModel, Field  # noqa: E402
+from pydantic import BaseModel, Field, WithJsonSchema  # noqa: E402
 from sqlalchemy import select, update  # noqa: E402
 
 from app.api.v1.deps import AuthUser, DBSession, require_permission  # noqa: E402
@@ -267,10 +267,14 @@ class UpdateConnectorRequest(BaseModel):
     # Accept the raw value here and validate it manually below. FastAPI's
     # default Pydantic error includes rejected input values; that could echo a
     # credential if a malformed auth_config is sent.
-    auth_config: Any | None = Field(
+    # Override the whole schema: field extras leave Any's empty anyOf branch
+    # in place, which advertises arbitrary JSON despite the endpoint's check.
+    auth_config: Annotated[
+        Any | None,
+        WithJsonSchema({"anyOf": [{"type": "object", "additionalProperties": True}, {"type": "null"}]}),
+    ] = Field(
         default=None,
         description="Partial secret-field replacements. Blank values preserve the stored credentials.",
-        json_schema_extra={"type": "object", "additionalProperties": {"type": "string"}},
     )
     connector_config: dict[str, Any] | None = None
     tags: list[str] | None = None
@@ -925,12 +929,12 @@ async def _merge_connector_credential_patch(
 
     catalog_entry = await _validate_connector_type(connector.connector_type, tenant_id)
     secret_fields = {
-        field.get("name")
+        field["name"]
         for field in catalog_entry.get("fields", [])
         if isinstance(field, dict) and field.get("type") == "secret" and isinstance(field.get("name"), str)
     }
     required_secret_fields = {
-        field.get("name")
+        field["name"]
         for field in catalog_entry.get("fields", [])
         if isinstance(field, dict) and field.get("type") == "secret" and field.get("required", True) and isinstance(field.get("name"), str)
     }

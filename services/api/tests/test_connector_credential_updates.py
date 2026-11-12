@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import uuid
-from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from app.api.v1.deps import CurrentUser
 from app.api.v1.endpoints import connectors as endpoint
 from app.api.v1.endpoints.connectors import UpdateConnectorRequest
+from app.models.connector import Connector
 from app.security.credential_vault import CredentialVault, CredentialVaultError
 from cryptography.fernet import Fernet
 from fastapi import HTTPException
+from sqlalchemy import Select
 
 TENANT = uuid.uuid4()
 OTHER_TENANT = uuid.uuid4()
@@ -27,8 +29,19 @@ CATALOG = {
 }
 
 
-def _connector(vault: CredentialVault) -> SimpleNamespace:
-    return SimpleNamespace(
+def test_published_credential_patch_schema_is_object_or_null() -> None:
+    from app.main import app
+    from fastapi.testclient import TestClient
+
+    response = TestClient(app).get("/api/openapi.json")
+    assert response.status_code == 200
+    schema = response.json()["components"]["schemas"]["UpdateConnectorRequest"]["properties"]["auth_config"]
+    assert schema["anyOf"] == [{"type": "object", "additionalProperties": True}, {"type": "null"}]
+    assert "type" not in schema
+
+
+def _connector(vault: CredentialVault) -> Connector:
+    return Connector(
         id=CONNECTOR_ID,
         tenant_id=TENANT,
         name="SIEM",
@@ -147,9 +160,9 @@ async def test_cross_tenant_connector_lookup_returns_not_found() -> None:
 
     class TenantScopedDB:
         def __init__(self) -> None:
-            self.statement = None
+            self.statement: Select[Any] | None = None
 
-        async def execute(self, statement: object) -> MissingResult:
+        async def execute(self, statement: Select[Any]) -> MissingResult:
             self.statement = statement
             return MissingResult()
 
@@ -166,5 +179,5 @@ async def test_cross_tenant_connector_lookup_returns_not_found() -> None:
 
     assert exc.value.status_code == 404
     assert db.statement is not None
-    where_clauses = db.statement.whereclause  # type: ignore[union-attr]
+    where_clauses = db.statement.whereclause
     assert "tenant_id" in str(where_clauses)
