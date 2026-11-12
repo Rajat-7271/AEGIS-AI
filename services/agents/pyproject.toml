@@ -59,7 +59,10 @@ structlog = ">=24.1,<27.0"
 prometheus-client = ">=0.19,<0.27"
 python-dateutil = "^2.8.2"
 aiokafka = ">=0.10,<0.15"
-qdrant-client = {extras = ["fastembed"], version = "^1.9.0"}
+# 1.20 supports FastEmbed 0.9; 0.9.1 permits patched Pillow 13.
+qdrant-client = {extras = ["fastembed"], version = ">=1.20,<2"}
+fastembed = ">=0.9.1,<0.10"
+pillow = ">=13,<14"
 markdown = "^3.5"
 # `<70` held this at 69.0, which carries PYSEC-2026-3940 (fixed in 70.0).
 weasyprint = {version = ">=62,<71", optional = true}

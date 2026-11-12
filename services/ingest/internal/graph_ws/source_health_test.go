@@ -360,6 +360,14 @@ func TestStreamRouteRefusesWhenTheSourceIsDetached(t *testing.T) {
 	}
 }
 
+func TestWindowsReaderRefusalOffersAdvice(t *testing.T) {
+	health := NewSourceState("windows-broker", time.Second)
+	health.ObserveReaderError("dial tcp 127.0.0.1:9092: connectex: No connection could be made because the target machine actively refused it.")
+	if !strings.Contains(health.Health().Advice, "nothing is listening") {
+		t.Fatal("Windows reader refusal offered no broker advice")
+	}
+}
+
 // TestAnUnreachableBrokerSaysSo drives a real kafka.Reader at a port nothing
 // is listening on.
 //

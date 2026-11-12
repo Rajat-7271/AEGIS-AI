@@ -6,8 +6,8 @@ import uuid
 from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
 from app.api.v1.endpoints import playbook_steps
+from fastapi import HTTPException
 
 pytestmark = pytest.mark.asyncio
 

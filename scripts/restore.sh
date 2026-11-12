@@ -263,7 +263,7 @@ restore_postgres() {
   log "Download complete ($(du -sh "$local_file" | cut -f1))"
 
   log "Restoring to ${POSTGRES_URL}…"
-  gunzip -c "$local_file" | psql "$POSTGRES_URL" --single-transaction
+  gunzip -c "$local_file" | psql --no-psqlrc --set=ON_ERROR_STOP=1 --single-transaction "$POSTGRES_URL"
   log "PostgreSQL restore complete"
 }
 

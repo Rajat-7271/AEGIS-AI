@@ -335,10 +335,7 @@ def main() -> int:
             and simulation.get("simulated") is True
             and simulation.get("executed") is False
             and "tenant_id" not in simulation,
-            (
-                f"status={simulation.get('status')!r}, simulated={simulation.get('simulated')!r}, "
-                f"executed={simulation.get('executed')!r}"
-            ),
+            (f"status={simulation.get('status')!r}, simulated={simulation.get('simulated')!r}, executed={simulation.get('executed')!r}"),
         )
 
     return _finish(r)

@@ -193,13 +193,13 @@ class QdrantStore:
         privileged/global read and callers are responsible for gating it.
         """
         vectors = await self._embed([query])
-        results = await self._client.search(
+        results = await self._client.query_points(
             collection_name=collection,
-            query_vector=vectors[0],
+            query=vectors[0],
             limit=limit,
             query_filter=tenant_scope_filter(tenant_id, include_shared=include_shared),
         )
-        return [r.payload for r in results if r.payload]
+        return [r.payload for r in results.points if r.payload]
 
     @staticmethod
     def _point_id(tenant_id: str, natural_key: str) -> int:

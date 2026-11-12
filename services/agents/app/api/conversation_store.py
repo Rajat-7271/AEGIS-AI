@@ -38,7 +38,7 @@ _POOL: asyncpg.Pool | None = None
 # No-database deployments keep conversations in process memory. The outer
 # key is the tenant UUID, so one tenant can never read another tenant's turns.
 # This is intentionally temporary: restarts and separate workers do not share it.
-_MEMORY_CONVERSATIONS: dict[str, dict[str, "Conversation"]] = {}
+_MEMORY_CONVERSATIONS: dict[str, dict[str, Conversation]] = {}
 _MEMORY_LOCK = asyncio.Lock()
 
 
@@ -154,6 +154,7 @@ async def get_conversation(*, tenant_id: uuid.UUID, conversation_id: str) -> Con
             parsed,
         )
     return _row_to_conversation(row) if row else None
+
 
 async def append_messages(
     *,

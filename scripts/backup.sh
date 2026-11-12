@@ -262,11 +262,12 @@ backup_postgres() {
     # the server, which aborts before writing a byte. Keep it, and surface it
     # on failure.
     local dump_log="${BACKUP_DIR}/pg_dump.stderr"
-    if ! pg_dump "$POSTGRES_URL" \
+    if ! pg_dump \
       --format=plain \
       --no-owner \
       --no-acl \
       --verbose \
+      "$POSTGRES_URL" \
       2>"$dump_log" \
       | gzip > "$outfile"; then
       fail "pg_dump failed:"

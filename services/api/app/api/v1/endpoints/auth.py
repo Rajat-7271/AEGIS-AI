@@ -68,9 +68,9 @@ async def _invitation_target(
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     invitation = (
         await db.execute(
-            select(TenantAdminInvitation).join(
-                Tenant, Tenant.id == TenantAdminInvitation.tenant_id
-            ).where(
+            select(TenantAdminInvitation)
+            .join(Tenant, Tenant.id == TenantAdminInvitation.tenant_id)
+            .where(
                 Tenant.slug == tenant_slug,
                 Tenant.is_active.is_(True),
                 TenantAdminInvitation.token_hash == token_hash,

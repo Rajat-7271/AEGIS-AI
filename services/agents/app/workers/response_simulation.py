@@ -61,11 +61,7 @@ async def simulate_proposal(
     if not isinstance(result, dict):
         return _failure("action_simulator_invalid_response")
 
-    simulated = (
-        result.get("simulated") is True
-        and result.get("executed") is False
-        and result.get("status") == "simulated"
-    )
+    simulated = result.get("simulated") is True and result.get("executed") is False and result.get("status") == "simulated"
     action_status = str(result.get("status") or "failed")
     executed = result.get("executed") is True
     if executed:

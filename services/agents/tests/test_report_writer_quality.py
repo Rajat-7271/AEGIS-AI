@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app.investigator.report_writer_agent import _md_to_html, render_incident_report_md, run_report_writer
+from app.investigator.report_writer_agent import render_incident_report_md, run_report_writer
 from app.investigator.state import (
     ForensicFindings,
     InvestigatorState,
@@ -83,9 +83,7 @@ class IncidentReportQualityTests(unittest.IsolatedAsyncioTestCase):
         state.recon.mitre_techniques = []
         state.recon.threat_actors = []
         state.forensic.groundedness = None
-        state.enrichment_cache = {
-            "203.0.113.99": {"error": "provider detail that must not be echoed", "ioc": "203.0.113.99"}
-        }
+        state.enrichment_cache = {"203.0.113.99": {"error": "provider detail that must not be echoed", "ioc": "203.0.113.99"}}
 
         markdown = render_incident_report_md(state)
 

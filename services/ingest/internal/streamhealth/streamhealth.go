@@ -270,6 +270,7 @@ func NewClassifier(names Names) *Classifier {
 		{"security disabled", true, c.permanent[kafka.SecurityDisabled]},
 		{"unknown topic or partition", false, "create the topic, or enable auto-creation on the broker"},
 		{"connection refused", false, "nothing is listening on the broker address; check " + n.BrokersVar + " and that the broker is up"},
+		{"actively refused", false, "nothing is listening on the broker address; check " + n.BrokersVar + " and that the broker is up"},
 		{"no such host", false, "the broker hostname does not resolve; check " + n.BrokersVar},
 		{"i/o timeout", false, "the broker accepted no answer in time; check network reachability between this service and the broker"},
 	}

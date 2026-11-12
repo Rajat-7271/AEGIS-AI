@@ -204,20 +204,10 @@ async def _load_persisted_run(
                     "model_used": row["model_used"],
                     "error": row["error"],
                     "total_tokens": row["total_tokens"],
-                    "total_cost_usd": (
-                        float(row["total_cost_usd"])
-                        if row["total_cost_usd"] is not None
-                        else None
-                    ),
+                    "total_cost_usd": (float(row["total_cost_usd"]) if row["total_cost_usd"] is not None else None),
                     "iterations": row["iterations"],
-                    "started_at": (
-                        row["started_at"].isoformat() if row["started_at"] else None
-                    ),
-                    "completed_at": (
-                        row["completed_at"].isoformat()
-                        if row["completed_at"]
-                        else None
-                    ),
+                    "started_at": (row["started_at"].isoformat() if row["started_at"] else None),
+                    "completed_at": (row["completed_at"].isoformat() if row["completed_at"] else None),
                     "report_md": reports.get("report_md", ""),
                     "report_html": reports.get("report_html", ""),
                 }
@@ -229,6 +219,8 @@ async def _load_persisted_run(
         )
 
     return None
+
+
 _orch = InvestigatorOrchestrator()
 _router_orch = RouterOrchestrator()
 
@@ -503,11 +495,7 @@ async def get_investigation(run_id: str, principal: ScopedPrincipal):
         raise HTTPException(status_code=404, detail="Run not found")
 
     # Strip large report fields from polling responses.
-    return {
-        key: value
-        for key, value in run.items()
-        if key not in ("report_md", "report_html", "tenant_id")
-    }
+    return {key: value for key, value in run.items() if key not in ("report_md", "report_html", "tenant_id")}
 
 
 @router.get("/investigations/{run_id}/report.md", response_class=PlainTextResponse)
@@ -609,9 +597,7 @@ async def stream_investigation(ws: WebSocket, run_id: str):
         return
 
     persisted_run = False
-    explicit_adhoc = bool(
-        ws.query_params.get("case_id") and ws.query_params.get("alert_summary")
-    )
+    explicit_adhoc = bool(ws.query_params.get("case_id") and ws.query_params.get("alert_summary"))
     if run is None and not explicit_adhoc:
         run = await _load_persisted_run(run_id, principal)
         if run is None:

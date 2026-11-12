@@ -2066,9 +2066,7 @@ async def case_investigation_pdf(
     safe_run_id = quote(run_id, safe="")
     headers = {"X-AiSOC-Tenant-ID": str(user.tenant_id)}
 
-    meta = await _agents_proxy(
-        "GET", f"/api/v1/investigations/{safe_run_id}", headers=headers
-    )
+    meta = await _agents_proxy("GET", f"/api/v1/investigations/{safe_run_id}", headers=headers)
     if meta.status_code >= 400:
         raise HTTPException(status_code=meta.status_code, detail=meta.text)
     run_case_id = meta.json().get("case_id")
@@ -2078,14 +2076,13 @@ async def case_investigation_pdf(
             detail="Investigation run not found for this case",
         )
 
-    html_resp = await _agents_proxy(
-        "GET", f"/api/v1/investigations/{safe_run_id}/report.html", headers=headers
-    )
+    html_resp = await _agents_proxy("GET", f"/api/v1/investigations/{safe_run_id}/report.html", headers=headers)
     if html_resp.status_code >= 400:
         raise HTTPException(status_code=html_resp.status_code, detail=html_resp.text)
 
     try:
         from weasyprint import HTML
+
         pdf_bytes = HTML(string=html_resp.text).write_pdf()
     except (ImportError, OSError) as exc:
         logger.exception("investigation_pdf.renderer_unavailable")
@@ -2105,10 +2102,7 @@ async def case_investigation_pdf(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={
-            "Content-Disposition":
-                f'attachment; filename="case-{safe_case_id}-{safe_run_id_filename}.pdf"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="case-{safe_case_id}-{safe_run_id_filename}.pdf"'},
     )
 
 
