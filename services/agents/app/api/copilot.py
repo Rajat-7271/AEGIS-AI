@@ -220,14 +220,18 @@ def _is_general_knowledge_question(question: str, context: dict[str, Any] | None
     if sources_from_context(context):
         return False
     q = question.strip().lower()
-    if re.search(r"\b(my|our|this|these|current|actual)\s+(alerts?|hosts?|devices?|network|environment|cases?|incidents?|logs?|events?)\b", q):
+    if re.search(
+        r"\b(my|our|this|these|current|actual)\s+(alerts?|hosts?|devices?|network|environment|cases?|incidents?|logs?|events?)\b", q
+    ):
         return False
-    return bool(re.match(
-        r"^(?:please\s+)?(?:explain|define|describe|what\s+is|what\s+are|"
-        r"how\s+does|how\s+do|which\s+windows\s+event\s+ids|"
-        r"what\s+windows\s+event\s+ids|list\s+(?:the\s+)?(?:most\s+important\s+)?windows\s+event\s+ids)\b",
-        q,
-    ))
+    return bool(
+        re.match(
+            r"^(?:please\s+)?(?:explain|define|describe|what\s+is|what\s+are|"
+            r"how\s+does|how\s+do|which\s+windows\s+event\s+ids|"
+            r"what\s+windows\s+event\s+ids|list\s+(?:the\s+)?(?:most\s+important\s+)?windows\s+event\s+ids)\b",
+            q,
+        )
+    )
 
 
 def _ground_copilot_reply(reply: str, question: str, context: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -268,6 +272,7 @@ def _normalize_copilot_markdown(content: str) -> str:
         previous_table = is_table
     result.extend(pending_blank)
     return "".join(result)
+
 
 def _looks_like_unexecuted_tool_call(content: str) -> bool:
     """Reject tool invocation syntax, not ordinary discussion of commands."""

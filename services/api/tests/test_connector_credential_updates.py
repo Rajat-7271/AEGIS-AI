@@ -7,14 +7,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from cryptography.fernet import Fernet
-from fastapi import HTTPException
-
 from app.api.v1.deps import CurrentUser
 from app.api.v1.endpoints import connectors as endpoint
 from app.api.v1.endpoints.connectors import UpdateConnectorRequest
 from app.security.credential_vault import CredentialVault, CredentialVaultError
-
+from cryptography.fernet import Fernet
+from fastapi import HTTPException
 
 TENANT = uuid.uuid4()
 OTHER_TENANT = uuid.uuid4()
@@ -37,9 +35,7 @@ def _connector(vault: CredentialVault) -> SimpleNamespace:
         connector_type="splunk",
         category="siem",
         is_enabled=True,
-        auth_config=vault.encrypt_dict(
-            {"api_token": "old-token", "secondary_token": "old-secondary", "legacy": "keep-me"}
-        ),
+        auth_config=vault.encrypt_dict({"api_token": "old-token", "secondary_token": "old-secondary", "legacy": "keep-me"}),
     )
 
 

@@ -64,6 +64,7 @@ from app.routing.model_router import is_deterministic_mode
 from app.security.llm_resolver import resolve_llm_config
 from app.workers.business_context import BusinessContextApplier
 from app.workers.entity_lane import EntityLanes, entity_of
+from app.workers.response_simulation import simulate_proposal
 from app.workers.shadow_mode import (
     LiveShadowModePolicy,
     ShadowDecision,
@@ -71,7 +72,6 @@ from app.workers.shadow_mode import (
     ShadowModeTriageWriter,
     alert_class_of,
 )
-from app.workers.response_simulation import simulate_proposal
 from app.workers.triage_persistence import (
     LiveTriageContextReader,
     LiveTriageWriter,

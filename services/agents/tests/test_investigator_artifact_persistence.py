@@ -67,22 +67,14 @@ def _prepare(
         "prefetch_context_bundle_dict",
         AsyncMock(return_value={}),
     )
-    monkeypatch.setattr(
-        investigator_orchestrator, "CostTracker", lambda **_: _FixedTracker()
-    )
-    monkeypatch.setattr(
-        investigator_orchestrator.ledger, "start_run", AsyncMock(return_value=TENANT_ID)
-    )
+    monkeypatch.setattr(investigator_orchestrator, "CostTracker", lambda **_: _FixedTracker())
+    monkeypatch.setattr(investigator_orchestrator.ledger, "start_run", AsyncMock(return_value=TENANT_ID))
     monkeypatch.setattr(investigator_orchestrator.ledger, "record_event", AsyncMock())
-    monkeypatch.setattr(
-        investigator_orchestrator.ledger, "record_artifact", artifacts
-    )
+    monkeypatch.setattr(investigator_orchestrator.ledger, "record_artifact", artifacts)
     monkeypatch.setattr(investigator_orchestrator.ledger, "complete_run", AsyncMock())
     monkeypatch.setattr(investigator_orchestrator, "_apply_groundedness", lambda _: None)
 
-    instance = investigator_orchestrator.InvestigatorOrchestrator.__new__(
-        investigator_orchestrator.InvestigatorOrchestrator
-    )
+    instance = investigator_orchestrator.InvestigatorOrchestrator.__new__(investigator_orchestrator.InvestigatorOrchestrator)
     instance._graph = _FixedGraph(_state(report_html=report_html))
     return instance, artifacts
 
@@ -93,13 +85,9 @@ async def test_run_persists_html_artifact_with_run_and_tenant(
 ) -> None:
     orchestrator, artifacts = _prepare(monkeypatch, report_html=REPORT_HTML)
 
-    await orchestrator.run(
-        "case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID
-    )
+    await orchestrator.run("case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID)
 
-    html_artifacts = [
-        call.kwargs for call in artifacts.await_args_list if call.kwargs["kind"] == "report_html"
-    ]
+    html_artifacts = [call.kwargs for call in artifacts.await_args_list if call.kwargs["kind"] == "report_html"]
     assert html_artifacts == [
         {
             "run_id": RUN_ID,
@@ -116,16 +104,9 @@ async def test_stream_persists_html_artifact_with_run_and_tenant(
 ) -> None:
     orchestrator, artifacts = _prepare(monkeypatch, report_html=REPORT_HTML)
 
-    events = [
-        event
-        async for event in orchestrator.stream(
-            "case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID
-        )
-    ]
+    events = [event async for event in orchestrator.stream("case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID)]
 
-    html_artifacts = [
-        call.kwargs for call in artifacts.await_args_list if call.kwargs["kind"] == "report_html"
-    ]
+    html_artifacts = [call.kwargs for call in artifacts.await_args_list if call.kwargs["kind"] == "report_html"]
     assert html_artifacts == [
         {
             "run_id": RUN_ID,
@@ -139,22 +120,13 @@ async def test_stream_persists_html_artifact_with_run_and_tenant(
 
 @pytest.mark.parametrize("streaming", [False, True], ids=["run", "stream"])
 @pytest.mark.asyncio
-async def test_missing_html_skips_html_artifact(
-    monkeypatch: pytest.MonkeyPatch, streaming: bool
-) -> None:
+async def test_missing_html_skips_html_artifact(monkeypatch: pytest.MonkeyPatch, streaming: bool) -> None:
     orchestrator, artifacts = _prepare(monkeypatch, report_html="")
 
     if streaming:
-        events = [
-            event
-            async for event in orchestrator.stream(
-                "case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID
-            )
-        ]
+        events = [event async for event in orchestrator.stream("case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID)]
         assert events[-1]["type"] == "done"
     else:
-        await orchestrator.run(
-            "case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID
-        )
+        await orchestrator.run("case-123", "Suspicious login", tenant_id=str(TENANT_ID), run_id=RUN_ID)
 
     assert [call.kwargs["kind"] for call in artifacts.await_args_list] == ["report_md"]

@@ -177,11 +177,13 @@ IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
     ),
     "services/api/app/api/v1/endpoints/auth.py::validate_admin_invitation": (
         "_invitation_target",
-        "pre-login invitation validation is rate-limited and verifies an unexpired unconsumed hashed bearer token bound to a tenant and pending admin",
+        "pre-login invitation validation is rate-limited and verifies an unexpired unconsumed "
+        "hashed bearer token bound to a tenant and pending admin",
     ),
     "services/api/app/api/v1/endpoints/auth.py::redeem_admin_invitation": (
         "_invitation_target",
-        "pre-login invitation redemption is rate-limited, validates the hashed invitation token and atomically consumes it before activating the bound admin",
+        "pre-login invitation redemption is rate-limited, validates the hashed invitation "
+        "token and atomically consumes it before activating the bound admin",
     ),
     "services/agents/app/api/playbooks.py::answer_verification": (
         "resume_verification",

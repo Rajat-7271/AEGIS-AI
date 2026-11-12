@@ -134,11 +134,7 @@ async def get_investigation(run_id: str, principal: ScopedPrincipal):
 
     response = {key: value for key, value in run.items() if key != "tenant_id"}
     if isinstance(response.get("result"), dict):
-        response["result"] = {
-            key: value
-            for key, value in response["result"].items()
-            if key != "tenant_id"
-        }
+        response["result"] = {key: value for key, value in response["result"].items() if key != "tenant_id"}
     return response
 
 

@@ -89,9 +89,7 @@ async def sweep_once() -> dict[str, int]:
     return {"resumed": len(resumed), "verifications": len(verifications), "expired": len(expired)}
 
 
-async def run_forever(
-    *, interval_seconds: float | None = None, stop_event: asyncio.Event | None = None
-) -> None:
+async def run_forever(*, interval_seconds: float | None = None, stop_event: asyncio.Event | None = None) -> None:
     """Sweep on a fixed cadence; a stop request finishes the current pass."""
     interval = interval_seconds or DEFAULT_INTERVAL_SECONDS
     consecutive_failures = 0

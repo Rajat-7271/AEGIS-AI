@@ -140,9 +140,7 @@ class DrainMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope_type = scope["type"]
         path = scope.get("path", "")
-        if scope_type == "lifespan" or (
-            scope_type == "http" and path in self._ALLOWED_DURING_DRAIN
-        ):
+        if scope_type == "lifespan" or (scope_type == "http" and path in self._ALLOWED_DURING_DRAIN):
             await self.app(scope, receive, send)
             return
 

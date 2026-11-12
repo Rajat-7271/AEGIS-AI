@@ -198,4 +198,3 @@ def synthesise_alert_from_events(
 
 # Alias for backward compatibility
 _synthesise_alert_from_events = synthesise_alert_from_events
-

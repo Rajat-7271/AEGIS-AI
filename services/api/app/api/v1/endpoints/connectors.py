@@ -893,9 +893,7 @@ async def update_connector(
         updates["updated_at"] = datetime.now(UTC)
         try:
             await db.execute(
-                update(Connector)
-                .where(Connector.id == connector_id, Connector.tenant_id == current_user.tenant_id)
-                .values(**updates)
+                update(Connector).where(Connector.id == connector_id, Connector.tenant_id == current_user.tenant_id).values(**updates)
             )
             await db.commit()
         except Exception:
@@ -934,10 +932,7 @@ async def _merge_connector_credential_patch(
     required_secret_fields = {
         field.get("name")
         for field in catalog_entry.get("fields", [])
-        if isinstance(field, dict)
-        and field.get("type") == "secret"
-        and field.get("required", True)
-        and isinstance(field.get("name"), str)
+        if isinstance(field, dict) and field.get("type") == "secret" and field.get("required", True) and isinstance(field.get("name"), str)
     }
 
     replacements: dict[str, str] = {}
@@ -964,9 +959,7 @@ async def _merge_connector_credential_patch(
         merged_auth = vault.decrypt_dict(connector.auth_config or {})
         merged_auth.update(replacements)
         missing_required = {
-            name
-            for name in required_secret_fields
-            if not isinstance(merged_auth.get(name), str) or not merged_auth[name].strip()
+            name for name in required_secret_fields if not isinstance(merged_auth.get(name), str) or not merged_auth[name].strip()
         }
         if missing_required:
             raise HTTPException(
