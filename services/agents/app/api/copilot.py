@@ -225,7 +225,7 @@ def _is_general_knowledge_question(question: str, context: dict[str, Any] | None
     return bool(re.match(
         r"^(?:please\s+)?(?:explain|define|describe|what\s+is|what\s+are|"
         r"how\s+does|how\s+do|which\s+windows\s+event\s+ids|"
-        r"what\s+windows\s+event\s+ids)\b",
+        r"what\s+windows\s+event\s+ids|list\s+(?:the\s+)?(?:most\s+important\s+)?windows\s+event\s+ids)\b",
         q,
     ))
 
@@ -238,19 +238,33 @@ def _ground_copilot_reply(reply: str, question: str, context: dict[str, Any] | N
 
 
 def _normalize_copilot_markdown(content: str) -> str:
-    """Repair escaped Markdown structure outside fenced code blocks only."""
+    """Repair model-escaped Markdown tables without touching code or paths."""
     result: list[str] = []
+    pending_blank: list[str] = []
     in_fence = False
+    previous_table = False
     for line in content.splitlines(keepends=True):
         stripped = line.lstrip()
         if stripped.startswith(("```", "~~~")):
             in_fence = not in_fence
-        elif not in_fence:
+        if not in_fence and not stripped.startswith(("```", "~~~")):
             if re.match(r"^\\#{1,6}\s", stripped):
                 line = line.replace(r"\#", "#", 6)
+            elif re.match(r"^\\-{3,}\s*$", stripped):
+                line = line.replace(r"\-", "-")
             elif stripped.startswith(r"\|") and stripped.count(r"\|") >= 2:
-                line = line.replace(r"\|", "|")
+                line = line.replace(r"\|", "|").replace(r"\*", "*")
+        is_table = not in_fence and line.lstrip().startswith("|") and line.count("|") >= 3
+        if not line.strip() and not in_fence:
+            pending_blank.append(line)
+            continue
+        if pending_blank:
+            if not (previous_table and is_table):
+                result.extend(pending_blank)
+            pending_blank.clear()
         result.append(line)
+        previous_table = is_table
+    result.extend(pending_blank)
     return "".join(result)
 
 def _looks_like_unexecuted_tool_call(content: str) -> bool:
