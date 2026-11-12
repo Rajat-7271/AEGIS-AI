@@ -176,11 +176,16 @@ export function renderCopilotRichText(content: string): React.ReactNode {
   // Very small subset: **bold**, `code`, # headings, > blockquote, - lists,
   // and pipe tables. Good enough for assistant replies without pulling in
   // a full markdown library.
-  const lines = content.split('\n').map((line) => line.replace(/^\\(#{1,6}\s)/, '$1').replace(/^\\(-{3,}\s*)$/, '$1'));
+  const lines = content.split('\n').map((line) =>
+    line.replace(/^\\(#{1,6}\s)/, '$1')
+      .replace(/^\\(-{3,}\s*)$/, '$1')
+      .replace(/^\\(`{3,}|~{3,})/, '$1'),
+  );
   const blocks: React.ReactNode[] = [];
   let i = 0;
 
   const inline = (text: string): React.ReactNode => {
+    text = text.replace(/\\([*`])/g, '$1');
     const parts: React.ReactNode[] = [];
     const re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
     let lastIndex = 0;
@@ -212,6 +217,30 @@ export function renderCopilotRichText(content: string): React.ReactNode {
 
   while (i < lines.length) {
     const line = lines[i];
+
+    // Render fenced code as inert text; never execute or parse as HTML.
+    const fence = line.trim().match(/^(`{3,}|~{3,})([a-zA-Z0-9_-]*)\s*$/);
+    if (fence) {
+      const marker = fence[1][0];
+      const width = fence[1].length;
+      const language = fence[2];
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length) {
+        const closing = lines[i].trim();
+        if (closing.length >= width && [...closing].every((ch) => ch === marker)) break;
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      blocks.push(
+        <pre key={i} className="my-3 overflow-x-auto rounded-lg bg-slate-950/80 p-3 text-xs text-slate-200">
+          {language && <span className="mb-2 block text-slate-500">{language}</span>}
+          <code className="font-mono whitespace-pre">{codeLines.join('\n')}</code>
+        </pre>,
+      );
+      continue;
+    }
 
     // Render Markdown separators as rules instead of literal backslash/hyphen text.
     if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
