@@ -15,13 +15,15 @@ return. It does not describe the tenant's data, because nothing read it.
 
 from __future__ import annotations
 
-import asyncio
 import json
+import re
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
+import httpx
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -123,6 +125,18 @@ def _tenant_of(principal: TenantPrincipal) -> uuid.UUID:
 NO_MODEL = "no_model_configured"
 CALL_FAILED = "model_call_failed"
 
+_LEGACY_TOOL_FALLBACK = (
+    "I cannot query live security telemetry from this chat response. "
+    "Open the Alerts or Explore view to inspect actual events, "
+    "then share the relevant findings for analysis."
+)
+_LEGACY_FAILURE_ENDING = (
+    "This is a model or gateway problem, not a missing credential — a model is configured. "
+    "On a CPU-only deployment the usual cause is contention with the auto-triage backlog, "
+    "which holds the same local model. Retrying usually works; if it does not, check the "
+    "model service's own logs."
+)
+
 
 def _fallback_reply(reason: str, *, model: str | None = None, detail: str | None = None) -> str:
     """What to say when no model answered.
@@ -151,15 +165,10 @@ def _fallback_reply(reason: str, *, model: str | None = None, detail: str | None
         )
 
     named = f" ({model})" if model else ""
-    because = f"\n\nThe call reported: {detail}" if detail else ""
+    because = f"\n\nDiagnostic: {detail}" if detail else ""
     return (
-        f"I can't answer this: the configured model{named} did not return a reply.{because}\n\n"
-        "Nothing about your alerts, cases or detections was looked at, so treat this as an "
-        "unanswered question rather than a finding.\n\n"
-        "This is a model or gateway problem, not a missing credential — a model is configured. "
-        "On a CPU-only deployment the usual cause is contention with the auto-triage backlog, "
-        "which holds the same local model. Retrying usually works; if it does not, check the "
-        "model service's own logs."
+        f"Copilot could not produce an answer using the configured model{named}.{because}\n\n"
+        "Treat this as an unanswered question rather than a finding."
     )
 
 
@@ -184,28 +193,28 @@ def _notice_for(reason: str | None) -> str | None:
     if reason == NO_MODEL:
         return "No language model is configured, so nothing answered this question. This is not analysis of your environment."
     if reason == CALL_FAILED:
-        return (
-            "A model is configured but the call did not return, so nothing answered this "
-            "question. This is not analysis of your environment, and it is not a missing "
-            "API key."
-        )
+        return "Copilot could not produce an answer for this question."
     return None
+
+
+def _is_fallback_message(message: dict[str, Any]) -> bool:
+    if message["role"] != "assistant":
+        return False
+    if message.get("source") is not None:
+        return message["source"] == "template"
+    content = message["content"]
+    return content in (_LEGACY_TOOL_FALLBACK, _fallback_reply(NO_MODEL)) or (
+        content.startswith("I can't answer this: the configured model") and content.endswith(_LEGACY_FAILURE_ENDING)
+    )
 
 
 def _looks_like_unexecuted_tool_call(content: str) -> bool:
     """Reject tool invocation syntax, not ordinary discussion of commands."""
-    import re
-
-    if any(marker in content for marker in (
-        "<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>",
-    )):
+    if any(marker in content for marker in ("<|tool_call_start|>", "<|tool_call_end|>", "<tool_call>", "</tool_call>")):
         return True
     # Some providers return an invocation as plain text rather than structured
     # tool_calls. Do not show these as if an operation actually ran.
-    return bool(re.search(
-        r"(?m)^\s*(?:bash|query_system)\s*\(\s*(?:command|hostname|query)\s*=",
-        content,
-    ))
+    return bool(re.search(r"(?m)^\s*`*(?:bash|query_system)\s*\(\s*(?:command|hostname|query)\s*=", content))
 
 
 async def _get_openai_reply(
@@ -223,26 +232,46 @@ async def _get_openai_reply(
     alerts" as real analysis of their environment. The frontend had an honest
     fallback of its own that never fired, because the backend reported success.
 
-    The two fallback conditions are now distinguished (issue #1275). They
-    used to collapse into one message telling the operator to configure an
-    API key — advice that is simply wrong when a local model is configured
-    and timed out, which is the common case on CPU. This repository has the
-    same lesson recorded from the RBA banner that named fusion while fusion
-    was healthy: a diagnostic pointing at the wrong subsystem sends someone
-    to fix something that is not broken, and is worse than a vague one.
+    Keep missing configuration distinct from a failed or unusable completion.
     """
-    from app.llm.factory import resolve_api_key, resolve_model_alias
+    from app.llm.contract import safe_chat_completions_request
+    from app.llm.factory import chat_completions_url, resolve_api_key, resolve_model_alias
+    from app.llm.routing import at_bundled_gateway, is_gateway_alias, resolve_base_url
 
-    model = resolve_model_alias("copilot")
-    # Resolved with the route, not from OPENAI_API_KEY directly: when the call
-    # goes to the bundled gateway the bearer has to be the gateway's master key.
-    api_key = resolve_api_key(model) or ""
-    if not api_key:
-        return _fallback_reply(NO_MODEL), "template", NO_MODEL
-
+    model = None
     try:
-        from app.llm.contract import safe_chat_completions_request
-        from app.llm.factory import chat_completions_url
+        model = resolve_model_alias("copilot")
+        api_key = resolve_api_key(model)
+        if not api_key:
+            return _fallback_reply(NO_MODEL), "template", NO_MODEL
+
+        url = chat_completions_url(model)
+        openrouter = urlsplit(url).hostname in {"openrouter.ai", "eu.openrouter.ai"}
+        options: dict[str, Any] = {}
+        if openrouter:
+            if is_gateway_alias(model):
+                detail = "Set AISOC_MODEL_PIN_COPILOT to an OpenRouter model ID that supports structured outputs."
+                return _fallback_reply(CALL_FAILED, model=model, detail=detail), "template", CALL_FAILED
+            options = {
+                "provider": {"require_parameters": True, "allow_fallbacks": False},
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "copilot_reply",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {"answer": {"type": "string"}},
+                            "required": ["answer"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+            }
+        elif at_bundled_gateway(resolve_base_url(model)):
+            # Request-level LiteLLM router controls. The running gateway version
+            # and any upstream provider retries are outside this client's control.
+            options = {"num_retries": 0, "disable_fallbacks": True}
 
         messages: list[dict[str, str]] = [
             {
@@ -254,11 +283,15 @@ async def _get_openai_reply(
                     "when relevant. Format recommendations as numbered steps when appropriate. "
                     "You cannot execute shell commands or query live hosts through this chat. "
                     "Never emit tool-call syntax or claim to have run tools. "
-                    "If current telemetry is unavailable, say so and explain how to inspect it."
+                    "If current telemetry is unavailable, say so and explain how to inspect it. "
+                    "Answer general questions directly and ground any claims about the environment in supplied evidence."
+                    + (" Return the user-facing answer in the JSON field answer." if openrouter else "")
                 ),
             }
         ]
         for m in conversation.get("messages", [])[-10:]:  # last 10 for context
+            if _is_fallback_message(m):
+                continue
             messages.append({"role": m["role"], "content": m["content"]})
         messages.append({"role": "user", "content": user_message})
 
@@ -266,30 +299,43 @@ async def _get_openai_reply(
             api_key=api_key,
             model=model,
             messages=messages,
-            url=chat_completions_url(model),
-            max_tokens=512,
+            url=url,
+            max_tokens=1024,
+            **options,
         )
-        message = body["choices"][0]["message"]
-        content = message.get("content") or ""
-        # A text-only model response is not an executed tool invocation.
-        # Do not display generated tool-call markup as a completed investigation.
-        if message.get("tool_calls") or message.get("function_call") or not isinstance(content, str) or not content.strip() or _looks_like_unexecuted_tool_call(content):
+        if not isinstance(body, dict):
+            raise ValueError("Invalid completion envelope")
+        if body.get("error") is not None:
+            return _fallback_reply(CALL_FAILED, model=model, detail="The provider returned an error response."), "template", CALL_FAILED
+        choices = body.get("choices")
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            raise ValueError("Invalid completion choices")
+        choice = choices[0]
+        message = choice.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("Invalid completion message")
+        content = message.get("content")
+        attempted_tool = (
+            message.get("tool_calls")
+            or message.get("function_call")
+            or choice.get("finish_reason") in ("tool_calls", "function_call")
+            or (isinstance(content, str) and _looks_like_unexecuted_tool_call(content))
+        )
+        if openrouter and isinstance(content, str) and content.strip() and not attempted_tool:
+            parsed = json.loads(content)
+            content = parsed["answer"] if isinstance(parsed, dict) and parsed.keys() == {"answer"} else None
+        if attempted_tool or (isinstance(content, str) and _looks_like_unexecuted_tool_call(content)):
             logger.warning("copilot.unexecuted_tool_call", model=model)
-            return (
-                "I cannot query live security telemetry from this chat response. "
-                "Open the Alerts or Explore view to inspect actual events, "
-                "then share the relevant findings for analysis.",
-                "template",
-                CALL_FAILED,
-            )
-        return content, "llm", None
+            detail = "The model attempted to use a tool. Copilot chat cannot query live security telemetry."
+        elif isinstance(content, str) and content.strip():
+            return content, "llm", None
+        else:
+            detail = "The model returned no usable answer."
     except Exception as exc:
-        # `str(exc)` is empty for several httpx timeout classes, which is
-        # how the report ended up with `copilot.openai_error` carrying no
-        # message at all. The class name always says something.
-        detail = str(exc).strip() or type(exc).__name__
+        # Provider exceptions can contain URLs, credentials, or prompt data.
+        detail = f"HTTP {exc.response.status_code}" if isinstance(exc, httpx.HTTPStatusError) else type(exc).__name__
         logger.warning("copilot.openai_error", error=detail, model=model)
-        return _fallback_reply(CALL_FAILED, model=model, detail=detail), "template", CALL_FAILED
+    return _fallback_reply(CALL_FAILED, model=model, detail=detail), "template", CALL_FAILED
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +400,7 @@ async def chat(
         "id": str(uuid.uuid4()),
         "role": "assistant",
         "content": reply_text,
+        "source": reply_source,
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
@@ -411,6 +458,7 @@ async def chat_stream(
         "id": msg_id,
         "role": "assistant",
         "content": reply_text,
+        "source": reply_source,
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
@@ -443,11 +491,7 @@ async def chat_stream(
             )
             + "\n"
         ).encode()
-        words = reply_text.split(" ")
-        for i, word in enumerate(words):
-            chunk = word + (" " if i < len(words) - 1 else "")
-            yield (json.dumps({"delta": chunk, "done": False}) + "\n").encode()
-            await asyncio.sleep(0.01)
+        yield (json.dumps({"delta": reply_text, "done": False}) + "\n").encode()
 
         yield (
             json.dumps(

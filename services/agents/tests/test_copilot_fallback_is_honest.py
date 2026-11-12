@@ -60,8 +60,9 @@ class TestTheTwoReasonsAreDistinguished:
 
         assert source == "template"
         assert reason == copilot.CALL_FAILED
-        assert "not a missing credential" in text
-        assert "not a missing API key" in (copilot._notice_for(reason) or "")
+        assert "TimeoutError" in text
+        assert "credential" not in text
+        assert "API key" not in (copilot._notice_for(reason) or "")
 
     @pytest.mark.asyncio
     async def test_an_empty_exception_message_still_names_the_failure(self, monkeypatch: Any) -> None:
@@ -84,8 +85,8 @@ class TestTheTwoReasonsAreDistinguished:
     def test_only_the_unconfigured_notice_mentions_configuring_one(self) -> None:
         """The whole defect in one assertion."""
         failed = copilot._notice_for(copilot.CALL_FAILED) or ""
-        assert "not a missing API key" in failed
-        assert "A model is configured" in failed
+        assert "API key" not in failed
+        assert "could not produce an answer" in failed
 
     def test_a_model_answer_carries_no_notice(self) -> None:
         assert copilot._notice_for(None) is None
@@ -136,12 +137,11 @@ class TestTheFallbackBodyAssertsNothingAboutTheEstate:
         assert "llama3.2:3b" in body
         assert "ReadTimeout" in body
 
-    def test_it_points_at_the_contention_the_reporter_actually_hit(self) -> None:
-        """CPU-only deployments share one local model between interactive
-        copilot and the auto-triage backlog. Naming it is the difference
-        between a retry and an afternoon of debugging."""
-        body = copilot._fallback_reply(copilot.CALL_FAILED)
-        assert "auto-triage" in body
+    def test_http_authentication_failure_reports_only_the_known_status(self) -> None:
+        body = copilot._fallback_reply(copilot.CALL_FAILED, detail="HTTP 401")
+        assert "HTTP 401" in body
+        assert "credential" not in body
+        assert "auto-triage" not in body
 
     def test_the_same_question_does_not_get_a_different_canned_answer(self) -> None:
         """`_synthetic_reply` cycled, so asking twice produced two
