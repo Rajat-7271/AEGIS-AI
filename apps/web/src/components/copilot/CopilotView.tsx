@@ -214,7 +214,7 @@ export function renderCopilotRichText(content: string): React.ReactNode {
     const line = lines[i];
 
     // Render Markdown separators as rules instead of literal backslash/hyphen text.
-    if (/^\\s*(?:-{3,}|\\*{3,}|_{3,})\\s*$/.test(line)) {
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
       blocks.push(<hr key={i} className="my-3 border-slate-700/60" />);
       i++;
       continue;
