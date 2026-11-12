@@ -176,7 +176,7 @@ export function renderCopilotRichText(content: string): React.ReactNode {
   // Very small subset: **bold**, `code`, # headings, > blockquote, - lists,
   // and pipe tables. Good enough for assistant replies without pulling in
   // a full markdown library.
-  const lines = content.split('\n');
+  const lines = content.split('\n').map((line) => line.replace(/^\\(#{1,6}\s)/, '$1').replace(/^\\(-{3,}\s*)$/, '$1'));
   const blocks: React.ReactNode[] = [];
   let i = 0;
 
@@ -262,10 +262,11 @@ export function renderCopilotRichText(content: string): React.ReactNode {
       continue;
     }
 
-    if (line.startsWith('# ')) {
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
       blocks.push(
-        <h2 key={i} className="mt-3 text-lg font-semibold text-white">
-          {inline(line.slice(2))}
+        <h2 key={i} className={heading[1].length <= 2 ? "mt-3 text-lg font-semibold text-white" : "mt-3 text-base font-semibold text-white"}>
+          {inline(heading[2])}
         </h2>,
       );
       i++;
