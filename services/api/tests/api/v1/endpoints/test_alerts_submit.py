@@ -397,12 +397,12 @@ class TestSynthesiseAlertFromEvents:
         The submit path bounds event timestamps against ``now_utc()`` (see
         ``services/api/app/services/timestamp_bounds.py``) — events too far in
         the past or future get clamped. To keep this test stable regardless of
-        when CI runs, we pin ``now_utc`` inside the alerts endpoint module to
+        when CI runs, we pin ``now_utc`` inside the alert synthesis service to
         a value just after the fixture window so all three events fall inside
         the valid range and no clamping occurs.
         """
         pinned_now = datetime(2026, 5, 14, 10, 0, 0, tzinfo=UTC)
-        monkeypatch.setattr("app.api.v1.endpoints.alerts.now_utc", lambda: pinned_now)
+        monkeypatch.setattr("app.services.alert_synthesis.now_utc", lambda: pinned_now)
         events = [
             _okta_event(published="2026-05-14T09:30:14Z"),
             _okta_event(published="2026-05-14T09:45:00Z"),
