@@ -125,6 +125,9 @@ def _tenant_of(principal: TenantPrincipal) -> uuid.UUID:
 NO_MODEL = "no_model_configured"
 CALL_FAILED = "model_call_failed"
 
+# OpenRouter's free endpoint for this model does not support response_format.
+_NEMOTRON_ULTRA_FREE = "nvidia/nemotron-3-ultra-550b-a55b:free"
+
 _LEGACY_TOOL_FALLBACK = (
     "I cannot query live security telemetry from this chat response. "
     "Open the Alerts or Explore view to inspect actual events, "
@@ -247,31 +250,32 @@ async def _get_openai_reply(
 
         url = chat_completions_url(model)
         openrouter = urlsplit(url).hostname in {"openrouter.ai", "eu.openrouter.ai"}
+        use_json_schema = openrouter and model != _NEMOTRON_ULTRA_FREE
         options: dict[str, Any] = {}
         if openrouter:
             if is_gateway_alias(model):
                 detail = "Set AISOC_MODEL_PIN_COPILOT to an OpenRouter model ID that supports structured outputs."
                 return _fallback_reply(CALL_FAILED, model=model, detail=detail), "template", CALL_FAILED
-            options = {
-                "provider": {"require_parameters": True, "allow_fallbacks": False},
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "copilot_reply",
-                        "strict": True,
-                        "schema": {
-                            "type": "object",
-                            "properties": {"answer": {"type": "string"}},
-                            "required": ["answer"],
-                            "additionalProperties": False,
-                        },
-                    },
-                },
-            }
+            options["provider"] = {"require_parameters": True, "allow_fallbacks": False}
         elif at_bundled_gateway(resolve_base_url(model)):
             # Request-level LiteLLM router controls. The running gateway version
             # and any upstream provider retries are outside this client's control.
             options = {"num_retries": 0, "disable_fallbacks": True}
+
+        if use_json_schema:
+            options["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "copilot_reply",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {"answer": {"type": "string"}},
+                        "required": ["answer"],
+                        "additionalProperties": False,
+                    },
+                },
+            }
 
         messages: list[dict[str, str]] = [
             {
@@ -285,7 +289,7 @@ async def _get_openai_reply(
                     "Never emit tool-call syntax or claim to have run tools. "
                     "If current telemetry is unavailable, say so and explain how to inspect it. "
                     "Answer general questions directly and ground any claims about the environment in supplied evidence."
-                    + (" Return the user-facing answer in the JSON field answer." if openrouter else "")
+                    + (" Return the user-facing answer in the JSON field answer." if use_json_schema else "")
                 ),
             }
         ]
@@ -321,7 +325,7 @@ async def _get_openai_reply(
             or choice.get("finish_reason") in ("tool_calls", "function_call")
             or (isinstance(content, str) and _looks_like_unexecuted_tool_call(content))
         )
-        if openrouter and isinstance(content, str) and content.strip() and not attempted_tool:
+        if use_json_schema and isinstance(content, str) and content.strip() and not attempted_tool:
             parsed = json.loads(content)
             content = parsed["answer"] if isinstance(parsed, dict) and parsed.keys() == {"answer"} else None
         if attempted_tool or (isinstance(content, str) and _looks_like_unexecuted_tool_call(content)):

@@ -13,13 +13,24 @@ from fastapi.testclient import TestClient
 
 
 @pytest.mark.parametrize("endpoint", ["chat", "chat/stream"])
-@pytest.mark.parametrize("answer", ["Review the timeline.", 'bash(command="whoami")'])
-@pytest.mark.parametrize("openrouter", [True, False], ids=["openrouter", "litellm"])
-def test_chat_round_trip(monkeypatch, endpoint, answer, openrouter):
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Review the timeline.",
+        'bash(command="whoami")',
+        pytest.param({"content": "Review the timeline.", "tool_calls": [{"id": "call_1"}]}, id="structured-tool"),
+        pytest.param({"content": ["malformed"]}, id="malformed-content"),
+        pytest.param("  ", id="blank"),
+    ],
+)
+@pytest.mark.parametrize("route", ["openrouter-schema", "openrouter-nvidia-free", "litellm"])
+def test_chat_round_trip(monkeypatch, endpoint, answer, route):
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    openrouter = route.startswith("openrouter")
+    use_json_schema = route == "openrouter-schema"
     if openrouter:
         base = "https://openrouter.ai/api/v1"
-        model = "openai/test-model"
+        model = "nvidia/nemotron-3-ultra-550b-a55b" if use_json_schema else "nvidia/nemotron-3-ultra-550b-a55b:free"
         monkeypatch.setenv("OPENAI_BASE_URL", base)
         monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     else:
@@ -40,8 +51,9 @@ def test_chat_round_trip(monkeypatch, endpoint, answer, openrouter):
         payload = json.loads(request.content)
         requests.append(payload)
         reply = answer if len(requests) == 1 else "Check the alert's evidence and timestamps."
-        content = json.dumps({"answer": reply}) if openrouter else reply
-        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+        content = json.dumps({"answer": reply}) if use_json_schema else reply
+        message = reply if isinstance(reply, dict) else {"content": content}
+        return httpx.Response(200, json={"choices": [{"message": message}]})
 
     client_class = httpx.AsyncClient
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: client_class(transport=httpx.MockTransport(complete), **kwargs))
@@ -56,8 +68,13 @@ def test_chat_round_trip(monkeypatch, endpoint, answer, openrouter):
     assert len(requests) == 1
     assert [message["content"] for message in requests[0]["messages"] if message["role"] == "user"] == [question]
     assert requests[0]["model"] == model
-    if openrouter:
+    assert ("JSON field answer" in requests[0]["messages"][0]["content"]) == use_json_schema
+    if use_json_schema:
         assert requests[0]["response_format"]["type"] == "json_schema"
+        assert requests[0]["response_format"]["json_schema"]["strict"] is True
+    else:
+        assert "response_format" not in requests[0]
+    if openrouter:
         assert requests[0]["provider"] == {"require_parameters": True, "allow_fallbacks": False}
     else:
         assert requests[0]["num_retries"] == 0
@@ -72,12 +89,13 @@ def test_chat_round_trip(monkeypatch, endpoint, answer, openrouter):
         reply = "".join(event.get("delta", "") for event in events)
         assert events[-1]["done"]
         conversation_id = events[-1]["conversationId"]
-    if answer.startswith("bash"):
-        assert source == "template"
-        assert answer not in reply
-    else:
+    if answer == "Review the timeline.":
         assert source == "llm"
         assert reply == answer
+    else:
+        assert source == "template"
+        assert 'bash(command="whoami")' not in reply
+        assert "malformed" not in reply
 
     follow_up = "What should I check next?"
     with TestClient(app) as client:
