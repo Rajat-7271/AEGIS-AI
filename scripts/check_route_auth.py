@@ -184,6 +184,7 @@ IN_BAND_CREDENTIAL_ROUTES: dict[str, tuple[str, str]] = {
         "_invitation_target",
         "pre-login invitation redemption is rate-limited, validates the hashed invitation "
         "token and atomically consumes it before activating the bound admin",
+    ),
     "services/api/app/api/v1/endpoints/windows_security.py::ingest_windows": (
         "_verify_windows_ingest_token",
         "Windows collector verifies a revocable tenant-scoped connector-push token in the database, and an HMAC over the exact request bytes when configured; no browser session is required",
