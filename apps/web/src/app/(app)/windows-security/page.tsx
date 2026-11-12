@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, windowsSecurityApi } from '@/lib/api';
 
 type EventRow = {
@@ -39,11 +39,14 @@ function formatUtcTimestamp(value: string): string {
 
 export default function WindowsSecurityPage() {
   const [events, setEvents] = useState<EventRow[]>([]);
+  const refreshInFlight = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const refresh = useCallback(async (silent = false) => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
     if (!silent) setLoading(true);
     setError(null);
     try {
@@ -58,6 +61,7 @@ export default function WindowsSecurityPage() {
           : 'Could not load Windows Security events. Try refreshing.';
       setError(message);
     } finally {
+      refreshInFlight.current = false;
       setLoading(false);
     }
   }, []);
