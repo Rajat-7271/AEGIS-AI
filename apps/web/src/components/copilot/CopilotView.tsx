@@ -187,7 +187,7 @@ export function renderCopilotRichText(content: string): React.ReactNode {
   const inline = (text: string): React.ReactNode => {
     text = text.replace(/\\([*`])/g, '$1');
     const parts: React.ReactNode[] = [];
-    const re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    const re = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g;
     let lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
@@ -198,6 +198,12 @@ export function renderCopilotRichText(content: string): React.ReactNode {
           <strong key={`b-${m.index}`} className="font-semibold text-white">
             {token.slice(2, -2)}
           </strong>,
+        );
+      } else if (token.startsWith('*')) {
+        parts.push(
+          <em key={`em-${m.index}`} className="italic text-slate-200">
+            {token.slice(1, -1)}
+          </em>,
         );
       } else if (token.startsWith('`')) {
         parts.push(
