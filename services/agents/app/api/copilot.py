@@ -348,7 +348,15 @@ async def _get_openai_reply(
                     "If current telemetry is unavailable, say so and explain how to inspect it. "
                     "Answer general questions directly and ground any claims about the environment in supplied evidence. "
                     "Use normal Markdown headings and tables without escaping punctuation outside code blocks. "
-                    "Preserve literal backslashes in commands and fenced code."
+                    "Preserve literal backslashes in commands and fenced code. "
+                    "For Windows PowerShell logging, distinguish Event ID 4103 (Module Logging: pipeline execution details) "
+                    "from Event ID 4104 (Script Block Logging: script block content). "
+                    "They are not script-block start/end events. Do not invent event fields, "
+                    "fixed truncation limits, guaranteed deobfuscation, or assert that every execution is logged. "
+                    "When exact event semantics are uncertain, state the uncertainty and recommend "
+                    "checking Microsoft documentation or the actual event schema. "
+                    "For code fences, place the language tag alone on the opening fence line, "
+                    "followed by a newline before code."
                     + (" Return the user-facing answer in the JSON field answer." if use_json_schema else "")
                 ),
             }
