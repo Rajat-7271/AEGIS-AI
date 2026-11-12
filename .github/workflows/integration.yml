@@ -1063,8 +1063,24 @@ jobs:
           pip install --quiet awscli "cryptography>=46,<51"
           # A newer pg_dump can read PG16 but emits SQL that PG16 cannot
           # restore (for example transaction_timeout). Match the server.
-          sudo apt-get update -q && sudo apt-get install -y -q postgresql-client-16
-          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          # Ubuntu runner repositories do not always carry client-16 (notably
+          # ubuntu-26.04). Use the official PG16 image already used by this job.
+          # Host networking lets the clients reach the CI Postgres service at
+          # localhost; -i preserves the SQL stream consumed by restore.sh.
+          docker pull postgres:16
+          mkdir -p "$RUNNER_TEMP/pg16-bin"
+          for tool in pg_dump psql; do
+            cat > "$RUNNER_TEMP/pg16-bin/$tool" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          tool="${0##*/}"
+          exec docker run --rm -i --network host \
+            -e POSTGRES_URL -e PGPASSWORD -e PGHOST -e PGUSER -e PGDATABASE \
+            postgres:16 "$tool" "$@"
+          SH
+            chmod +x "$RUNNER_TEMP/pg16-bin/$tool"
+          done
+          echo "$RUNNER_TEMP/pg16-bin" >> "$GITHUB_PATH"
 
       - name: Verify disaster-recovery client and server versions
         if: needs.changes.outputs.backup == 'true'
