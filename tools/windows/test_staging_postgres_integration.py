@@ -47,3 +47,21 @@ def test_real_postgres_atomic_replay_and_conflict(db):
     with db.cursor() as cur:
         cur.execute("SELECT count(*) FROM windows_pilot.security_events WHERE device_id=%s", (device,))
         assert cur.fetchone()[0] == 2
+
+
+def test_real_postgres_rolls_back_prior_insert_on_later_conflict(db):
+    device = "ci-" + uuid.uuid4().hex
+    accept_batch_postgres(db, {"device_id": device, "events": [event(20)]})
+    # The first event is new; the second collides with an existing record.
+    # The transaction must roll back the first insert on conflict.
+    with pytest.raises(InvalidBatch, match="Conflicting replay"):
+        accept_batch_postgres(db, {
+            "device_id": device,
+            "events": [event(10), event(20, "different")],
+        })
+    with db.cursor() as cur:
+        cur.execute(
+            "SELECT record_id FROM windows_pilot.security_events "
+            "WHERE device_id=%s ORDER BY record_id", (device,)
+        )
+        assert [row[0] for row in cur.fetchall()] == [20]
