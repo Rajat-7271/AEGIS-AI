@@ -8,13 +8,22 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import threading
+import time
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from staging_receiver import MAX_REQUEST_BYTES, InvalidBatch, accept_batch, authorize
 
 
-def handler_factory(database: Path, expected_token: str, expected_device_id: str = "test-device"):
+def handler_factory(database: Path, expected_token: str, expected_device_id: str = "test-device",
+                    max_requests_per_minute: int = 60):
+    if max_requests_per_minute < 1:
+        raise ValueError("Rate limit must be positive")
+    request_times = deque()
+    rate_lock = threading.Lock()
+
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             if self.path != "/v1/windows-security/events":
@@ -29,6 +38,14 @@ def handler_factory(database: Path, expected_token: str, expected_device_id: str
             except PermissionError:
                 self.send_error(401)
                 return
+            with rate_lock:
+                now = time.monotonic()
+                while request_times and now - request_times[0] >= 60:
+                    request_times.popleft()
+                if len(request_times) >= max_requests_per_minute:
+                    self.send_error(429)
+                    return
+                request_times.append(now)
             if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
                 self.send_error(415)
                 return
@@ -85,6 +102,8 @@ def main():
     if not 1 <= args.port <= 65535:
         raise SystemExit("Invalid port")
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_factory(args.database, token, device_id))
+    server.daemon_threads = True
+    server.request_queue_size = 16
     print(f"Loopback-only receiver listening on 127.0.0.1:{args.port}; no TLS, do not expose externally")
     try:
         server.serve_forever()
