@@ -37,6 +37,7 @@ jobs:
             tools/windows/test_staging_receiver.py \
             tools/windows/test_staging_postgres_receiver.py \
             tools/windows/test_source_epoch_contract.py \
+            tools/windows/test_source_continuity.py \
             tools/windows/test_upload_security_events.py
 
   postgres-integration:
