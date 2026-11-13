@@ -275,3 +275,18 @@ The source epoch must be derived and persisted by a future continuity
 manager that can fail closed when a reset cannot be verified. The
 32-hex-character format is a transport identifier, not evidence of
 continuity by itself. Existing local telemetry remains v1 and untouched.
+
+## Fail-closed continuity state (not connected)
+
+`source_continuity.py` now validates a separately persisted v2 source
+identity and an externally supplied trusted log-instance marker. It rejects
+missing/corrupt state, a changed marker, record-ID regression, and accidental
+overwriting of an existing epoch. Its state is exclusive-create only; it
+does not update the exporter or upload checkpoints.
+
+**Important limitation:** The code does not yet obtain or authenticate a
+stable Windows Security log-instance marker. A caller-provided marker is
+not proof of log continuity. Until a trustworthy marker and an explicit
+migration/recovery procedure exist, this module is a tested contract rather
+than a reliable log-reset detector. The existing v1 collector remains
+unchanged, and unattended remote ingestion remains blocked.
