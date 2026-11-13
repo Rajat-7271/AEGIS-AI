@@ -364,3 +364,15 @@ This is a contract primitive, **not an enabled migration or unattended
 sender**. There is currently no verified Windows source supplying the
 trusted marker; passing an invented marker would defeat the safety gate.
 The existing v1 export must not be automatically relabeled as verified v2.
+
+## Continuity-state file hardening
+
+The experimental continuity-state reader now rejects oversized files
+(over 4096 bytes), nonregular files, invalid UTF-8, malformed JSON,
+and final-component symlinks (with `O_NOFOLLOW` where supported).
+State creation remains exclusive and never repairs or rotates an epoch.
+
+These checks protect local file parsing, **not the trustworthiness of
+the log-instance marker**. On Windows, POSIX file modes are not a
+substitute for reviewed NTFS ACLs; secure state provisioning and
+independent source-instance verification remain blockers.
