@@ -62,6 +62,7 @@ jobs:
             tools/windows/test_collector.py \
             tools/windows/test_upload_security_events_v2_retry.py
           python -m pytest -q tools/windows/test_staging_epoch_wsgi.py
+          python -m pytest -q tools/windows/test_synthetic_detection_bridge.py
 
   postgres-integration:
     name: Windows pilot PostgreSQL integration
