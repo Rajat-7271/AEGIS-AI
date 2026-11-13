@@ -25,7 +25,10 @@ def _reply(start_response, status, payload):
 
 def application(environ, start_response):
     """Fail closed: authentication precedes any database access."""
-    if environ.get("REQUEST_METHOD") != "POST" or environ.get("PATH_INFO") != "/v2/windows-security/events":
+    method = environ.get("REQUEST_METHOD")
+    route = environ.get("PATH_INFO")
+    is_readiness = method == "GET" and route == "/v2/health/ready"
+    if not is_readiness and (method != "POST" or route != "/v2/windows-security/events"):
         return _reply(start_response, "404 Not Found", {"error": "not_found"})
     token = os.environ.get("AEGIS_WINDOWS_STAGING_TOKEN", "")
     device = os.environ.get("AEGIS_WINDOWS_DEVICE_ID", "")
@@ -39,6 +42,18 @@ def application(environ, start_response):
         authorize(auth[7:], token)
     except PermissionError:
         return _reply(start_response, "401 Unauthorized", {"error": "unauthorized"})
+    if is_readiness:
+        try:
+            import psycopg
+            with psycopg.connect(dsn, connect_timeout=5) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT to_regclass('windows_pilot.security_events_v2')")
+                    ready = cursor.fetchone()[0] is not None
+            if not ready:
+                return _reply(start_response, "503 Service Unavailable", {"ready": False})
+            return _reply(start_response, "200 OK", {"ready": True})
+        except Exception:
+            return _reply(start_response, "503 Service Unavailable", {"ready": False})
     if environ.get("CONTENT_TYPE", "").split(";")[0].strip().lower() != "application/json":
         return _reply(start_response, "415 Unsupported Media Type", {"error": "content_type"})
     raw_length = environ.get("CONTENT_LENGTH", "")
