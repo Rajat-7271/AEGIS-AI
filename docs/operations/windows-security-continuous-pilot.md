@@ -290,3 +290,17 @@ not proof of log continuity. Until a trustworthy marker and an explicit
 migration/recovery procedure exist, this module is a tested contract rather
 than a reliable log-reset detector. The existing v1 collector remains
 unchanged, and unattended remote ingestion remains blocked.
+
+## Experimental v2 PostgreSQL ingestion
+
+`staging_postgres_epoch_receiver.py` now implements atomic v2 batch
+persistence into `windows_pilot.security_events_v2`. It scopes event
+identity to device, channel, source epoch, computer, and record ID.
+Identical replays are idempotent; conflicting replays abort the whole
+transaction. The existing PostgreSQL CI job covers reused record IDs
+across two epochs and rollback after a late conflict.
+
+This is a **separate, unmounted v2 receiver**, not an enabled endpoint.
+A trustworthy Windows log-instance marker, durable epoch lifecycle,
+local-file/checkpoint migration, and authenticated HTTPS hosting are
+still required before unattended real-event uploads.
