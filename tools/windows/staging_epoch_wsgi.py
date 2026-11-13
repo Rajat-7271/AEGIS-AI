@@ -54,6 +54,9 @@ def application(environ, start_response):
         payload = json.loads(raw)
         if not isinstance(payload, dict) or payload.get("device_id") != device:
             return _reply(start_response, "403 Forbidden", {"error": "device_mismatch"})
+        # Validate the entire v2 envelope before opening a database connection.
+        from source_epoch_contract import validate_epoch_batch
+        validate_epoch_batch(payload)
         import psycopg
         with psycopg.connect(dsn, autocommit=True, connect_timeout=5) as conn:
             result = accept_epoch_batch_postgres(conn, payload)
