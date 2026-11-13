@@ -120,3 +120,28 @@ successful and mismatched acknowledgements without contacting a server.
 These checks do **not** establish that a cloud endpoint is ready. Keep
 `--send` disabled until a reviewed staging HTTPS receiver and credentials
 are provisioned.
+
+## Staging deployment gate
+
+Do not deploy the loopback HTTP adapter as a public service. The current
+implementation is a **protocol test harness**, not an internet-facing
+ingestion API. Before enabling remote upload, the following must be reviewed
+and tested together:
+
+1. Dedicated staging hostname and TLS termination, with redirects disabled.
+2. Per-device token issuance, secure storage, rotation, revocation, and
+   server-side binding of credential to device identity.
+3. A persistent staging database with explicit retention and backup policy;
+   verify transactional commit before acknowledgement.
+4. Request rate limiting, body-size and connection timeouts, health checks,
+   and safe operational logs without credentials or event payloads.
+5. Source epoch or boot/log-reset identity to prevent record-ID collisions
+   after Security log recreation.
+6. Integration tests for lost responses, repeated batches, concurrent
+   requests, database failure, and interrupted checkpoint writes.
+7. Explicit approval before any staging deployment. Production and existing
+   public endpoints are out of scope.
+
+The local sender continues to default to dry run, and now checks the shape
+of historical rows even when their record IDs are below its separate upload
+checkpoint. This protects against silently overlooking modified event files.
