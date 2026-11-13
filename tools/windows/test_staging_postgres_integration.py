@@ -209,3 +209,75 @@ def test_epoch_postgres_rollback_on_later_conflict(db):
             "WHERE device_id=%s ORDER BY record_id", (device,),
         )
         assert [row[0] for row in cursor.fetchall()] == [20]
+
+
+def test_epoch_http_postgres_ingestion_and_replay(db):
+    """Exercise authenticated local v2 HTTP through committed epoch-scoped rows."""
+    import json
+    import threading
+    import urllib.error
+    import urllib.request
+
+    from staging_http_adapter import BoundedThreadingHTTPServer
+    from staging_postgres_epoch_http_adapter import epoch_handler_factory
+    from staging_postgres_epoch_receiver import accept_epoch_batch_postgres
+
+    db.execute((Path(__file__).parent / "staging_postgres_epoch_schema.sql").read_text())
+    dsn = os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"]
+    device = "ci-" + uuid.uuid4().hex
+    token = "local-test-" + uuid.uuid4().hex
+
+    def persist(payload):
+        with psycopg.connect(dsn, autocommit=True, connect_timeout=5) as connection:
+            return accept_epoch_batch_postgres(connection, payload)
+
+    server = BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), epoch_handler_factory(token, device, persist)
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def post(payload, credential=token):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_port}/v1/windows-security/events",
+            data=json.dumps(payload).encode("utf-8"), method="POST",
+            headers={"Authorization": f"Bearer {credential}",
+                     "Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as error:
+            return error.code, None
+
+    def payload(epoch, provider="Microsoft-Windows-Security-Auditing"):
+        return {
+            "protocol_version": 2, "device_id": device,
+            "channel": "Security", "source_epoch": epoch,
+            "events": [event(500, provider)],
+        }
+
+    try:
+        first = payload("a" * 32)
+        second = payload("b" * 32)
+        assert post(first, "wrong-token")[0] == 401
+        assert post({**first, "device_id": "spoofed"})[0] == 403
+        expected = (200, {"accepted": True, "last_record_id": 500})
+        assert post(first) == expected
+        assert post(first) == expected
+        assert post(second) == expected
+        assert post(payload("a" * 32, "changed"))[0] == 400
+        assert post(payload("invalid"))[0] == 400
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT source_epoch, count(*) FROM windows_pilot.security_events_v2 "
+                "WHERE device_id=%s GROUP BY source_epoch ORDER BY source_epoch",
+                (device,),
+            )
+            assert [(row[0].strip(), row[1]) for row in cursor.fetchall()] == [
+                ("a" * 32, 1), ("b" * 32, 1)
+            ]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
