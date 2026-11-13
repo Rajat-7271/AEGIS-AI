@@ -149,3 +149,63 @@ def test_real_postgres_concurrent_identical_replays(db):
             (device,),
         )
         assert cursor.fetchone()[0] == 2
+
+
+def test_epoch_scoped_postgres_replay_and_record_reuse(db):
+    """A new epoch may safely reuse a record ID without colliding with the old one."""
+    from source_epoch_contract import SourceIdentityError
+    from staging_postgres_epoch_receiver import accept_epoch_batch_postgres
+
+    db.execute((Path(__file__).parent / "staging_postgres_epoch_schema.sql").read_text())
+    device = "ci-" + uuid.uuid4().hex
+
+    def payload(epoch, provider="Microsoft-Windows-Security-Auditing"):
+        return {
+            "protocol_version": 2, "device_id": device,
+            "channel": "Security", "source_epoch": epoch,
+            "events": [event(1, provider)],
+        }
+
+    first = payload("a" * 32)
+    second = payload("b" * 32)
+    expected = {"accepted": True, "last_record_id": 1}
+    assert accept_epoch_batch_postgres(db, first) == expected
+    assert accept_epoch_batch_postgres(db, first) == expected
+    assert accept_epoch_batch_postgres(db, second) == expected
+
+    with pytest.raises(InvalidBatch, match="Conflicting replay"):
+        accept_epoch_batch_postgres(db, payload("a" * 32, "different"))
+    with pytest.raises(SourceIdentityError):
+        accept_epoch_batch_postgres(db, {**first, "source_epoch": "bad"})
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            "SELECT source_epoch, count(*) FROM windows_pilot.security_events_v2 "
+            "WHERE device_id=%s GROUP BY source_epoch ORDER BY source_epoch",
+            (device,),
+        )
+        assert [(row[0].strip(), row[1]) for row in cursor.fetchall()] == [
+            ("a" * 32, 1), ("b" * 32, 1)
+        ]
+
+
+def test_epoch_postgres_rollback_on_later_conflict(db):
+    from staging_postgres_epoch_receiver import accept_epoch_batch_postgres
+
+    db.execute((Path(__file__).parent / "staging_postgres_epoch_schema.sql").read_text())
+    device = "ci-" + uuid.uuid4().hex
+    identity = {
+        "protocol_version": 2, "device_id": device,
+        "channel": "Security", "source_epoch": "c" * 32,
+    }
+    accept_epoch_batch_postgres(db, {**identity, "events": [event(20)]})
+    with pytest.raises(InvalidBatch, match="Conflicting replay"):
+        accept_epoch_batch_postgres(db, {
+            **identity, "events": [event(10), event(20, "changed")],
+        })
+    with db.cursor() as cursor:
+        cursor.execute(
+            "SELECT record_id FROM windows_pilot.security_events_v2 "
+            "WHERE device_id=%s ORDER BY record_id", (device,),
+        )
+        assert [row[0] for row in cursor.fetchall()] == [20]
