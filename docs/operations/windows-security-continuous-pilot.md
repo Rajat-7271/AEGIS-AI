@@ -429,3 +429,20 @@ The service should not auto-deploy from this development branch.
 credentials have been provisioned by these commits. The real Windows
 sender is still blocked by the unverified log-instance identity.
 Do not generate a random epoch to paper over this blocker.
+
+## Authenticated staging readiness check
+
+After deploying the latest branch to the **isolated** Render staging service,
+run from the Windows repository root:
+
+```powershell
+powershell.exe -NoProfile -File .\tools\windows\check-staging-readiness.ps1
+```
+
+The command prompts for the existing staging bearer token without echoing it.
+It makes a **read-only** HTTPS GET to `/v2/health/ready`; the endpoint
+authenticates first, connects to staging PostgreSQL, and checks the v2 table
+exists. It never uploads or modifies Windows events. A cold Render free
+instance may take more than 50 seconds to wake; the client allows 120 seconds.
+A `READY` response proves basic connection and schema availability,
+**not** that event writes or Windows log continuity are safe.
