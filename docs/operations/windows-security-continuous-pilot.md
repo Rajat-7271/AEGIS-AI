@@ -102,3 +102,12 @@ plain-HTTP adapter; do not weaken that protection. A later staging-only TLS
 gateway and server-side device identity validation are prerequisites for
 live PC-to-cloud upload. The current receiver's token comparison helper
 does not yet bind a token to a specific `device_id`.
+
+## Device identity binding
+
+The loopback adapter requires `AEGIS_WINDOWS_DEVICE_ID` and
+`AEGIS_WINDOWS_STAGING_TOKEN` to be configured together. An authenticated
+request claiming a different device ID is rejected with HTTP 403 before
+persistence. This is a single-device prototype; staging deployment still
+needs securely provisioned per-device credentials, TLS, and an appropriate
+persistent database. Never commit tokens or print them in logs.
