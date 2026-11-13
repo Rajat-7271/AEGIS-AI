@@ -81,3 +81,27 @@ def test_reject_device_spoofing(server):
 
 def test_reject_missing_device_id(server):
     assert send(server, {"events": [event(1)]})[0] == 403
+
+
+def test_rate_limit_rejects_excess_authenticated_requests(tmp_path):
+    instance = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        adapter.handler_factory(tmp_path / "rate.sqlite", "a" * 32, "test-device", max_requests_per_minute=1),
+    )
+    worker = threading.Thread(target=instance.serve_forever, daemon=True)
+    worker.start()
+    try:
+        url = f"http://127.0.0.1:{instance.server_port}/v1/windows-security/events"
+        body = {"device_id": "test-device", "events": [event(1)]}
+        assert send(url, body)[0] == 200
+        assert send(url, body)[0] == 429
+        assert send(url, body, token="incorrect")[0] == 401
+    finally:
+        instance.shutdown()
+        instance.server_close()
+        worker.join(timeout=5)
+
+
+def test_rate_limit_configuration_rejects_zero(tmp_path):
+    with pytest.raises(ValueError, match="Rate limit"):
+        adapter.handler_factory(tmp_path / "rate.sqlite", "a" * 32, max_requests_per_minute=0)
