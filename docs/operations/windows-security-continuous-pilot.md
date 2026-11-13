@@ -319,3 +319,17 @@ verifies reused record IDs are separately stored under distinct epochs.
 It does not establish trustworthy Windows log-instance identification,
 migrate existing checkpoints, provide a hardened HTTPS gateway, or
 connect the dashboard. Do not use production credentials.
+
+## Experimental v2 HTTPS sender primitive
+
+`upload_security_events_v2.py` provides a separately importable
+`build_envelope` and `send_epoch_batch` implementation. It validates
+v2 source-epoch envelopes, enforces standard-port verified HTTPS, rejects
+redirects, and requires an exact server acknowledgement. Its contract
+checks run in the Windows pilot CI workflow.
+
+There is deliberately **no v2 CLI or scheduled upload**. The primitive
+does not generate an epoch, access local JSONL or checkpoint files,
+or enable network transfer on its own. Real migration requires a trusted
+Windows source-instance identity, persisted epoch management, a safe
+checkpoint transition, and separately approved staging HTTPS hosting.
