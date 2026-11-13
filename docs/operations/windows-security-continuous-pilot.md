@@ -239,3 +239,24 @@ conflicting replay rejection. It verifies the committed database rows
 directly afterward. This uses only synthetic test metadata and an ephemeral
 CI PostgreSQL container. It is not a remote HTTPS test and does not access
 real Windows Security logs or the production database.
+
+## Security log reset: protocol migration required
+
+The current sender checkpoint and server primary key are based on Windows
+`EventRecordID`. That number can restart after the Security log is cleared.
+A regression check on the exporter catches some resets but cannot reliably
+detect a reset if new records have already exceeded the previous checkpoint.
+**Do not automatically reset either checkpoint or delete the event file.**
+
+Before enabling unattended remote ingestion, introduce a stable, explicit
+`source_epoch` identifier across exporter, local event file, sender envelope,
+receiver validation, and PostgreSQL primary key. The epoch must change on
+verified log recreation/reset, persist across ordinary restarts, and be
+bound to the authenticated device and channel. A transition needs a safe
+migration for existing checkpoint and JSONL files, a documented manual
+recovery path for ambiguous histories, and tests for reset/reuse, interrupted
+writes, replay, and restart continuity. An arbitrary epoch generated on
+each invocation would **not** be safe.
+
+This remains a deployment blocker. Current code intentionally fails closed
+for obvious record-ID regressions and does not claim to solve log resets.
