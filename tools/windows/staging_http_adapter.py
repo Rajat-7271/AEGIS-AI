@@ -32,9 +32,11 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 
 
 def handler_factory(database: Path, expected_token: str, expected_device_id: str = "test-device",
-                    max_requests_per_minute: int = 60):
+                    max_requests_per_minute: int = 60, persist_batch=None):
     if max_requests_per_minute < 1:
         raise ValueError("Rate limit must be positive")
+    if persist_batch is None:
+        persist_batch = lambda payload: accept_batch(database, payload)
     request_times = deque()
     rate_lock = threading.Lock()
 
@@ -78,7 +80,7 @@ def handler_factory(database: Path, expected_token: str, expected_device_id: str
                 payload = json.loads(raw)
                 if not isinstance(payload, dict) or payload.get("device_id") != expected_device_id:
                     raise PermissionError("Device identity does not match credential")
-                result = accept_batch(database, payload)
+                result = persist_batch(payload)
             except PermissionError:
                 self.send_error(403)
                 return
