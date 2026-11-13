@@ -42,3 +42,23 @@ the server acknowledges durable acceptance. Keep the local exporter checkpoint
 separate to prevent loss during network outages.
 
 No production deployment or merge is authorized by this pilot.
+
+## Sender dry run (no network)
+
+After a successful local export:
+
+```powershell
+python .\tools\windows\upload_security_events.py
+python -m pytest -q .\tools\windows\test_upload_security_events.py
+```
+
+The uploader processes at most 100 pending events per invocation and keeps a
+**separate** `windows-events.upload.checkpoint` file. Dry runs do not modify
+this checkpoint. It refuses extra event fields to avoid transmitting personal
+or credential data.
+
+**Do not use `--send` yet.** The staging receiver is not implemented.
+When it exists, it must authenticate per-device credentials, validate the
+allowlist and batch size, durably persist with idempotent record keys, then
+return HTTP 200 with `{"accepted":true,"last_record_id":N}` only after
+durable acceptance. No public production endpoint is authorized.
