@@ -105,3 +105,17 @@ def test_rate_limit_rejects_excess_authenticated_requests(tmp_path):
 def test_rate_limit_configuration_rejects_zero(tmp_path):
     with pytest.raises(ValueError, match="Rate limit"):
         adapter.handler_factory(tmp_path / "rate.sqlite", "a" * 32, max_requests_per_minute=0)
+
+
+def test_bounded_server_configures_client_socket_timeout(tmp_path):
+    instance = adapter.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        adapter.handler_factory(tmp_path / "timeout.sqlite", "a" * 32),
+    )
+    try:
+        assert instance.daemon_threads is True
+        assert instance.block_on_close is False
+        assert instance.request_queue_size == 16
+        assert instance.client_timeout_seconds == 10
+    finally:
+        instance.server_close()
