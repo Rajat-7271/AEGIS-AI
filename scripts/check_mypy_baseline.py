@@ -364,7 +364,7 @@ def run_mypy(root: Path, tree: str) -> tuple[dict[str, dict[str, int]], str]:
         match = _FINDING.match(line.strip())
         if not match:
             continue
-        findings[match.group("file")][match.group("code") or "no-code"] += 1
+        findings[match.group("file").replace("\\", "/")][match.group("code") or "no-code"] += 1
     # mypy exits 1 for findings and 2 for a crash or a bad invocation. Treating
     # those the same would turn "mypy could not run" into "mypy found nothing",
     # which is the failure this whole file exists to stop.
@@ -447,7 +447,7 @@ def run_mypy_unmanaged(root: Path, files: list[str]) -> tuple[dict[str, dict[str
                 match = _FINDING.match(line.strip())
                 if not match:
                     continue
-                file = match.group("file")
+                file = match.group("file").replace("\\", "/")
                 if file not in in_scope:
                     stray.add(file)
                     continue
@@ -815,6 +815,27 @@ def _coverage_self_test() -> tuple[list[str], int]:
             (
                 "an empty scope fails rather than reporting clean",
                 "" if error and not empty else f"got {error!r}",
+            )
+        )
+
+        # Exercise diagnostic identities through mypy itself, including its
+        # platform-specific separators, rather than supplying parsed findings.
+        probe = root / "probe"
+        (probe / "nested").mkdir(parents=True)
+        (probe / "pyproject.toml").write_text('[tool.mypy]\npython_version = "3.11"\n', encoding="utf-8")
+        (probe / "nested" / "bad.py").write_text('value: int = "wrong"\n', encoding="utf-8")
+        diagnostics, error = run_mypy(root, "probe")
+        expected = {"nested/bad.py": {"assignment": 1}}
+        cases.append(
+            ("tree diagnostics use portable file identities", "" if not error and diagnostics == expected else f"{error}: {diagnostics}")
+        )
+        (root / UNMANAGED_CONFIG).write_text('[mypy]\npython_version = "3.11"\n', encoding="utf-8")
+        diagnostics, error = run_mypy_unmanaged(root, ["probe/nested/bad.py"])
+        expected = {"probe/nested/bad.py": {"assignment": 1}}
+        cases.append(
+            (
+                "unmanaged diagnostics stay in scope on every platform",
+                "" if not error and diagnostics == expected else f"{error}: {diagnostics}",
             )
         )
 

@@ -14,60 +14,62 @@ overrides:
   shell-quote: '>=1.11.0'
   source-map-js: '>=1.2.2'
 
-dependencies:
-  '@aisoc/sdk':
-    specifier: file:../../packages/sdk-ts
-    version: file:../../packages/sdk-ts(typescript@6.0.3)
-  expo:
-    specifier: ^54.0.0
-    version: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.4)(react@19.1.0)(typescript@6.0.3)
-  expo-constants:
-    specifier: ^18.0.0
-    version: 18.0.14(expo@54.0.37)(react-native@0.81.4)
-  expo-device:
-    specifier: ^8.0.0
-    version: 8.0.10(expo@54.0.37)
-  expo-linking:
-    specifier: ^8.0.0
-    version: 8.0.12(expo@54.0.37)(react-native@0.81.4)(react@19.1.0)
-  expo-local-authentication:
-    specifier: ^17.0.0
-    version: 17.0.9(expo@54.0.37)
-  expo-notifications:
-    specifier: ^0.32.0
-    version: 0.32.17(expo@54.0.37)(react-native@0.81.4)(react@19.1.0)(typescript@6.0.3)
-  expo-router:
-    specifier: ^6.0.0
-    version: 6.0.24(@expo/metro-runtime@6.1.2)(@types/react@19.1.17)(expo-constants@18.0.14)(expo-linking@8.0.12)(expo@54.0.37)(react-dom@19.3.1)(react-native-safe-area-context@5.6.2)(react-native-screens@4.16.0)(react-native@0.81.4)(react@19.1.0)
-  expo-secure-store:
-    specifier: ^15.0.0
-    version: 15.0.8(expo@54.0.37)
-  expo-status-bar:
-    specifier: ^3.0.0
-    version: 3.0.9(react-native@0.81.4)(react@19.1.0)
-  react:
-    specifier: 19.1.0
-    version: 19.1.0
-  react-native:
-    specifier: 0.81.4
-    version: 0.81.4(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
-  react-native-safe-area-context:
-    specifier: ~5.6.0
-    version: 5.6.2(react-native@0.81.4)(react@19.1.0)
-  react-native-screens:
-    specifier: ~4.16.0
-    version: 4.16.0(react-native@0.81.4)(react@19.1.0)
+importers:
 
-devDependencies:
-  '@types/react':
-    specifier: ~19.1.0
-    version: 19.1.17
-  typescript:
-    specifier: ^6.0.3
-    version: 6.0.3
-  vitest:
-    specifier: ^4.1.11
-    version: 4.1.11(vite@8.3.4)
+  .:
+    dependencies:
+      '@aisoc/sdk':
+        specifier: file:../../packages/sdk-ts
+        version: file:../../packages/sdk-ts(typescript@6.0.3)
+      expo:
+        specifier: ^54.0.0
+        version: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.4)(react@19.1.0)(typescript@6.0.3)
+      expo-constants:
+        specifier: ^18.0.0
+        version: 18.0.14(expo@54.0.37)(react-native@0.81.4)
+      expo-device:
+        specifier: ^8.0.0
+        version: 8.0.10(expo@54.0.37)
+      expo-linking:
+        specifier: ^8.0.0
+        version: 8.0.12(expo@54.0.37)(react-native@0.81.4)(react@19.1.0)
+      expo-local-authentication:
+        specifier: ^17.0.0
+        version: 17.0.9(expo@54.0.37)
+      expo-notifications:
+        specifier: ^0.32.0
+        version: 0.32.17(expo@54.0.37)(react-native@0.81.4)(react@19.1.0)(typescript@6.0.3)
+      expo-router:
+        specifier: ^6.0.0
+        version: 6.0.24(@expo/metro-runtime@6.1.2)(@types/react@19.1.17)(expo-constants@18.0.14)(expo-linking@8.0.12)(expo@54.0.37)(react-dom@19.3.1)(react-native-safe-area-context@5.6.2)(react-native-screens@4.16.0)(react-native@0.81.4)(react@19.1.0)
+      expo-secure-store:
+        specifier: ^15.0.0
+        version: 15.0.8(expo@54.0.37)
+      expo-status-bar:
+        specifier: ^3.0.0
+        version: 3.0.9(react-native@0.81.4)(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-native:
+        specifier: 0.81.4
+        version: 0.81.4(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+      react-native-safe-area-context:
+        specifier: ~5.6.0
+        version: 5.6.2(react-native@0.81.4)(react@19.1.0)
+      react-native-screens:
+        specifier: ~4.16.0
+        version: 4.16.0(react-native@0.81.4)(react@19.1.0)
+    devDependencies:
+      '@types/react':
+        specifier: ~19.1.0
+        version: 19.1.17
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(vite@8.3.4)
 
 packages:
 

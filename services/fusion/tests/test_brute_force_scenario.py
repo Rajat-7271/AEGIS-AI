@@ -45,9 +45,7 @@ class _MemoryRedis:
 
 def _metrics(events, detected_scenarios: set[str]) -> dict[str, int | float]:
     truth_by_scenario = {row.scenario_id: row.ground_truth for row in events}
-    confusion: Counter[str] = Counter(
-        {"true_positive": 0, "false_positive": 0, "false_negative": 0, "true_negative": 0}
-    )
+    confusion: Counter[str] = Counter({"true_positive": 0, "false_positive": 0, "false_negative": 0, "true_negative": 0})
     outcome_by_label = {
         ("malicious", True): "true_positive",
         ("malicious", False): "false_negative",
@@ -76,10 +74,7 @@ def test_scenario_is_repeatable_and_has_ordered_labelled_events() -> None:
     assert [row.event["ocsf_event"]["time"] for row in first] == sorted(row.event["ocsf_event"]["time"] for row in first)
     assert {row.ground_truth for row in first} == {"malicious", "benign"}
     assert all("ground_truth" not in row.event["ocsf_event"]["raw_data"] for row in first)
-    assert all(
-        {"user", "src_ip", "host", "outcome"} <= set(json.loads(row.event["ocsf_event"]["raw_data"]))
-        for row in first
-    )
+    assert all({"user", "src_ip", "host", "outcome"} <= set(json.loads(row.event["ocsf_event"]["raw_data"])) for row in first)
 
 
 @pytest.mark.asyncio

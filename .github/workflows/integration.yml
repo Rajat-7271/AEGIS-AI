@@ -26,7 +26,7 @@ name: Integration
 #                      data survives (destructive-migration detection) and
 #                      every HEAD migration applied. People upgrade; test it.
 #
-# The spine job builds `fusion` and `ingest-worker` from PR source (they own
+# The spine job builds `api`, `fusion` and `ingest-worker` from PR source (they own
 # the bridges under test) and pulls the other service images from GHCR
 # `:main` — those surfaces are gated by compose-smoke.yml with its own
 # rebuild-on-change detection.
@@ -104,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          spine_paths='services/api/ services/ingest/ services/fusion/ services/realtime/ docker-compose.yml scripts/integration/ .github/workflows/integration.yml'
+          spine_paths='services/api/ infra/postgres/initdb/ services/ingest/ services/fusion/ services/realtime/ docker-compose.yml scripts/integration/ .github/workflows/integration.yml'
           migration_paths='services/api/migrations/ services/api/app/scripts/run_migrations.py services/ueba/alembic/ services/api/tests/test_mssp_portfolio_isolation.py tests/isolation/test_postgres_rls.py tests/isolation/test_mssp_rls_live.py scripts/check_runtime_db_role.py .github/workflows/integration.yml'
           # backup_crypt.py was missing from the old filter, and it is where
           # every byte of the AES-256-GCM implementation lives — so a change
@@ -207,9 +207,9 @@ jobs:
       # /v1/ingest is authenticated and the tenant is derived from the
       # credential, so the spine test has to hold one.
       #
-      # This job covers the delegated service-token path used by connectors.
-      # Ingest validates the declared tenant before using it as a scope.
-      # The golden pipeline covers the minted per-tenant token path.
+      # It uses the service-token shape rather than a minted per-tenant
+      # token to exercise the delegated path used by connectors. The golden
+      # pipeline also covers minted tokens. Both use an API built from source.
       - name: Seed environment file
         run: |
           set -euo pipefail
@@ -260,10 +260,10 @@ jobs:
       - name: Pre-pull published images
         run: docker compose pull --ignore-pull-failures --quiet || true
 
-      # Postgres loads migrations from the checkout. Build the API from
-      # that checkout so its alert queries match the test database schema.
-      # Build after pulling so the registry cannot replace the local tags.
-      - name: Build API, fusion, and ingest from source
+      # The API model must match the checkout migrations mounted into Postgres.
+      # Build AFTER the pull so the
+      # locally-built tags are not clobbered by the registry.
+      - name: Build API + fusion + ingest from source
         run: docker compose build api fusion ingest-worker
 
       # This job verifies the FULL architecture — it asserts below that the
@@ -277,6 +277,13 @@ jobs:
       # They are written into .env by the seed step above so that every
       # compose invocation in this job — including the chaos restarts — boots
       # the same configuration this job claims to be testing.
+      - name: Record API image and migration provenance
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          docker image inspect "ghcr.io/beenuar/aisoc-core-api:${AISOC_VERSION}" --format '{{json .Id}} {{json .RepoDigests}} {{json .Config.Labels}}'
+          sha256sum services/api/migrations/*.sql
+
       - name: Boot stack (full profile — this job asserts on the lake)
         run: docker compose --profile full up -d
 
@@ -1062,18 +1069,35 @@ jobs:
           POSTGRES_CONTAINER_ID: ${{ job.services.postgres.id }}
         run: |
           pip install --quiet awscli "cryptography>=46,<51"
-          # Use the fixture's clients so pg_dump emits SQL for its server version.
-          bin="$RUNNER_TEMP/postgres-client"
-          mkdir -p "$bin"
-          cat > "$bin/postgres-client" <<'SH'
-          #!/bin/sh
-          exec docker exec -i --env PGPASSWORD "$POSTGRES_CONTAINER_ID" "${0##*/}" "$@"
+          # A newer pg_dump can read PG16 but emits SQL that PG16 cannot
+          # restore (for example transaction_timeout). Match the server.
+          # Ubuntu runner repositories do not always carry client-16 (notably
+          # ubuntu-26.04). Use the official PG16 image already used by this job.
+          # Host networking lets the clients reach the CI Postgres service at
+          # localhost; -i preserves the SQL stream consumed by restore.sh.
+          docker pull postgres:16
+          mkdir -p "$RUNNER_TEMP/pg16-bin"
+          for tool in pg_dump psql; do
+            cat > "$RUNNER_TEMP/pg16-bin/$tool" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          tool="${0##*/}"
+          exec docker run --rm -i --network host \
+            -e POSTGRES_URL -e PGPASSWORD -e PGHOST -e PGUSER -e PGDATABASE \
+            postgres:16 "$tool" "$@"
           SH
-          chmod +x "$bin/postgres-client"
-          ln -s postgres-client "$bin/pg_dump"
-          ln -s postgres-client "$bin/psql"
-          echo "$bin" >> "$GITHUB_PATH"
-          echo "POSTGRES_CONTAINER_ID=$POSTGRES_CONTAINER_ID" >> "$GITHUB_ENV"
+            chmod +x "$RUNNER_TEMP/pg16-bin/$tool"
+          done
+          echo "$RUNNER_TEMP/pg16-bin" >> "$GITHUB_PATH"
+
+      - name: Verify disaster-recovery client and server versions
+        if: needs.changes.outputs.backup == 'true'
+        run: |
+          set -euo pipefail
+          pg_dump --version | grep -E 'PostgreSQL\) 16\.'
+          psql --version | grep -E 'PostgreSQL\) 16\.'
+          version=$(PGPASSWORD=aisoc_ci_secret psql -X -h localhost -U aisoc -d aisoc -tAc 'SHOW server_version_num')
+          test "$((version / 10000))" = 16
 
       # The S3 endpoint is a fixture: what this job tests is backup.sh and
       # restore.sh, not the object store. It still has to be a real S3 server,
@@ -1290,9 +1314,9 @@ jobs:
       matrix:
         include:
           - from_ref: v7.3.1
-            upstream_commit: abff3d06cfb2bc93fb6442fe54a88e876768d0a1
+            from_sha: abff3d06cfb2bc93fb6442fe54a88e876768d0a1
           - from_ref: v7.5.0
-            upstream_commit: c00088fc426873529a2be4ae6e8e2039170cac20
+            from_sha: c00088fc426873529a2be4ae6e8e2039170cac20
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:16
@@ -1344,6 +1368,18 @@ jobs:
         id: head
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Fetch and verify the upstream release baseline
+        env:
+          RELEASE_REF: ${{ matrix.from_ref }}
+          RELEASE_SHA: ${{ matrix.from_sha }}
+        run: |
+          set -euo pipefail
+          # Forks need not publish upstream release tags. Fetch only the
+          # historical schema, and reject a moved tag before using it.
+          git fetch --no-tags https://github.com/beenuar/AiSOC.git "refs/tags/${RELEASE_REF}"
+          test "$(git rev-parse FETCH_HEAD^{commit})" = "$RELEASE_SHA"
+          git update-ref "refs/upgrade-baselines/${RELEASE_REF}" "$RELEASE_SHA"
+
       - name: Install the released schema (${{ matrix.from_ref }})
         env:
           UPSTREAM_COMMIT: ${{ matrix.upstream_commit }}
@@ -1356,7 +1392,7 @@ jobs:
           # migrations dir exactly matches the released set (otherwise HEAD's
           # newer files leak in and pass 1 silently becomes a fresh apply).
           rm -rf services/api/migrations
-          git checkout "$UPSTREAM_COMMIT" -- services/api/migrations
+          git checkout "refs/upgrade-baselines/${{ matrix.from_ref }}" -- services/api/migrations
           echo "migration files at ${{ matrix.from_ref }}: $(ls services/api/migrations/*.sql | wc -l)"
           ( cd services/api && python -m app.scripts.run_migrations )
 

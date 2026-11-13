@@ -159,3 +159,6 @@ services/api/tests/test_evidence_bundle.py:generic-api-key:26
 # generated lock file.
 detections/rule-ids.lock.json:generic-api-key:841
 detections/rule-ids.lock.json:generic-api-key:854
+
+# Render feature-flag name and boolean value, not an authentication credential.
+render-free.yaml:generic-api-key:75

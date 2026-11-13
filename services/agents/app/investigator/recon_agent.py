@@ -14,8 +14,8 @@ import asyncio
 import ipaddress
 import re
 import time
-from urllib.parse import urlsplit
 from typing import Any
+from urllib.parse import urlsplit
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -38,7 +38,13 @@ logger = structlog.get_logger()
 _VALID_HASH_LENGTHS = {32, 40, 64, 128}
 _DOMAIN_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 _EXECUTABLE_SUFFIXES = (
-    ".exe", ".dll", ".sys", ".bat", ".cmd", ".ps1", ".msi",
+    ".exe",
+    ".dll",
+    ".sys",
+    ".bat",
+    ".cmd",
+    ".ps1",
+    ".msi",
 )
 
 
@@ -74,10 +80,7 @@ def _is_valid_recon_ioc(ioc: Any) -> bool:
         ):
             return False
         labels = domain.split(".")
-        return all(
-            len(label) <= 63 and _DOMAIN_LABEL.fullmatch(label) is not None
-            for label in labels
-        )
+        return all(len(label) <= 63 and _DOMAIN_LABEL.fullmatch(label) is not None for label in labels)
 
     if ioc_type == "url":
         try:
@@ -87,16 +90,12 @@ def _is_valid_recon_ioc(ioc: Any) -> bool:
             # Validate the hostname and any explicitly supplied port.
             if parsed.port is not None and not (1 <= parsed.port <= 65535):
                 return False
-            return _is_valid_recon_ioc({"type": "domain", "value": parsed.hostname}) or (
-                _is_valid_ip_host(parsed.hostname)
-            )
+            return _is_valid_recon_ioc({"type": "domain", "value": parsed.hostname}) or (_is_valid_ip_host(parsed.hostname))
         except ValueError:
             return False
 
     if ioc_type == "hash":
-        return len(value) in _VALID_HASH_LENGTHS and all(
-            ch in "0123456789abcdefABCDEF" for ch in value
-        )
+        return len(value) in _VALID_HASH_LENGTHS and all(ch in "0123456789abcdefABCDEF" for ch in value)
 
     return False
 

@@ -45,6 +45,8 @@ function safeBase(url: string): string {
 }
 
 export const API_BASE = safeBase(process.env.NEXT_PUBLIC_API_URL || "");
+// Copilot talks directly to the public Agents service; other routes keep using the Next.js proxy.
+const COPILOT_BASE = process.env.NEXT_PUBLIC_AGENTS_URL || API_BASE;
 const AGENTS_BASE = safeBase(process.env.NEXT_PUBLIC_AGENTS_URL || "");
 const ACTIONS_BASE = safeBase(process.env.NEXT_PUBLIC_ACTIONS_URL || "");
 const FUSION_BASE = safeBase(process.env.NEXT_PUBLIC_FUSION_URL || "");
@@ -5447,11 +5449,14 @@ export interface CopilotChatResponse {
 
 export const copilotApi = {
   listConversations: () =>
-    request<{ conversations: CopilotConversation[] }>("/api/v1/copilot/conversations"),
+    request<{ conversations: CopilotConversation[] }>("/api/v1/copilot/conversations", {
+      baseUrl: COPILOT_BASE,
+    }),
 
   getConversation: (id: string) =>
     request<{ id: string; title: string; messages: CopilotMessage[] }>(
-      `/api/v1/copilot/conversations/${id}`
+      `/api/v1/copilot/conversations/${id}`,
+      { baseUrl: COPILOT_BASE }
     ),
 
   /** One-shot chat call. UI should support optimistic append + rollback. */
@@ -5459,6 +5464,7 @@ export const copilotApi = {
     request<CopilotChatResponse>("/api/v1/copilot/chat", {
       method: "POST",
       body: JSON.stringify(req),
+      baseUrl: COPILOT_BASE,
     }),
 
   /**
@@ -5467,7 +5473,7 @@ export const copilotApi = {
    * Callers should consume via `Response.body.getReader()`.
    */
   streamChat: (req: CopilotChatRequest, signal?: AbortSignal) =>
-    fetch(`${API_BASE}/api/v1/copilot/chat/stream`, {
+    fetch(`${COPILOT_BASE}/api/v1/copilot/chat/stream`, {
       method: "POST",
       headers: apiHeaders(),
       body: JSON.stringify(req),

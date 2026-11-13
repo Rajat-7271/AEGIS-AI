@@ -33,9 +33,7 @@ class _Connection:
                 (
                     {"payload": event["payload"]}
                     for event in self.events
-                    if event["run_id"] == args[0]
-                    and event["tenant_id"] == args[1]
-                    and event["payload"].get("idempotency_key") == args[2]
+                    if event["run_id"] == args[0] and event["tenant_id"] == args[1] and event["payload"].get("idempotency_key") == args[2]
                 ),
                 None,
             )

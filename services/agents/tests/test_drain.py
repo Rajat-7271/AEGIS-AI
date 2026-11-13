@@ -56,9 +56,7 @@ async def test_cancelled_http_request_releases_its_lease() -> None:
         await asyncio.Event().wait()
         return {"ok": True}
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://agents"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://agents") as client:
         request = asyncio.create_task(client.get("/hang"))
         await entered.wait()
         request.cancel()
@@ -139,9 +137,7 @@ async def test_in_flight_background_investigation_finishes_and_new_one_is_reject
         background_tasks.add_task(fake_investigation)
         return {"status": "running"}
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://agents"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://agents") as client:
         existing = asyncio.create_task(client.post("/api/v1/cases/case-1/investigate"))
         await started.wait()
         assert (await controller.snapshot())["active"] == {"active_investigations": 1}
@@ -232,9 +228,7 @@ async def test_drain_endpoint_auth_and_repeated_requests_are_idempotent(monkeypa
     app.include_router(drain_router)
     headers = {"X-AiSOC-Drain-Token": "test-drain-secret"}
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://agents"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://agents") as client:
         denied = await client.get("/ops/drain")
         assert denied.status_code == 401
         first = await client.post("/ops/drain?wait_seconds=1", headers=headers)
@@ -273,9 +267,7 @@ def test_real_investigation_websocket_is_rejected_after_drain() -> None:
     asyncio.run(drain_controller.begin())
     client = TestClient(app)
     with pytest.raises(WebSocketDisconnect) as error:
-        with client.websocket_connect(
-            "/api/v1/investigations/unknown/stream?case_id=case-1&alert_summary=explicit"
-        ):
+        with client.websocket_connect("/api/v1/investigations/unknown/stream?case_id=case-1&alert_summary=explicit"):
             pytest.fail("draining service accepted a new investigation stream")
     assert error.value.code == 1013
 

@@ -56,13 +56,13 @@ def test_tenant_filter_can_exclude_shared():
 @pytest.mark.asyncio
 async def test_search_as_A_cannot_include_B_in_its_filter():
     client = MagicMock()
-    client.search = AsyncMock(return_value=[])
+    client.query_points = AsyncMock(return_value=MagicMock(points=[]))
     store = QdrantStore(client)
 
     await store.semantic_search(" transfer to attacker", tenant_id="tenant-A")
 
-    client.search.assert_awaited_once()
-    query_filter = client.search.await_args.kwargs["query_filter"]
+    client.query_points.assert_awaited_once()
+    query_filter = client.query_points.await_args.kwargs["query_filter"]
     allowed = _match_any_values(query_filter)
     assert "tenant-A" in allowed
     assert "tenant-B" not in allowed  # A can never read B
@@ -71,10 +71,10 @@ async def test_search_as_A_cannot_include_B_in_its_filter():
 @pytest.mark.asyncio
 async def test_search_without_tenant_is_flagged_as_privileged():
     client = MagicMock()
-    client.search = AsyncMock(return_value=[])
+    client.query_points = AsyncMock(return_value=MagicMock(points=[]))
     store = QdrantStore(client)
     await store.semantic_search("q", tenant_id=None)
-    assert client.search.await_args.kwargs["query_filter"] is None
+    assert client.query_points.await_args.kwargs["query_filter"] is None
 
 
 # ── Writes stamp tenant + avoid cross-tenant collisions ──────────────────────

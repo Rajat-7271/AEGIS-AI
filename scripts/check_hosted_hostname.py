@@ -223,6 +223,7 @@ ALLOWED: dict[str, tuple[int, str]] = {
     "services/api/app/services/waitlist/rate_limit.py": (1, _MANAGED_FEATURE),
     "services/mesh/app/main.py": (1, _MANAGED_FEATURE),
     # --- uuid5 namespace seeds: compatibility constants, not URLs ----------
+    "tests/e2e/golden_pipeline/run_golden_pipeline.py": (1, _UUID_SEED),
     "services/agents/app/orchestrator/router.py": (2, _UUID_SEED),
     "services/agents/app/workers/fused_alert_consumer.py": (1, _UUID_SEED),
     "tests/e2e/golden_pipeline/run_golden_pipeline.py": (1, _UUID_SEED),

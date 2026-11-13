@@ -103,9 +103,7 @@ async def reap_once() -> int:
     return len(closed)
 
 
-async def run_forever(
-    *, interval_seconds: float | None = None, stop_event: asyncio.Event | None = None
-) -> None:
+async def run_forever(*, interval_seconds: float | None = None, stop_event: asyncio.Event | None = None) -> None:
     """Reap on a fixed cadence; a stop request finishes the current pass."""
     interval = interval_seconds or DEFAULT_INTERVAL_SECONDS
     consecutive_failures = 0

@@ -260,8 +260,12 @@ async def load_sample_data(
             detail="The authenticated session carries no usable tenant.",
         ) from exc
 
+    if not sample_data.is_standalone_mode():
+        # Complete/commit the read transaction so db resources aren't held during external HTTP call
+        await db.commit()
+
     try:
-        result = await sample_data.load(tenant_id=tenant_id)
+        result = await sample_data.load(tenant_id=tenant_id, db=db)
     except sample_data.SampleDataError as exc:
         # 502, not 500: the API is fine and something it depends on is
         # not, and the message says which.

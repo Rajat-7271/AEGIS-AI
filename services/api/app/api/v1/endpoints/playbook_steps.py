@@ -109,9 +109,7 @@ async def simulate_alert_response(
     payload = verdict_event.payload if verdict_event and isinstance(verdict_event.payload, dict) else {}
     proposals = payload.get("proposed_actions") if isinstance(payload.get("proposed_actions"), list) else []
     if not any(
-        isinstance(proposal, dict)
-        and proposal.get("action_type") == body.capability
-        and proposal.get("target") == body.target
+        isinstance(proposal, dict) and proposal.get("action_type") == body.capability and proposal.get("target") == body.target
         for proposal in proposals
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="response proposal not found")
@@ -187,11 +185,7 @@ async def simulate_alert_response(
     return {
         "proposal_status": "proposed",
         "status": (
-            "simulated"
-            if simulated
-            else "failed"
-            if action_status in {"simulated", "succeeded", "awaiting_completion"}
-            else action_status
+            "simulated" if simulated else "failed" if action_status in {"simulated", "succeeded", "awaiting_completion"} else action_status
         ),
         "simulated": simulated,
         "executed": executed,

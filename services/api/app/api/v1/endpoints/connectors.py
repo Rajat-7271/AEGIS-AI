@@ -267,7 +267,12 @@ class UpdateConnectorRequest(BaseModel):
     # Accept the raw value here and validate it manually below. FastAPI's
     # default Pydantic error includes rejected input values; that could echo a
     # credential if a malformed auth_config is sent.
-    auth_config: Annotated[Any, WithJsonSchema({"type": "object", "additionalProperties": True})] | None = Field(
+    # Override the whole schema: field extras leave Any's empty anyOf branch
+    # in place, which advertises arbitrary JSON despite the endpoint's check.
+    auth_config: Annotated[
+        Any | None,
+        WithJsonSchema({"anyOf": [{"type": "object", "additionalProperties": True}, {"type": "null"}]}),
+    ] = Field(
         default=None,
         description="Partial secret-field replacements. Blank values preserve the stored credentials.",
     )
@@ -892,9 +897,7 @@ async def update_connector(
         updates["updated_at"] = datetime.now(UTC)
         try:
             await db.execute(
-                update(Connector)
-                .where(Connector.id == connector_id, Connector.tenant_id == current_user.tenant_id)
-                .values(**updates)
+                update(Connector).where(Connector.id == connector_id, Connector.tenant_id == current_user.tenant_id).values(**updates)
             )
             await db.commit()
         except Exception:
@@ -926,17 +929,14 @@ async def _merge_connector_credential_patch(
 
     catalog_entry = await _validate_connector_type(connector.connector_type, tenant_id)
     secret_fields = {
-        field.get("name")
+        field["name"]
         for field in catalog_entry.get("fields", [])
         if isinstance(field, dict) and field.get("type") == "secret" and isinstance(field.get("name"), str)
     }
     required_secret_fields = {
-        field.get("name")
+        field["name"]
         for field in catalog_entry.get("fields", [])
-        if isinstance(field, dict)
-        and field.get("type") == "secret"
-        and field.get("required", True)
-        and isinstance(field.get("name"), str)
+        if isinstance(field, dict) and field.get("type") == "secret" and field.get("required", True) and isinstance(field.get("name"), str)
     }
 
     replacements: dict[str, str] = {}
@@ -963,9 +963,7 @@ async def _merge_connector_credential_patch(
         merged_auth = vault.decrypt_dict(connector.auth_config or {})
         merged_auth.update(replacements)
         missing_required = {
-            name
-            for name in required_secret_fields
-            if not isinstance(merged_auth.get(name), str) or not merged_auth[name].strip()
+            name for name in required_secret_fields if not isinstance(merged_auth.get(name), str) or not merged_auth[name].strip()
         }
         if missing_required:
             raise HTTPException(

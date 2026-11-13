@@ -171,9 +171,7 @@ class TestTheInvestigationRunReadIsScoped:
         ],
     )
     @pytest.mark.asyncio
-    async def test_a_run_without_case_ownership_metadata_is_refused(
-        self, handler: Any, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_a_run_without_case_ownership_metadata_is_refused(self, handler: Any, monkeypatch: pytest.MonkeyPatch) -> None:
         """Missing case metadata must not bypass the run-to-case check."""
         monkeypatch.setattr(cases, "_resolve_case_id", AsyncMock(return_value=uuid.uuid4()))
         proxy = AsyncMock(return_value=_proxy_response({"status": "completed"}))
@@ -198,17 +196,13 @@ class TestTheInvestigationRunReadIsScoped:
         proxy = AsyncMock(side_effect=[_proxy_response({"case_id": str(mine)}), markdown])
         monkeypatch.setattr(cases, "_agents_proxy", proxy)
 
-        response = await cases.case_investigation_report_md(
-            case_id="INC-001", run_id="r-1", db=MagicMock(), user=_user()
-        )
+        response = await cases.case_investigation_report_md(case_id="INC-001", run_id="r-1", db=MagicMock(), user=_user())
 
         assert response.body == b"# Incident report"
         assert proxy.await_count == 2
 
     @pytest.mark.asyncio
-    async def test_a_case_owned_pdf_is_rendered_from_the_report_html(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_a_case_owned_pdf_is_rendered_from_the_report_html(self, monkeypatch: pytest.MonkeyPatch) -> None:
         mine = uuid.uuid4()
         monkeypatch.setattr(cases, "_resolve_case_id", AsyncMock(return_value=mine))
         html = MagicMock(status_code=200, text="<html>Incident report</html>")
@@ -220,9 +214,7 @@ class TestTheInvestigationRunReadIsScoped:
             SimpleNamespace(HTML=lambda *, string: SimpleNamespace(write_pdf=lambda: b"%PDF-test")),
         )
 
-        response = await cases.case_investigation_pdf(
-            case_id="INC-001", run_id="r-1", db=MagicMock(), user=_user()
-        )
+        response = await cases.case_investigation_pdf(case_id="INC-001", run_id="r-1", db=MagicMock(), user=_user())
 
         assert response.body == b"%PDF-test"
         assert response.media_type == "application/pdf"

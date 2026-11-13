@@ -147,7 +147,11 @@ def extract_iocs(text: str) -> list[dict[str, str]]:
         iocs.append({"type": "ip", "value": m.group()})
     for m in domain_pattern.finditer(text):
         val = m.group()
-        if "." in val and not val.lower().endswith((".exe", ".dll", ".sys", ".bat", ".cmd", ".ps1", ".msi")) and not any(d["value"] == val for d in iocs):
+        if (
+            "." in val
+            and not val.lower().endswith((".exe", ".dll", ".sys", ".bat", ".cmd", ".ps1", ".msi"))
+            and not any(d["value"] == val for d in iocs)
+        ):
             iocs.append({"type": "domain", "value": val})
 
     return iocs

@@ -172,17 +172,22 @@ function buildDemoReply(prompt: string): CopilotMessage {
 
 // ─── Markdown-ish renderer (lightweight) ─────────────────────────────────────
 
-function renderRichText(content: string): React.ReactNode {
+export function renderCopilotRichText(content: string): React.ReactNode {
   // Very small subset: **bold**, `code`, # headings, > blockquote, - lists,
   // and pipe tables. Good enough for assistant replies without pulling in
   // a full markdown library.
-  const lines = content.split('\n');
+  const lines = content.split('\n').map((line) =>
+    line.replace(/^\\(#{1,6}\s)/, '$1')
+      .replace(/^\\(-{3,}\s*)$/, '$1')
+      .replace(/^\\(`{3,}|~{3,})/, '$1'),
+  );
   const blocks: React.ReactNode[] = [];
   let i = 0;
 
   const inline = (text: string): React.ReactNode => {
+    text = text.replace(/\\([*`])/g, '$1');
     const parts: React.ReactNode[] = [];
-    const re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    const re = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g;
     let lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
@@ -193,6 +198,12 @@ function renderRichText(content: string): React.ReactNode {
           <strong key={`b-${m.index}`} className="font-semibold text-white">
             {token.slice(2, -2)}
           </strong>,
+        );
+      } else if (token.startsWith('*')) {
+        parts.push(
+          <em key={`em-${m.index}`} className="italic text-slate-200">
+            {token.slice(1, -1)}
+          </em>,
         );
       } else if (token.startsWith('`')) {
         parts.push(
@@ -212,6 +223,37 @@ function renderRichText(content: string): React.ReactNode {
 
   while (i < lines.length) {
     const line = lines[i];
+
+    // Render fenced code as inert text; never execute or parse as HTML.
+    const fence = line.trim().match(/^(`{3,}|~{3,})([a-zA-Z0-9_-]*)\s*$/);
+    if (fence) {
+      const marker = fence[1][0];
+      const width = fence[1].length;
+      const language = fence[2];
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length) {
+        const closing = lines[i].trim();
+        if (closing.length >= width && [...closing].every((ch) => ch === marker)) break;
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      blocks.push(
+        <pre key={i} className="my-3 overflow-x-auto rounded-lg bg-slate-950/80 p-3 text-xs text-slate-200">
+          {language && <span className="mb-2 block text-slate-500">{language}</span>}
+          <code className="font-mono whitespace-pre">{codeLines.join('\n')}</code>
+        </pre>,
+      );
+      continue;
+    }
+
+    // Render Markdown separators as rules instead of literal backslash/hyphen text.
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      blocks.push(<hr key={i} className="my-3 border-slate-700/60" />);
+      i++;
+      continue;
+    }
 
     // Table: header | --- | rows
     if (line.includes('|') && lines[i + 1]?.match(/^\s*\|?\s*-/)) {
@@ -262,10 +304,11 @@ function renderRichText(content: string): React.ReactNode {
       continue;
     }
 
-    if (line.startsWith('# ')) {
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
       blocks.push(
-        <h2 key={i} className="mt-3 text-lg font-semibold text-white">
-          {inline(line.slice(2))}
+        <h2 key={i} className={heading[1].length <= 2 ? "mt-3 text-lg font-semibold text-white" : "mt-3 text-base font-semibold text-white"}>
+          {inline(heading[2])}
         </h2>,
       );
       i++;
@@ -417,6 +460,8 @@ export function CopilotView() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  // State updates are asynchronous; this ref blocks a second submit in the same tick.
+  const requestInFlight = useRef(false);
   const [error, setError] = useState<unknown>(null);
   // The prompt whose request failed, so the retry re-issues *that* request
   // rather than making the operator retype it.
@@ -444,7 +489,8 @@ export function CopilotView() {
    */
   const send = async (prompt: string, { replay = false }: { replay?: boolean } = {}) => {
     const trimmed = prompt.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || requestInFlight.current) return;
+    requestInFlight.current = true;
 
     if (!replay) {
       const userMsg: CopilotMessage = {
@@ -524,6 +570,7 @@ export function CopilotView() {
       setError(err);
       setFailedPrompt(trimmed);
     } finally {
+      requestInFlight.current = false;
       setSending(false);
     }
   };
@@ -694,7 +741,7 @@ export function CopilotView() {
                       )}
                     >
                       {m.role === 'assistant' ? (
-                        renderRichText(m.content)
+                        renderCopilotRichText(m.content)
                       ) : (
                         <p className="whitespace-pre-wrap text-sm text-slate-100">
                           {m.content}

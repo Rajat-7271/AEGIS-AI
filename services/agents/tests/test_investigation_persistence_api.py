@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import uuid
@@ -173,9 +172,7 @@ def test_in_memory_run_hides_its_internal_tenant_id(setup_api) -> None:
     assert "tenant_id" not in response.json()
 
 
-def test_websocket_refuses_another_tenants_in_memory_run(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_refuses_another_tenants_in_memory_run(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, _ = setup_api
     investigate_mod._runs[RUN_ID] = {
         "run_id": RUN_ID,
@@ -194,9 +191,7 @@ def test_websocket_refuses_another_tenants_in_memory_run(
     assert exc.value.code == 1008
 
 
-def test_websocket_still_streams_an_owned_in_memory_run(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_still_streams_an_owned_in_memory_run(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, _ = setup_api
     investigate_mod._runs[RUN_ID] = {
         "run_id": RUN_ID,
@@ -215,9 +210,7 @@ def test_websocket_still_streams_an_owned_in_memory_run(
     assert message["status"] == "completed"
 
 
-def test_websocket_replays_terminal_event_for_persisted_run(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_replays_terminal_event_for_persisted_run(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, state = setup_api
     state["runs"][(uuid.UUID(RUN_ID), TENANT_A)] = {
         "id": uuid.UUID(RUN_ID),
@@ -256,9 +249,7 @@ def test_websocket_replays_terminal_event_for_persisted_run(
     }
 
 
-def test_websocket_does_not_restart_a_persisted_running_run(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_does_not_restart_a_persisted_running_run(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, state = setup_api
     state["runs"][(uuid.UUID(RUN_ID), TENANT_A)] = {
         "id": uuid.UUID(RUN_ID),
@@ -292,9 +283,7 @@ def test_websocket_does_not_restart_a_persisted_running_run(
     assert exc.value.code == 1013
 
 
-def test_websocket_refuses_missing_run_without_starting_investigation(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_refuses_missing_run_without_starting_investigation(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, _ = setup_api
 
     async def principal_for_tenant_a(_ws) -> TenantPrincipal:
@@ -312,9 +301,7 @@ def test_websocket_refuses_missing_run_without_starting_investigation(
     assert exc.value.code == 1008
 
 
-def test_websocket_refuses_persisted_run_from_another_tenant(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_refuses_persisted_run_from_another_tenant(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, state = setup_api
     state["runs"][(uuid.UUID(RUN_ID), TENANT_A)] = {
         "id": uuid.UUID(RUN_ID),
@@ -340,9 +327,7 @@ def test_websocket_refuses_persisted_run_from_another_tenant(
     assert exc.value.code == 1008
 
 
-def test_websocket_preserves_explicit_adhoc_investigation(
-    setup_api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_websocket_preserves_explicit_adhoc_investigation(setup_api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, _ = setup_api
     seen: list[dict[str, Any]] = []
 
@@ -356,9 +341,7 @@ def test_websocket_preserves_explicit_adhoc_investigation(
     monkeypatch.setattr(investigate_mod, "_ws_principal", principal_for_tenant_a)
     monkeypatch.setattr(investigate_mod, "_investigate_stream", fake_adhoc_stream)
 
-    with client.websocket_connect(
-        f"/api/v1/investigations/{RUN_ID}/stream?case_id=adhoc-case&alert_summary=adhoc-summary"
-    ) as ws:
+    with client.websocket_connect(f"/api/v1/investigations/{RUN_ID}/stream?case_id=adhoc-case&alert_summary=adhoc-summary") as ws:
         message = ws.receive_json()
 
     assert message["type"] == "done"

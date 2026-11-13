@@ -44,6 +44,7 @@ passed.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import os
 import re
 import subprocess
@@ -319,15 +320,23 @@ async def _seed_row(conn, table: str, tenant: uuid.UUID, enum_labels: dict[str, 
     names = ["tenant_id"]
     values = [tenant_literal]
     for col in cols:
-        literal = _literal_for(
-            col["data_type"],
-            col["udt_name"],
-            enum_labels,
-            nonce=nonce,
-            allowed=vocab.get(col["column_name"]),
-            max_len=col["character_maximum_length"],
-            exact_len=exact.get(col["column_name"]),
-        )
+        # Invitations require a unique SHA-256 digest and an expiry strictly
+        # after created_at (whose default is the same transaction's now()).
+        # Keep both constraints intact while exercising this table's policy.
+        if table == "tenant_admin_invitations" and col["column_name"] == "token_hash":
+            literal = "'" + hashlib.sha256(f"{tenant}:{nonce}".encode()).hexdigest() + "'"
+        elif table == "tenant_admin_invitations" and col["column_name"] == "expires_at":
+            literal = "now() + interval '1 day'"
+        else:
+            literal = _literal_for(
+                col["data_type"],
+                col["udt_name"],
+                enum_labels,
+                nonce=nonce,
+                allowed=vocab.get(col["column_name"]),
+                max_len=col["character_maximum_length"],
+                exact_len=exact.get(col["column_name"]),
+            )
         if literal == "DEFAULT":
             continue
         names.append(f'"{col["column_name"]}"')

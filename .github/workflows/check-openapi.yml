@@ -6,6 +6,8 @@ on:
       - "services/api/**"
       - "docs/openapi.yaml"
       - "scripts/export_openapi.py"
+      - "scripts/service_requirements.py"
+      - ".github/workflows/check-openapi.yml"
   push:
     branches: [main]
     paths:
@@ -44,7 +46,9 @@ jobs:
           cache: pip
 
       - name: Install API dependencies
-        run: pip install --quiet ${{ env.OPENAPI_DEPS }}
+        run: |
+          python scripts/service_requirements.py api --locked --only main > /tmp/api-locked.txt
+          pip install --quiet --no-deps -r /tmp/api-locked.txt
 
       - name: Export and check OpenAPI schema
         run: python scripts/export_openapi.py --check
@@ -108,7 +112,9 @@ jobs:
           cache: pip
 
       - name: Install API dependencies
-        run: pip install --quiet ${{ env.OPENAPI_DEPS }}
+        run: |
+          python scripts/service_requirements.py api --locked --only main > /tmp/api-locked.txt
+          pip install --quiet --no-deps -r /tmp/api-locked.txt
 
       - name: Regenerate and commit openapi.yaml
         run: |

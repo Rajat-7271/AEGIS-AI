@@ -13,10 +13,11 @@ import html
 import re
 import time
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import structlog
+
 from app.tools.mitre import lookup_technique
 from app.tools.mitre_full import get_technique
 
@@ -111,11 +112,7 @@ def _render_enrichment(state: InvestigatorState) -> list[str]:
 
         sources = result.get("sources")
         if isinstance(sources, list):
-            source_names = [
-                source.get("name")
-                for source in sources
-                if isinstance(source, dict) and isinstance(source.get("name"), str)
-            ]
+            source_names = [source.get("name") for source in sources if isinstance(source, dict) and isinstance(source.get("name"), str)]
             if source_names:
                 detail_parts.append(f"sources: {_md_value(', '.join(source_names), limit=300)}")
 
@@ -253,12 +250,14 @@ def render_incident_report_md(state: InvestigatorState) -> str:
         "",
     ]
     if state.forensic.timeline:
-        lines.extend([
-            "The following chronology is an automated hypothesis; verify each timestamp against source telemetry.",
-            "",
-            "| Time | Event | Source |",
-            "|---|---|---|",
-        ])
+        lines.extend(
+            [
+                "The following chronology is an automated hypothesis; verify each timestamp against source telemetry.",
+                "",
+                "| Time | Event | Source |",
+                "|---|---|---|",
+            ]
+        )
         for event in state.forensic.timeline[:50]:
             if not isinstance(event, dict):
                 continue
@@ -285,7 +284,14 @@ def render_incident_report_md(state: InvestigatorState) -> str:
         if _MITRE_ID.fullmatch(technique_id) and technique_id not in techniques:
             techniques.append(technique_id)
     if techniques:
-        lines.extend(["Candidate mappings; these are not a confirmed attribution of adversary behavior.", "", "| ID | Canonical name | Tactic |", "|---|---|---|"])
+        lines.extend(
+            [
+                "Candidate mappings; these are not a confirmed attribution of adversary behavior.",
+                "",
+                "| ID | Canonical name | Tactic |",
+                "|---|---|---|",
+            ]
+        )
         for technique_id in techniques:
             name, tactic = _mitre_name(technique_id)
             if name == "Canonical mapping unavailable":
@@ -320,7 +326,15 @@ def render_incident_report_md(state: InvestigatorState) -> str:
     if artefacts:
         lines.append("- **Unverified artifact hypotheses:** " + ", ".join(f"`{_md_value(item, limit=256)}`" for item in artefacts))
 
-    lines.extend(["", "## Threat Actor Attribution", "", "Attribution is unconfirmed. Model-generated actor names are leads only and require corroborating threat-intelligence evidence."])
+    lines.extend(
+        [
+            "",
+            "## Threat Actor Attribution",
+            "",
+            "Attribution is unconfirmed. Model-generated actor names are leads only and require "
+            "corroborating threat-intelligence evidence.",
+        ]
+    )
     actor_hypotheses = sanitize_iterable_of_strings(state.recon.threat_actors, max_item_len=128, max_items=20)
     lines.append("")
     if actor_hypotheses:
@@ -348,7 +362,19 @@ def render_incident_report_md(state: InvestigatorState) -> str:
         lines.extend(["", "### Additional proposals"])
         lines.extend(recommendations)
 
-    lines.extend(["", "## Recommendations", "", "Validate process lineage, command-line or script-block evidence, user context, file path, hash, and publisher signature. Correlate these with the original endpoint telemetry before attributing an actor or authorizing containment or remediation.", "", "## Appendix: Enrichment Data", ""])
+    lines.extend(
+        [
+            "",
+            "## Recommendations",
+            "",
+            "Validate process lineage, command-line or script-block evidence, user context, file "
+            "path, hash, and publisher signature. Correlate these with the original endpoint "
+            "telemetry before attributing an actor or authorizing containment or remediation.",
+            "",
+            "## Appendix: Enrichment Data",
+            "",
+        ]
+    )
     lines.extend(_render_enrichment(state))
     return "\n".join(lines).rstrip() + "\n"
 

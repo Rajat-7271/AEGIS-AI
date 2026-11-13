@@ -506,8 +506,18 @@ async def test_case_timeline_orders_audited_changes_and_keeps_recorded_actor() -
         [
             _case_row(id=cid, created_at=created_at, updated_at=later, created_by="creator@example.com"),
             [
-                _audit_row(id=uuid.uuid4(), created_at=later, changes={"status": {"from": "triaged", "to": "investigating"}}, actor_email="second@example.com"),
-                _audit_row(id=uuid.uuid4(), created_at=earlier, changes={"severity": {"from": "medium", "to": "high"}}, actor_email="first@example.com"),
+                _audit_row(
+                    id=uuid.uuid4(),
+                    created_at=later,
+                    changes={"status": {"from": "triaged", "to": "investigating"}},
+                    actor_email="second@example.com",
+                ),
+                _audit_row(
+                    id=uuid.uuid4(),
+                    created_at=earlier,
+                    changes={"severity": {"from": "medium", "to": "high"}},
+                    actor_email="first@example.com",
+                ),
             ],
             [],
             [],

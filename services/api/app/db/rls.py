@@ -31,7 +31,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import CurrentUser, get_current_user
-from app.db.database import AsyncSessionLocal
+from app.db.database import get_db
 
 
 async def set_rls_context(session: AsyncSession, tenant_id: uuid.UUID) -> None:
@@ -44,20 +44,20 @@ async def set_rls_context(session: AsyncSession, tenant_id: uuid.UUID) -> None:
 
 async def get_tenant_db(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: AsyncSession = Depends(get_db),
 ) -> AsyncGenerator[AsyncSession, None]:
     """DB session scoped to the authenticated user's tenant via Postgres RLS.
 
-    Yields an ``AsyncSession`` where ``app.current_tenant_id`` is set to the
-    current user's tenant UUID for the duration of the transaction.
+    Reuses the request's database session (from ``get_db``) and sets
+    ``app.current_tenant_id`` to the current user's tenant UUID for the
+    duration of the transaction.
     """
-    async with AsyncSessionLocal() as session:
-        try:
-            await set_rls_context(session, current_user.tenant_id)
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+    await set_rls_context(session, current_user.tenant_id)
+    try:
+        yield session
+    except Exception:
+        await session.rollback()
+        raise
 
 
 # Convenience type alias — use this as the dependency type in route signatures
