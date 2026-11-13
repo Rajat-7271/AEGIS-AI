@@ -6,7 +6,10 @@ validated homogeneous batch. This module never reads or writes v1 checkpoints.
 from __future__ import annotations
 
 import json
+import socket
 import ssl
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -52,13 +55,26 @@ def send_epoch_batch(endpoint: str, token: str, envelope: dict) -> int:
     opener = urllib.request.build_opener(
         urllib.request.HTTPSHandler(context=ssl.create_default_context()), NoRedirect
     )
-    with opener.open(request, timeout=15) as response:
-        if response.status != 200:
-            raise ValueError("Server did not acknowledge batch")
-        raw = response.read(4097)
-        if len(raw) > 4096:
-            raise ValueError("Oversized acknowledgement")
-        ack = json.loads(raw)
+    # The free staging receiver can cold-start for 50+ seconds. A retry
+    # reuses the identical envelope; the server's epoch-aware key makes
+    # committed replays idempotent. No checkpoint is advanced here.
+    for attempt in range(3):
+        try:
+            with opener.open(request, timeout=120) as response:
+                if response.status != 200:
+                    raise ValueError("Server did not acknowledge batch")
+                raw = response.read(4097)
+                if len(raw) > 4096:
+                    raise ValueError("Oversized acknowledgement")
+                ack = json.loads(raw)
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 502, 503, 504) or attempt == 2:
+                raise
+        except (urllib.error.URLError, TimeoutError, socket.timeout):
+            if attempt == 2:
+                raise
+        time.sleep(2 ** attempt)
     if (not isinstance(ack, dict) or set(ack) != {"accepted", "last_record_id"}
             or ack["accepted"] is not True
             or type(ack["last_record_id"]) is not int
