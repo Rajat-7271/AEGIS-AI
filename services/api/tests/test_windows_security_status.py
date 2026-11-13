@@ -96,6 +96,20 @@ def test_auth_permission_and_tenant_precede_upstream_access(client, monkeypatch)
     assert response.json() == {"configured": False}
 
 
+@pytest.mark.parametrize("token", ["x" * 32 + "\u00e9", "x" * 32 + "\n"])
+def test_invalid_configured_token_is_safe_service_error(client, monkeypatch, token):
+    http, keys = client
+    monkeypatch.setenv("AEGIS_WINDOWS_STAGING_TOKEN", token)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Invalid configured token reached upstream client")
+
+    monkeypatch.setattr(windows_security.httpx, "AsyncClient", forbidden)
+    response = http.get("/api/v1/windows-security/status", headers={"Authorization": f"Bearer {keys[0]}"})
+    assert response.status_code == 503
+    assert token not in response.text
+
+
 @pytest.mark.parametrize(
     "body,status",
     [

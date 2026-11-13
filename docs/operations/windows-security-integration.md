@@ -15,6 +15,9 @@ The existing Connectors dashboard shows committed staging receipt counts through
 the authenticated API. These records are **not connected to detection, alert
 promotion, or agent triage**. A receipt is not a detection result.
 
+See [the receipt audit](windows-security-receipt-audit.md) for measured staging
+evidence, dashboard configuration requirements, and the proposed pipeline bridge.
+
 ## Source continuity and recovery
 
 `collector.py --initialize` explicitly creates a new epoch and starts **after

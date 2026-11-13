@@ -34,6 +34,8 @@ async def staging_status(current_user: AuthUser) -> dict[str, Any]:
     # Other tenants cannot probe its endpoint or infer its collected volume.
     if not tenant or str(current_user.tenant_id) != tenant or not endpoint or len(token) < 32:
         return {"configured": False}
+    if not token.isascii() or any(c in token for c in "\r\n"):
+        raise HTTPException(503, "Windows staging status configuration is invalid")
     try:
         parsed = urlsplit(endpoint)
         valid_url = (

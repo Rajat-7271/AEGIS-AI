@@ -57,6 +57,17 @@ it('does not query until tenant identity is resolved', () => {
   expect(screen.getByText(/Loading receipt status/)).toBeInTheDocument();
 });
 
+it('renders a synthetic twelve-receipt response without claiming detections', async () => {
+  vi.mocked(apiRequest).mockResolvedValue({
+    configured: true, events_received: 12, source_epochs: 1,
+    last_received_at: '2026-11-13T17:25:18+00:00',
+  });
+  mount();
+  expect(await screen.findByText(/12 metadata records durably received; 1 source epochs/)).toBeInTheDocument();
+  expect(screen.getByText(/Last receipt:/)).not.toHaveTextContent('No events received');
+  expect(screen.getByText(/Detection and triage are not connected/)).toBeInTheDocument();
+});
+
 it('does not reuse receipt counts when the active tenant changes', async () => {
   vi.mocked(apiRequest).mockResolvedValue({ configured: true, events_received: 7, source_epochs: 1, last_received_at: null });
   const view = mount();
