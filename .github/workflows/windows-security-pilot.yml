@@ -37,3 +37,33 @@ jobs:
             tools/windows/test_staging_receiver.py \
             tools/windows/test_staging_postgres_receiver.py \
             tools/windows/test_upload_security_events.py
+
+  postgres-integration:
+    name: Windows pilot PostgreSQL integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: windows_pilot_test
+          POSTGRES_USER: windows_pilot_ci
+          POSTGRES_PASSWORD: ci-local-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U windows_pilot_ci -d windows_pilot_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AEGIS_WINDOWS_TEST_DATABASE_URL: postgresql://windows_pilot_ci:ci-local-only-password@127.0.0.1:5432/windows_pilot_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install isolated test dependencies
+        run: python -m pip install pytest "psycopg[binary]>=3,<4"
+      - name: Run PostgreSQL integration tests
+        run: python -m pytest -q tools/windows/test_staging_postgres_integration.py
