@@ -119,3 +119,50 @@ def test_bounded_server_configures_client_socket_timeout(tmp_path):
         assert instance.client_timeout_seconds == 10
     finally:
         instance.server_close()
+
+
+def test_injected_storage_receives_only_authenticated_device(tmp_path):
+    accepted = []
+    def persist(payload):
+        accepted.append(payload)
+        return {"accepted": True, "last_record_id": payload["events"][-1]["System"]["EventRecordID"]}
+
+    instance = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        adapter.handler_factory(tmp_path / "unused.sqlite", "a" * 32,
+                                "test-device", persist_batch=persist),
+    )
+    worker = threading.Thread(target=instance.serve_forever, daemon=True)
+    worker.start()
+    try:
+        url = f"http://127.0.0.1:{instance.server_port}/v1/windows-security/events"
+        batch = {"device_id": "test-device", "events": [event(51)]}
+        assert send(url, batch, token="wrong")[0] == 401
+        assert send(url, {"device_id": "wrong-device", "events": [event(51)]})[0] == 403
+        assert accepted == []
+        assert send(url, batch) == (200, {"accepted": True, "last_record_id": 51})
+        assert accepted == [batch]
+    finally:
+        instance.shutdown()
+        instance.server_close()
+        worker.join(timeout=5)
+
+
+def test_injected_storage_failure_does_not_acknowledge(tmp_path):
+    def fail(_payload):
+        raise RuntimeError("Database unavailable")
+
+    instance = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        adapter.handler_factory(tmp_path / "unused.sqlite", "a" * 32,
+                                "test-device", persist_batch=fail),
+    )
+    worker = threading.Thread(target=instance.serve_forever, daemon=True)
+    worker.start()
+    try:
+        url = f"http://127.0.0.1:{instance.server_port}/v1/windows-security/events"
+        assert send(url, {"device_id": "test-device", "events": [event(52)]})[0] == 500
+    finally:
+        instance.shutdown()
+        instance.server_close()
+        worker.join(timeout=5)
