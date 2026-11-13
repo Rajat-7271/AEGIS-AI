@@ -113,6 +113,7 @@ func (p *capturingPublisher) tenantsWritten(tenant uuid.UUID) int {
 // a per-vendor profile, which keeps these tests about the credential.
 func testConfig() *config.Config {
 	return &config.Config{
+		AttckDataPath:      "../testdata/synthetic-attack.json",
 		TenantHeaderKey:    "X-Tenant-ID",
 		NormalizerMode:     "lenient",
 		MaxBatchSize:       500,

@@ -178,7 +178,7 @@ func TestTheClassificationChangesNeitherSeverityNorClass(t *testing.T) {
 // true rather than a claim. A failure there is fatal, so this asserts the
 // successful path reaches a normalizer that can classify.
 func TestNewLoadsTheCatalogueAtBoot(t *testing.T) {
-	n, err := New(&config.Config{NormalizerMode: "lenient"})
+	n, err := New(&config.Config{NormalizerMode: "lenient", AttckDataPath: "../testdata/synthetic-attack.json"})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

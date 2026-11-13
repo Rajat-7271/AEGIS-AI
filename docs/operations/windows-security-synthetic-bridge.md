@@ -1,5 +1,9 @@
 # Windows Security local synthetic bridge
 
+The [staging readiness follow-up](windows-security-staging-readiness.md) records
+read-only deployment discovery, the offline Go test setup fix, real HTTP boundary
+coverage, configuration/rollback preparation, and remaining live-pipeline gates.
+
 This follow-up to the receipt audit adds an isolated prototype, not a live
 integration. No receipt table is read and none of the 12 retained staging receipts
 is eligible. No production or staging access, hosted configuration change,
