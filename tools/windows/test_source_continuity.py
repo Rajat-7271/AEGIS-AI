@@ -79,3 +79,22 @@ def test_symlink_state_rejected(tmp_path):
         load_state(link)
     with pytest.raises(ContinuityError, match="symlink"):
         write_new_state(link, state())
+
+
+def test_oversized_state_rejected(tmp_path):
+    path = tmp_path / "state.json"
+    path.write_bytes(b" " * 4097)
+    with pytest.raises(ContinuityError, match="size limit"):
+        load_state(path)
+
+
+def test_nonregular_state_rejected(tmp_path):
+    with pytest.raises(ContinuityError, match="Missing or invalid"):
+        load_state(tmp_path)
+
+
+def test_invalid_utf8_state_rejected(tmp_path):
+    path = tmp_path / "state.json"
+    path.write_bytes(b"\\xff\\xfe")
+    with pytest.raises(ContinuityError, match="Missing or invalid"):
+        load_state(path)
