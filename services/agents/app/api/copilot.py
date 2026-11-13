@@ -367,7 +367,7 @@ async def _get_openai_reply(
                     "events using both the computer and logon ID, not logon ID alone across hosts. "
                     "For detection queries, use valid syntax for the named platform, and do not "
                     "invent a table name or claim that a heuristic proves an attack. "
-                    "Use one consistent numbered-list style rather than mixing 1., 1), and 1. "
+                    "Use consistently numbered Markdown lists rather than mixing 1. and 1) markers. "
                     "For code fences, place the language tag alone on the opening fence line, "
                     "followed by a newline before code."
                     + (" Return the user-facing answer in the JSON field answer." if use_json_schema else "")
