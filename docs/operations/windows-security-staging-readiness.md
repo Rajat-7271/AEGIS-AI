@@ -5,6 +5,10 @@
 Dashboard activation remains blocked. No hosted changes, deployment, production
 requests, collection, or receipt replay were performed. The 12 genuine staging
 receipts were neither selected nor modified. Only staging schema names were read.
+The branch is explicitly disabled in `apps/web/vercel.json` before its first
+push, preventing this draft's source publication from requesting an automatic
+frontend deployment. Existing receiver auto-deploy is off; the docs deployment
+workflow runs on main, not this branch.
 
 Read-only connected inventory found:
 
