@@ -333,3 +333,19 @@ does not generate an epoch, access local JSONL or checkpoint files,
 or enable network transfer on its own. Real migration requires a trusted
 Windows source-instance identity, persisted epoch management, a safe
 checkpoint transition, and separately approved staging HTTPS hosting.
+
+## Read-only v1 to v2 migration assessment
+
+`plan_v2_migration.py` inspects an existing metadata-only JSONL export
+and its export/upload checkpoints without writing files or contacting
+the network. It rejects malformed metadata, duplicate or regressed
+record IDs, export-tail mismatch, and upload checkpoint ahead of export.
+It reports only record counts, record-ID boundaries, checkpoint values,
+and the number of distinct computers; it does not print event payloads.
+
+A valid v1 export is **not proof** of a single log-instance epoch.
+Accordingly the assessment always returns `can_auto_migrate: false`.
+Do not generate a new epoch and reinterpret historical v1 records as
+verified v2 data. Existing checkpoint files must not be overwritten.
+A separately reviewed continuity source and manual recovery procedure
+remain required before any real v2 sender activation.
