@@ -166,3 +166,12 @@ the adapter process and resets on restart. It is **not** a replacement for
 staging gateway IP/device quotas, connection limits, distributed rate limits,
 or network-layer denial-of-service protection. Unauthorized requests are
 rejected before consuming the authenticated request quota.
+
+## Idle connection safety in the local harness
+
+The loopback receiver uses a bounded server class with a ten-second socket
+timeout, a 16-connection listen backlog, and daemon request-handler threads.
+This reduces the impact of stalled local clients and makes shutdown more
+predictable. It does not impose a strict cap on simultaneously running
+handlers and is **not** a public-network security boundary. A real staging
+deployment must enforce connection limits and timeouts at its HTTPS gateway.
