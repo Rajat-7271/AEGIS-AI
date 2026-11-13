@@ -349,3 +349,18 @@ Do not generate a new epoch and reinterpret historical v1 records as
 verified v2 data. Existing checkpoint files must not be overwritten.
 A separately reviewed continuity source and manual recovery procedure
 remain required before any real v2 sender activation.
+
+## Offline v2 batch preparation
+
+`prepare_v2_batch.py` can assemble a v2 envelope from an existing
+metadata-only JSONL export **only when a caller supplies** a previously
+persisted continuity state, a matching independently trusted log-instance
+marker, and the observed newest Security record ID. It rejects a changed
+marker, regressed record ID, checkpoint behind the continuity baseline,
+or export rows beyond the observed log. It reads files only and does not
+send, assign epochs, or advance any checkpoint.
+
+This is a contract primitive, **not an enabled migration or unattended
+sender**. There is currently no verified Windows source supplying the
+trusted marker; passing an invented marker would defeat the safety gate.
+The existing v1 export must not be automatically relabeled as verified v2.
