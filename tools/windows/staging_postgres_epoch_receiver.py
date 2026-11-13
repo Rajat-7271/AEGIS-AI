@@ -1,4 +1,5 @@
 """Experimental v2 epoch-aware PostgreSQL receiver; not mounted in production."""
+
 from __future__ import annotations
 
 import json
@@ -25,8 +26,12 @@ WHERE device_id=%s AND channel=%s AND source_epoch=%s
 def accept_epoch_batch_postgres(connection: Any, payload: object) -> dict:
     """Commit an entire v2 batch before acknowledging its last record."""
     (device, channel, epoch), events = validate_epoch_batch(payload)
+    # A savepoint inside a caller-owned transaction is not durable acceptance.
+    if connection.info.transaction_status != 0:
+        raise RuntimeError("Receiver requires an idle database connection")
     with connection.transaction():
         with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('app.windows_device_id', %s, true)", (device,))
             for event in events:
                 system = event["System"]
                 key = (device, channel, epoch, system["Computer"], system["EventRecordID"])

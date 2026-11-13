@@ -3,26 +3,37 @@
 Not wired to the production API. Use a separate staging PostgreSQL database
 and a hosting provider that terminates HTTPS before forwarding to WSGI.
 """
+
 from __future__ import annotations
 
 import json
-import os
 import logging
-
-logger = logging.getLogger(__name__)
+import os
+import threading
+import time
+from collections import deque
 
 from source_epoch_contract import SourceIdentityError
-from staging_receiver import MAX_REQUEST_BYTES, InvalidBatch, authorize
 from staging_postgres_epoch_receiver import accept_epoch_batch_postgres
+from staging_receiver import MAX_REQUEST_BYTES, InvalidBatch, authorize
+
+logger = logging.getLogger(__name__)
+_request_times: deque[float] = deque()
+_rate_lock = threading.Lock()
 
 
 def _reply(start_response, status, payload):
     body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    start_response(status, [
-        ("Content-Type", "application/json"),
-        ("Content-Length", str(len(body))),
-        ("Cache-Control", "no-store"),
-    ])
+    retry_headers = [("Retry-After", "60")] if status.startswith("429") else []
+    start_response(
+        status,
+        [
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(body))),
+            ("Cache-Control", "no-store"),
+        ]
+        + retry_headers,
+    )
     return [body]
 
 
@@ -31,27 +42,69 @@ def application(environ, start_response):
     method = environ.get("REQUEST_METHOD")
     route = environ.get("PATH_INFO")
     is_readiness = method == "GET" and route == "/v2/health/ready"
-    if not is_readiness and (method != "POST" or route != "/v2/windows-security/events"):
+    is_status = method == "GET" and route == "/v2/windows-security/status"
+    if not is_readiness and not is_status and (method != "POST" or route != "/v2/windows-security/events"):
         return _reply(start_response, "404 Not Found", {"error": "not_found"})
     token = os.environ.get("AEGIS_WINDOWS_STAGING_TOKEN", "")
     device = os.environ.get("AEGIS_WINDOWS_DEVICE_ID", "")
     dsn = os.environ.get("AEGIS_WINDOWS_STAGING_DATABASE_URL", "")
-    if len(token) < 32 or not device or not dsn:
+    if len(token) < 32 or not token.isascii() or any(c in token for c in "\r\n") or not device or not dsn:
         return _reply(start_response, "503 Service Unavailable", {"error": "not_configured"})
     auth = environ.get("HTTP_AUTHORIZATION", "")
     try:
         if not auth.startswith("Bearer "):
             raise PermissionError("Missing bearer")
         authorize(auth[7:], token)
-    except PermissionError:
+    except (PermissionError, TypeError):
         return _reply(start_response, "401 Unauthorized", {"error": "unauthorized"})
+    # Single-device, per-worker protection. Gateway quotas and connection/body
+    # timeouts remain necessary; this is not a distributed rate limit.
+    with _rate_lock:
+        now = time.monotonic()
+        while _request_times and now - _request_times[0] >= 60:
+            _request_times.popleft()
+        if len(_request_times) >= 60:
+            return _reply(start_response, "429 Too Many Requests", {"error": "rate_limited"})
+        _request_times.append(now)
+    if is_status:
+        try:
+            import psycopg
+
+            with psycopg.connect(dsn, autocommit=True, connect_timeout=5, prepare_threshold=None) as conn:
+                with conn.transaction(), conn.cursor() as cursor:
+                    cursor.execute("SELECT set_config('app.windows_device_id', %s, true)", (device,))
+                    cursor.execute(
+                        "SELECT count(*),max(received_at),max(record_id),count(DISTINCT source_epoch) "
+                        "FROM windows_pilot.security_events_v2 WHERE device_id=%s",
+                        (device,),
+                    )
+                    count, received, record, epochs = cursor.fetchone()
+            return _reply(
+                start_response,
+                "200 OK",
+                {
+                    "events_received": count,
+                    "last_received_at": received.isoformat() if received else None,
+                    "highest_record_id": record,
+                    "source_epochs": epochs,
+                    "scope": "staging_metadata",
+                    "detection_pipeline": "not_connected",
+                },
+            )
+        except Exception:
+            return _reply(start_response, "503 Service Unavailable", {"error": "storage_unavailable"})
     if is_readiness:
         try:
             import psycopg
-            with psycopg.connect(dsn, connect_timeout=5) as conn:
+
+            with psycopg.connect(dsn, connect_timeout=5, prepare_threshold=None) as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT to_regclass('windows_pilot.security_events_v2')")
-                    ready = cursor.fetchone()[0] is not None
+                    cursor.execute(
+                        "SELECT has_table_privilege(current_user, 'windows_pilot.security_events_v2', 'SELECT') "
+                        "AND has_table_privilege(current_user, 'windows_pilot.security_events_v2', 'INSERT') "
+                        "AND pg_has_role(current_user, 'windows_security_receiver', 'USAGE')"
+                    )
+                    ready = cursor.fetchone()[0] is True
             if not ready:
                 logger.warning("staging_readiness_failure category=schema_missing")
                 return _reply(start_response, "503 Service Unavailable", {"ready": False})
@@ -85,7 +138,11 @@ def application(environ, start_response):
                         category = "database_auth_failed"
                     elif "tenant or user not found" in detail or "invalid user" in detail:
                         category = "pooler_username_or_project_invalid"
-                    elif "name or service not known" in detail or "could not translate host name" in detail or "temporary failure in name resolution" in detail:
+                    elif (
+                        "name or service not known" in detail
+                        or "could not translate host name" in detail
+                        or "temporary failure in name resolution" in detail
+                    ):
                         category = "dns_resolution_failed"
                     elif "timeout expired" in detail or "connection timed out" in detail:
                         category = "connection_timeout"
@@ -118,9 +175,11 @@ def application(environ, start_response):
             return _reply(start_response, "403 Forbidden", {"error": "device_mismatch"})
         # Validate the entire v2 envelope before opening a database connection.
         from source_epoch_contract import validate_epoch_batch
+
         validate_epoch_batch(payload)
         import psycopg
-        with psycopg.connect(dsn, autocommit=True, connect_timeout=5) as conn:
+
+        with psycopg.connect(dsn, autocommit=True, connect_timeout=5, prepare_threshold=None) as conn:
             result = accept_epoch_batch_postgres(conn, payload)
     except (InvalidBatch, SourceIdentityError, ValueError, UnicodeError):
         return _reply(start_response, "400 Bad Request", {"error": "invalid_batch"})

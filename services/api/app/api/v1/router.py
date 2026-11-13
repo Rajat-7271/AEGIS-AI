@@ -104,6 +104,7 @@ from app.api.v1.endpoints import (
     verification_policies,
     waitlist,
     war_rooms,
+    windows_security,
     workload_identities,
 )
 
@@ -446,6 +447,7 @@ api_router.include_router(realtime.router)
 # The module shipped in #1303 with no include site, so its three routes were
 # unreachable on that branch; mounted here by the merge train.
 api_router.include_router(ai_assets.router)
+api_router.include_router(windows_security.router)
 
 # Case war rooms — depth 9.4. One action opens a Slack channel for a case,
 # invites the assignees and mirrors the timeline; the sweep worker is started

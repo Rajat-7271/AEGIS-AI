@@ -1,5 +1,9 @@
 # Windows Security continuous collection — isolated pilot
 
+Historical pilot notes follow. The connected v2 collector and current controlled
+validation procedure are documented in [Windows Security staging integration](windows-security-integration.md).
+The older v1 tools remain local-only and are not migrated automatically.
+
 This is a **local-only** collection experiment, not a cloud ingestion integration.
 It never sends Windows events to AEGIS AI or any third-party endpoint.
 

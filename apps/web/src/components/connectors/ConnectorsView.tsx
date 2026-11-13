@@ -32,6 +32,7 @@ import { AddConnectorModal } from './AddConnectorModal';
 import { EditConnectorModal } from './EditConnectorModal';
 import { ConnectorInstanceList } from './ConnectorInstanceList';
 import { InboxTokensPanel } from './InboxTokensPanel';
+import { WindowsSecurityStatus } from './WindowsSecurityStatus';
 import { demoFallback } from '@/lib/demoFallback';
 import { FailureBanner } from '@/components/ui/FailureBanner';
 import { describeApiFailure } from '@/lib/failure';
@@ -310,6 +311,7 @@ export function ConnectorsView() {
           poll-based connector list so the catalog stays the primary path
           and "push for everything else" is one click away. */}
       <InboxTokensPanel />
+      <WindowsSecurityStatus />
 
       {/* Add modal */}
       <AddConnectorModal
