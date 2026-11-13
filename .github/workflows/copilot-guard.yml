@@ -5,6 +5,10 @@ on:
     paths:
       - 'services/agents/app/api/copilot.py'
       - 'services/agents/tests/test_copilot_tool_output_guard.py'
+      - 'services/agents/tests/test_supabase_session_pool_budget.py'
+      - 'services/agents/app/api/conversation_store.py'
+      - 'services/agents/app/hunt/store.py'
+      - 'services/agents/app/investigator/ledger.py'
       - '.github/workflows/copilot-guard.yml'
   workflow_dispatch:
 
@@ -29,4 +33,4 @@ jobs:
           python -m pip install 'pytest>=9.0.3,<10' 'pytest-asyncio>=1,<2'
       - name: Run focused Copilot regression cases
         working-directory: services/agents
-        run: python -m pytest -q tests/test_copilot_tool_output_guard.py
+        run: python -m pytest -q tests/test_copilot_tool_output_guard.py tests/test_supabase_session_pool_budget.py
