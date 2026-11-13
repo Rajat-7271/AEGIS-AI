@@ -376,3 +376,24 @@ These checks protect local file parsing, **not the trustworthiness of
 the log-instance marker**. On Windows, POSIX file modes are not a
 substitute for reviewed NTFS ACLs; secure state provisioning and
 independent source-instance verification remain blockers.
+
+## Windows source verification and NTFS audit
+
+Two read-only PowerShell commands are now available:
+
+```powershell
+powershell.exe -NoProfile -File .\tools\windows\check-security-log-continuity.ps1 -LastRecordId 3015671
+powershell.exe -NoProfile -File .\tools\windows\audit-continuity-acl.ps1 -StatePath '<existing-v2-continuity-state-path>'
+```
+
+The first checks for obvious record regression and retained Security event
+1102 log-clear evidence, and explicitly reports
+`TrustedLogInstanceEstablished=false`. Event 1102 can be absent after
+offline clears or retention loss, so a successful probe **does not**
+authorize unattended uploads. The second inspects NTFS write permissions
+without modifying ACLs; it requires an existing state file.
+
+**Staging activation is blocked** until an independently verified
+durable log-instance identity and safe checkpoint/epoch transition exist.
+Neither probe writes credentials, changes local files, or enables a
+network listener. Do not expose the loopback HTTP prototype publicly.
