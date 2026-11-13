@@ -62,3 +62,23 @@ When it exists, it must authenticate per-device credentials, validate the
 allowlist and batch size, durably persist with idempotent record keys, then
 return HTTP 200 with `{"accepted":true,"last_record_id":N}` only after
 durable acceptance. No public production endpoint is authorized.
+
+## Receiver core (draft, not deployed)
+
+`tools/windows/staging_receiver.py` provides a standalone, dependency-free
+batch validator and transactional SQLite persistence for a staging prototype.
+It validates metadata-only records, rejects conflicting replays, and returns
+the sender's acknowledgement shape only after a database commit. It also
+provides a constant-time token comparison helper for a future HTTP adapter.
+
+```powershell
+python -m pytest -q .\tools\windows\test_staging_receiver.py .\tools\windows\test_upload_security_events.py
+```
+
+**There is no HTTP listener, HTTPS termination, credential provisioning,
+dashboard integration, or deployed staging service yet.** Do not enable
+`--send`. Before exposing any route, add a secure authenticated adapter,
+per-device token management, request-size limits, rate limiting, TLS,
+retention policy, monitoring, source-epoch handling, and a reviewed
+production-grade database implementation. SQLite is used only to prove the
+durable acknowledgement and replay contract locally.
