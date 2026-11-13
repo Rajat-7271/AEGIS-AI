@@ -111,3 +111,12 @@ request claiming a different device ID is rejected with HTTP 403 before
 persistence. This is a single-device prototype; staging deployment still
 needs securely provisioned per-device credentials, TLS, and an appropriate
 persistent database. Never commit tokens or print them in logs.
+
+## Additional sender hardening
+
+The sender now rejects invalid device identifiers, batches larger than 100,
+and HTTPS URLs using nonstandard ports. The offline tests also exercise
+successful and mismatched acknowledgements without contacting a server.
+These checks do **not** establish that a cloud endpoint is ready. Keep
+`--send` disabled until a reviewed staging HTTPS receiver and credentials
+are provisioned.
