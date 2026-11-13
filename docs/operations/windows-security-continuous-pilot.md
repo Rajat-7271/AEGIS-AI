@@ -304,3 +304,18 @@ This is a **separate, unmounted v2 receiver**, not an enabled endpoint.
 A trustworthy Windows log-instance marker, durable epoch lifecycle,
 local-file/checkpoint migration, and authenticated HTTPS hosting are
 still required before unattended real-event uploads.
+
+## Experimental v2 loopback HTTP path
+
+`staging_postgres_epoch_http_adapter.py` binds the authenticated HTTP
+handler to the v2 PostgreSQL receiver. It only listens on
+`127.0.0.1`, requires the same isolated test database and bearer/device
+environment settings as the v1 harness, and does not provide TLS.
+The PostgreSQL CI integration suite submits synthetic v2 requests through
+HTTP, tests token and device rejection, checks duplicate replay, and
+verifies reused record IDs are separately stored under distinct epochs.
+
+**Not deployable as a public endpoint:** This is a local integration harness.
+It does not establish trustworthy Windows log-instance identification,
+migrate existing checkpoints, provide a hardened HTTPS gateway, or
+connect the dashboard. Do not use production credentials.
