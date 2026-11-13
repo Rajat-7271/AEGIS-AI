@@ -65,3 +65,61 @@ def test_real_postgres_rolls_back_prior_insert_on_later_conflict(db):
             "WHERE device_id=%s ORDER BY record_id", (device,)
         )
         assert [row[0] for row in cur.fetchall()] == [20]
+
+
+def test_authenticated_http_to_real_postgres_and_replay(db):
+    """Exercise actual loopback HTTP and committed PostgreSQL rows together."""
+    import json
+    import threading
+    import urllib.error
+    import urllib.request
+
+    from staging_http_adapter import BoundedThreadingHTTPServer, handler_factory
+
+    dsn = os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"]
+    device = "ci-" + uuid.uuid4().hex
+    token = "local-ci-test-token-" + uuid.uuid4().hex
+
+    def persist(payload):
+        with psycopg.connect(dsn, autocommit=True, connect_timeout=5) as connection:
+            return accept_batch_postgres(connection, payload)
+
+    server = BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        handler_factory(Path("unused.sqlite"), token, device, persist_batch=persist),
+    )
+    worker = threading.Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+
+    def post(payload, credential=token):
+        url = f"http://127.0.0.1:{server.server_port}/v1/windows-security/events"
+        request = urllib.request.Request(
+            url, data=json.dumps(payload).encode("utf-8"), method="POST",
+            headers={"Authorization": f"Bearer {credential}",
+                     "Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as error:
+            return error.code, None
+
+    try:
+        batch = {"device_id": device, "events": [event(100), event(101)]}
+        assert post(batch, "wrong-token")[0] == 401
+        assert post({**batch, "device_id": "spoofed"})[0] == 403
+        expected = (200, {"accepted": True, "last_record_id": 101})
+        assert post(batch) == expected
+        assert post(batch) == expected
+        conflict = {"device_id": device, "events": [event(101, "changed")]}
+        assert post(conflict)[0] == 400
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT record_id FROM windows_pilot.security_events "
+                "WHERE device_id=%s ORDER BY record_id", (device,)
+            )
+            assert [row[0] for row in cursor.fetchall()] == [100, 101]
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join(timeout=5)
