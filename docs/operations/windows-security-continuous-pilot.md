@@ -82,3 +82,23 @@ per-device token management, request-size limits, rate limiting, TLS,
 retention policy, monitoring, source-epoch handling, and a reviewed
 production-grade database implementation. SQLite is used only to prove the
 durable acknowledgement and replay contract locally.
+
+## Loopback HTTP integration adapter
+
+`tools/windows/staging_http_adapter.py` is a **local-only** HTTP adapter
+bound to `127.0.0.1`. It is not a deployable HTTPS service and must never
+be exposed to the Internet. It demonstrates bearer authentication, request
+limits, metadata validation, transactional persistence, and acknowledgements
+using the SQLite prototype.
+
+Run the tests (no credentials or external services needed):
+
+```powershell
+python -m pytest -q .\tools\windows\test_staging_http_adapter.py .\tools\windows\test_staging_receiver.py .\tools\windows\test_upload_security_events.py
+```
+
+The sender intentionally requires HTTPS and cannot connect to this
+plain-HTTP adapter; do not weaken that protection. A later staging-only TLS
+gateway and server-side device identity validation are prerequisites for
+live PC-to-cloud upload. The current receiver's token comparison helper
+does not yet bind a token to a specific `device_id`.
