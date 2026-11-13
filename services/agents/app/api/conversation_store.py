@@ -34,6 +34,7 @@ import structlog
 logger = structlog.get_logger()
 
 _POOL: asyncpg.Pool | None = None
+_POOL_INIT_LOCK = asyncio.Lock()
 
 # No-database deployments keep conversations in process memory. The outer
 # key is the tenant UUID, so one tenant can never read another tenant's turns.
@@ -59,11 +60,14 @@ async def _pool() -> asyncpg.Pool:
     global _POOL
     if _POOL is not None:
         return _POOL
-    dsn = os.environ.get("DATABASE_URL", "").strip()
-    if not dsn:
-        raise ConversationStoreUnavailable("DATABASE_URL is not set.")
-    _POOL = await asyncpg.create_pool(dsn=_normalise_dsn(dsn), min_size=0, max_size=1, max_inactive_connection_lifetime=30, command_timeout=10)
-    return _POOL
+    async with _POOL_INIT_LOCK:
+        if _POOL is not None:
+            return _POOL
+        dsn = os.environ.get("DATABASE_URL", "").strip()
+        if not dsn:
+            raise ConversationStoreUnavailable("DATABASE_URL is not set.")
+        _POOL = await asyncpg.create_pool(dsn=_normalise_dsn(dsn), min_size=0, max_size=1, max_inactive_connection_lifetime=30, command_timeout=10)
+        return _POOL
 
 
 async def _scoped(conn: asyncpg.Connection, tenant_id: uuid.UUID) -> None:
