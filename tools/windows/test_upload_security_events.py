@@ -54,3 +54,51 @@ def test_checkpoint_roundtrip(tmp_path):
 def test_rejects_insecure_endpoint_without_network():
     with pytest.raises(ValueError, match="HTTPS"):
         sender.send_batch("http://example.com/ingest", "token", "device", [event(1)])
+
+
+def test_rejects_device_id_spoofing_without_network():
+    with pytest.raises(ValueError, match="device identifier"):
+        sender.send_batch("https://example.com/ingest", "token", "../other", [event(1)])
+
+
+def test_rejects_nonstandard_https_port_without_network():
+    with pytest.raises(ValueError, match="HTTPS"):
+        sender.send_batch("https://example.com:8080/ingest", "token", "device", [event(1)])
+
+
+def test_rejects_oversized_batch_without_network():
+    with pytest.raises(ValueError, match="batch size"):
+        sender.send_batch("https://example.com/ingest", "token", "device", [event(i) for i in range(1, 102)])
+
+
+def test_acknowledgement_must_match_last_record(monkeypatch):
+    class FakeResponse:
+        status = 200
+
+        def __init__(self, ack):
+            self.ack = ack
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self, size):
+            return json.dumps(self.ack).encode()
+
+    class FakeOpener:
+        def __init__(self, ack):
+            self.ack = ack
+
+        def open(self, request, timeout):
+            assert request.get_method() == "POST"
+            assert request.get_header("Authorization") == "Bearer token"
+            return FakeResponse(self.ack)
+
+    monkeypatch.setattr(sender.urllib.request, "build_opener", lambda *args: FakeOpener({"accepted": True, "last_record_id": 2}))
+    assert sender.send_batch("https://example.com/ingest", "token", "device", [event(1), event(2)]) == 2
+
+    monkeypatch.setattr(sender.urllib.request, "build_opener", lambda *args: FakeOpener({"accepted": True, "last_record_id": 999}))
+    with pytest.raises(ValueError, match="acknowledgement"):
+        sender.send_batch("https://example.com/ingest", "token", "device", [event(1), event(2)])
