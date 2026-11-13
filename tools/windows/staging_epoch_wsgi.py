@@ -68,12 +68,37 @@ def application(environ, start_response):
                 category = "database_not_found"
             elif sqlstate == "42P01":
                 category = "schema_missing"
+            elif sqlstate == "28000":
+                category = "database_role_or_pooler_user_invalid"
+            elif sqlstate == "53300":
+                category = "pooler_capacity"
             elif isinstance(exc, (TimeoutError, ConnectionError)):
                 category = "connection_timeout_or_network"
             else:
                 name = type(exc).__name__
                 if name in ("OperationalError", "InterfaceError"):
-                    category = "database_connection_failed"
+                    # libpq often packs connection failures into OperationalError
+                    # without SQLSTATE. Classify only known phrases; never log
+                    # the message itself, which can include the connection URI.
+                    detail = str(exc).lower()
+                    if "password authentication failed" in detail or "authentication failed" in detail:
+                        category = "database_auth_failed"
+                    elif "tenant or user not found" in detail or "invalid user" in detail:
+                        category = "pooler_username_or_project_invalid"
+                    elif "name or service not known" in detail or "could not translate host name" in detail or "temporary failure in name resolution" in detail:
+                        category = "dns_resolution_failed"
+                    elif "timeout expired" in detail or "connection timed out" in detail:
+                        category = "connection_timeout"
+                    elif "connection refused" in detail:
+                        category = "connection_refused"
+                    elif "network is unreachable" in detail or "no route to host" in detail:
+                        category = "network_unreachable"
+                    elif "certificate verify failed" in detail or "ssl error" in detail:
+                        category = "tls_handshake_failed"
+                    elif "database" in detail and "does not exist" in detail:
+                        category = "database_not_found"
+                    else:
+                        category = "database_connection_failed"
             logger.warning("staging_readiness_failure category=%s", category)
             return _reply(start_response, "503 Service Unavailable", {"ready": False})
     if environ.get("CONTENT_TYPE", "").split(";")[0].strip().lower() != "application/json":
