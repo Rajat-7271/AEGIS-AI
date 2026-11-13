@@ -41,6 +41,7 @@ on:
       - ".env.example"
       - "render.yaml"
       - ".github/workflows/isolation.yml"
+      - ".github/workflows/windows-security-pilot.yml"
   pull_request:
     paths:
       - "tests/isolation/**"
@@ -66,6 +67,7 @@ on:
       - ".env.example"
       - "render.yaml"
       - ".github/workflows/isolation.yml"
+      - ".github/workflows/windows-security-pilot.yml"
   # Matching isolation-live.yml, so a maintainer can run the isolation gate on
   # demand rather than only when a path filter happens to match.
   workflow_dispatch:

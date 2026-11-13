@@ -1,0 +1,40 @@
+name: Isolated staging policy
+
+on:
+  pull_request:
+    branches: [codex/windows-staging-readiness]
+    paths:
+      - '.github/workflows/isolated-staging-policy.yml'
+      - 'infra/render/staging-api.yaml'
+      - 'services/api/**'
+      - 'tests/test_isolated_staging*.py'
+      - 'apps/web/staging-routing*'
+      - 'apps/web/next.config.js'
+      - 'apps/web/vercel.json'
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          node-version: '22'
+      - name: Install isolated API locked dependency set
+        run: |
+          python scripts/service_requirements.py api --locked > /tmp/staging-api-requirements.txt
+          python -m venv /tmp/staging-api
+          /tmp/staging-api/bin/python -m pip install --no-deps -r /tmp/staging-api-requirements.txt
+      - name: Verify policy, real outage handling and synthetic bridge
+        run: |
+          /tmp/staging-api/bin/python -m pytest -q -o addopts='' tests/test_isolated_staging_api.py tests/test_isolated_staging_live.py tools/windows/test_synthetic_detection_bridge.py
+          node --test apps/web/staging-routing.test.cjs

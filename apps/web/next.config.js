@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+require('./staging-routing.cjs').configureStaging(process.env);
 
 // Repo-root VERSION file is the single source of truth for the app version
 // shown in Settings → About. Baked into the bundle at build time since the

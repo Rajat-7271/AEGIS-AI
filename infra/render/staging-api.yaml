@@ -1,0 +1,110 @@
+# Separate staging service only; never sync over an existing service.
+previews:
+  generation: 'off'
+services:
+  - type: web
+    name: aisoc-isolated-staging-api
+    runtime: docker
+    plan: free
+    autoDeployTrigger: 'off'
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: ./services/api
+    dockerCommand: python -m app.scripts.staging_serve
+    healthCheckPath: /readyz
+    envVars:
+      - key: AISOC_STAGING_ONLY
+        value: "1"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: AISOC_DEMO_MODE
+        value: "false"
+      - key: AISOC_DEV_MODE
+        value: "false"
+      - key: AISOC_DEV_AUTH_BYPASS
+        value: "0"
+      - key: AISOC_RUN_MIGRATIONS_ON_BOOT
+        value: "0"
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_POOL_SIZE
+        value: "2"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "0"
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: ""
+      - key: AISOC_ALLOW_CLEARTEXT_DB
+        value: "0"
+      - key: AISOC_ALLOW_CLEARTEXT_KAFKA
+        value: "0"
+      - key: PLUGIN_TRUST_MODE
+        value: "strict"
+      - key: AISOC_EASM_ACTIVE_SCAN_ENABLED
+        value: "false"
+      - key: OAUTH_REFRESH_WORKER_ENABLED
+        value: "false"
+      - key: WEEKLY_DIGEST_WORKER_ENABLED
+        value: "false"
+      - key: HUNT_SCHEDULER_ENABLED
+        value: "false"
+      - key: RETRO_HUNT_ENABLED
+        value: "false"
+      - key: REPORT_SCHEDULER_ENABLED
+        value: "false"
+      - key: OUTBOUND_WEBHOOK_WORKER_ENABLED
+        value: "false"
+      - key: AISOC_WAR_ROOM_SYNC_ENABLED
+        value: "false"
+      - key: RETENTION_WORKER_ENABLED
+        value: "false"
+      - key: PHISHING_INTAKE_WORKER_ENABLED
+        value: "false"
+      - key: APPROVAL_EXPIRY_ENABLED
+        value: "false"
+      - key: SHADOW_RECONCILE_ENABLED
+        value: "false"
+      - key: AUTONOMY_DRIFT_ENABLED
+        value: "false"
+      - key: AISOC_DISABLE_KAFKA
+        value: "true"
+      - key: AISOC_DISABLE_NEO4J
+        value: "true"
+      - key: AISOC_DISABLE_CLICKHOUSE
+        value: "true"
+      - key: AISOC_DISABLE_QDRANT
+        value: "true"
+      - key: AGENTS_API_URL
+        value: ""
+      - key: AGENTS_SERVICE_URL
+        value: ""
+      - key: CONNECTORS_SERVICE_URL
+        value: ""
+      - key: THREATINTEL_SERVICE_URL
+        value: ""
+      - key: NEO4J_URI
+        value: ""
+      - key: CLICKHOUSE_HOST
+        value: ""
+      - key: OPENSEARCH_URL
+        value: ""
+      - key: QDRANT_URL
+        value: ""
+      - key: SECRET_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: AISOC_CREDENTIAL_KEY
+        sync: false
+      - key: METRICS_TOKEN
+        sync: false
+      - key: REALTIME_INTERNAL_TOKEN
+        sync: false
+      - key: AISOC_REALTIME_JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: AISOC_STAGING_DB_HOST
+        sync: false
+      - key: AISOC_CORS_ORIGINS
+        sync: false
+      - key: AISOC_CONSOLE_URL
+        sync: false

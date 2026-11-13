@@ -2,7 +2,8 @@
   "git": {
     "deploymentEnabled": {
       "fix/trivy-dependency-remediation": false,
-      "codex/windows-staging-readiness": false
+      "codex/windows-staging-readiness": false,
+      "codex/isolated-staging-api": false
     }
   },
   "headers": [
