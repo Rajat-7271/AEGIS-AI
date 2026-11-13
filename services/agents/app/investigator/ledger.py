@@ -24,6 +24,7 @@ Design notes
 from __future__ import annotations
 
 import hashlib
+import asyncio
 import json
 import os
 import uuid
@@ -47,6 +48,7 @@ class LedgerPersistError(RuntimeError):
 
 
 _POOL: asyncpg.Pool | None = None
+_POOL_INIT_LOCK = asyncio.Lock()
 
 
 def _normalise_dsn(url: str) -> str:
@@ -60,23 +62,27 @@ async def get_pool() -> asyncpg.Pool | None:
     if _POOL is not None:
         return _POOL
 
-    dsn = os.environ.get("DATABASE_URL", "").strip()
-    if not dsn:
-        logger.debug("ledger.disabled", reason="DATABASE_URL not set")
-        return None
+    async with _POOL_INIT_LOCK:
+        if _POOL is not None:
+            return _POOL
+        dsn = os.environ.get("DATABASE_URL", "").strip()
+        if not dsn:
+            logger.debug("ledger.disabled", reason="DATABASE_URL not set")
+            return None
 
-    try:
-        _POOL = await asyncpg.create_pool(
-            dsn=_normalise_dsn(dsn),
-            min_size=1,
-            max_size=4,
-            command_timeout=10,
-        )
-        logger.info("ledger.pool_initialised")
-        return _POOL
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("ledger.pool_init_failed", error=str(exc))
-        return None
+        try:
+            _POOL = await asyncpg.create_pool(
+                dsn=_normalise_dsn(dsn),
+                min_size=0,
+                max_size=1,
+                max_inactive_connection_lifetime=30,
+                command_timeout=10,
+            )
+            logger.info("ledger.pool_initialised")
+            return _POOL
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ledger.pool_init_failed", error=str(exc))
+            return None
 
 
 async def close_pool() -> None:

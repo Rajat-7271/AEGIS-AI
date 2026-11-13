@@ -415,6 +415,19 @@ async def _get_openai_reply(
         elif isinstance(content, str) and content.strip():
             return _normalize_copilot_markdown(content), "llm", None
         else:
+            # Metadata only: never log prompts, completions, reasoning text,
+            # provider error bodies, credentials, or tenant identifiers.
+            usage = body.get("usage")
+            usage = usage if isinstance(usage, dict) else {}
+            logger.warning(
+                "copilot.unusable_completion",
+                model=model,
+                finish_reason=choice.get("finish_reason") if choice.get("finish_reason") in ("stop", "length", "tool_calls", "function_call", "content_filter") else "other",
+                content_type=type(content).__name__,
+                has_refusal=bool(message.get("refusal")),
+                prompt_tokens=usage.get("prompt_tokens") if type(usage.get("prompt_tokens")) is int else None,
+                completion_tokens=usage.get("completion_tokens") if type(usage.get("completion_tokens")) is int else None,
+            )
             detail = "The model returned no usable answer."
     except Exception as exc:
         # Provider exceptions can contain URLs, credentials, or prompt data.

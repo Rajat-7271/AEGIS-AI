@@ -234,6 +234,40 @@ async def test_model_tool_output_becomes_labelled_fallback(monkeypatch, message)
 
 
 @pytest.mark.asyncio
+async def test_empty_completion_logs_only_safe_metadata(monkeypatch):
+    from app.llm import contract, factory
+    from structlog.testing import capture_logs
+
+    monkeypatch.setattr(factory, "resolve_model_alias", lambda role: "test-model")
+    monkeypatch.setattr(factory, "resolve_api_key", lambda model: "test-key")
+    monkeypatch.setattr(factory, "chat_completions_url", lambda model: "https://example.test/chat")
+    calls = []
+
+    async def fake_completion(**kwargs):
+        calls.append(kwargs)
+        return {
+            "choices": [{"finish_reason": "length", "message": {"content": None}}],
+            "usage": {"prompt_tokens": 120, "completion_tokens": 1024},
+        }
+
+    monkeypatch.setattr(contract, "safe_chat_completions_request", fake_completion)
+    with capture_logs() as logs:
+        reply, source, reason = await _get_openai_reply(
+            {"messages": []}, "private-question-should-not-appear"
+        )
+    assert (source, reason) == ("template", CALL_FAILED)
+    assert len(calls) == 1
+    entries = [entry for entry in logs if entry.get("event") == "copilot.unusable_completion"]
+    assert len(entries) == 1
+    assert entries[0]["finish_reason"] == "length"
+    assert entries[0]["content_type"] == "NoneType"
+    assert entries[0]["prompt_tokens"] == 120
+    assert entries[0]["completion_tokens"] == 1024
+    assert "private-question-should-not-appear" not in str(logs)
+    assert "private-question-should-not-appear" not in reply
+
+
+@pytest.mark.asyncio
 async def test_normal_model_response_is_preserved(monkeypatch):
     from app.llm import contract, factory
 
