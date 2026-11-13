@@ -38,6 +38,10 @@ def load_batch(path: Path, acknowledged: int, limit: int = MAX_BATCH) -> list[di
             if type(record) is not int or record < 1:
                 raise ValueError("Invalid record ID")
             if record <= acknowledged:
+                # Never silently ignore malformed historical rows: a changed
+                # file could otherwise conceal private fields or corruption.
+                if set(event) != {"System", "EventData"} or event.get("EventData") != {} or set(system) != {"EventID", "Channel", "Computer", "EventRecordID", "TimeCreated", "Provider"}:
+                    raise ValueError("Invalid acknowledged event metadata")
                 continue
             if record <= previous:
                 raise ValueError("Out-of-order or duplicate unacknowledged record")
