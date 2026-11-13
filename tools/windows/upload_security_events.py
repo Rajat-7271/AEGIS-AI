@@ -84,10 +84,12 @@ def save_checkpoint(path: Path, record: int) -> None:
 
 def send_batch(endpoint: str, token: str, device_id: str, batch: list[dict]) -> int:
     parsed = urllib.parse.urlsplit(endpoint)
-    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment or parsed.port not in (None, 443):
         raise ValueError("A valid HTTPS endpoint without embedded credentials is required")
-    if not token or not device_id or any(c.isspace() for c in device_id):
+    if not token or not device_id or len(device_id) > 128 or not all(c.isascii() and (c.isalnum() or c in "._-") for c in device_id):
         raise ValueError("Missing token or invalid device identifier")
+    if not 1 <= len(batch) <= MAX_BATCH:
+        raise ValueError("Invalid upload batch size")
     last = batch[-1]["System"]["EventRecordID"]
     payload = json.dumps({"device_id": device_id, "events": batch}, separators=(",", ":")).encode()
     if len(payload) > MAX_BYTES + 4096:
