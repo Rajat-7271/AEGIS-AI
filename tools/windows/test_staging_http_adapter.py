@@ -73,3 +73,11 @@ def test_reject_private_fields(server):
 
 def test_reject_wrong_content_type(server):
     assert send(server, {"device_id": "test", "events": [event(1)]}, content_type="text/plain")[0] == 415
+
+
+def test_reject_device_spoofing(server):
+    assert send(server, {"device_id": "other-device", "events": [event(1)]})[0] == 403
+
+
+def test_reject_missing_device_id(server):
+    assert send(server, {"events": [event(1)]})[0] == 403
