@@ -260,3 +260,18 @@ each invocation would **not** be safe.
 
 This remains a deployment blocker. Current code intentionally fails closed
 for obvious record-ID regressions and does not claim to solve log resets.
+
+## Source epoch v2 contract (experimental; not connected)
+
+`source_epoch_contract.py` validates a versioned envelope containing
+`protocol_version: 2`, `device_id`, `channel: Security`, a lowercase
+32-hex-character `source_epoch`, and the same strict allowlisted event
+metadata. `staging_postgres_epoch_schema.sql` defines a **separate**
+`security_events_v2` table whose primary key includes the epoch.
+
+These files do not mint epochs, detect log resets, change exporter JSONL
+format, change checkpoints, accept remote v2 requests, or migrate v1 data.
+The source epoch must be derived and persisted by a future continuity
+manager that can fail closed when a reset cannot be verified. The
+32-hex-character format is a transport identifier, not evidence of
+continuity by itself. Existing local telemetry remains v1 and untouched.
