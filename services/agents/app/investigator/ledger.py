@@ -68,8 +68,9 @@ async def get_pool() -> asyncpg.Pool | None:
     try:
         _POOL = await asyncpg.create_pool(
             dsn=_normalise_dsn(dsn),
-            min_size=1,
-            max_size=4,
+            min_size=0,
+            max_size=1,
+            max_inactive_connection_lifetime=30,
             command_timeout=10,
         )
         logger.info("ledger.pool_initialised")
