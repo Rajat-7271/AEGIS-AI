@@ -10,11 +10,25 @@ import json
 import os
 import threading
 import time
+import socketserver
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from staging_receiver import MAX_REQUEST_BYTES, InvalidBatch, accept_batch, authorize
+
+
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    """Local harness: bound idle client lifetime and handler thread cleanup."""
+    daemon_threads = True
+    block_on_close = False
+    request_queue_size = 16
+    client_timeout_seconds = 10
+
+    def get_request(self):
+        sock, address = super().get_request()
+        sock.settimeout(self.client_timeout_seconds)
+        return sock, address
 
 
 def handler_factory(database: Path, expected_token: str, expected_device_id: str = "test-device",
@@ -101,9 +115,7 @@ def main():
         raise SystemExit("Set a valid AEGIS_WINDOWS_DEVICE_ID bound to this token")
     if not 1 <= args.port <= 65535:
         raise SystemExit("Invalid port")
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_factory(args.database, token, device_id))
-    server.daemon_threads = True
-    server.request_queue_size = 16
+    server = BoundedThreadingHTTPServer(("127.0.0.1", args.port), handler_factory(args.database, token, device_id))
     print(f"Loopback-only receiver listening on 127.0.0.1:{args.port}; no TLS, do not expose externally")
     try:
         server.serve_forever()
