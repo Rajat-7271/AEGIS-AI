@@ -123,3 +123,29 @@ def test_authenticated_http_to_real_postgres_and_replay(db):
         server.shutdown()
         server.server_close()
         worker.join(timeout=5)
+
+
+def test_real_postgres_concurrent_identical_replays(db):
+    """Two simultaneous transactions must not duplicate the same event."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    dsn = os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"]
+    device = "ci-" + uuid.uuid4().hex
+    payload = {"device_id": device, "events": [event(300), event(301)]}
+    barrier = Barrier(2)
+
+    def submit(_):
+        with psycopg.connect(dsn, autocommit=True, connect_timeout=5) as connection:
+            barrier.wait(timeout=10)
+            return accept_batch_postgres(connection, payload)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(submit, range(2)))
+    assert results == [{"accepted": True, "last_record_id": 301}] * 2
+    with db.cursor() as cursor:
+        cursor.execute(
+            "SELECT count(*) FROM windows_pilot.security_events WHERE device_id=%s",
+            (device,),
+        )
+        assert cursor.fetchone()[0] == 2
