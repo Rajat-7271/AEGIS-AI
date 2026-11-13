@@ -76,6 +76,8 @@ def load_state(path):
             if len(raw) > MAX_STATE_BYTES:
                 raise ContinuityError("Continuity state exceeds size limit")
         return validate_state(json.loads(raw.decode("utf-8")))
+    except ContinuityError:
+        raise
     except (OSError, ValueError, TypeError, UnicodeError) as exc:
         raise ContinuityError("Missing or invalid continuity state; manual recovery required") from exc
 
