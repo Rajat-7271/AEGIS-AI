@@ -102,3 +102,23 @@ def test_acknowledgement_must_match_last_record(monkeypatch):
     monkeypatch.setattr(sender.urllib.request, "build_opener", lambda *args: FakeOpener({"accepted": True, "last_record_id": 999}))
     with pytest.raises(ValueError, match="acknowledgement"):
         sender.send_batch("https://example.com/ingest", "token", "device", [event(1), event(2)])
+
+
+def test_rejects_corrupted_already_acknowledged_row(tmp_path):
+    bad = event(10, {"UnexpectedPrivateField": "secret"})
+    path = write_events(tmp_path, [bad, event(11)])
+    with pytest.raises(ValueError, match="acknowledged event metadata"):
+        sender.load_batch(path, 10)
+
+
+def test_dry_run_does_not_write_upload_checkpoint(tmp_path, monkeypatch, capsys):
+    import sys
+    events = write_events(tmp_path, [event(1)])
+    checkpoint = tmp_path / "upload.checkpoint"
+    monkeypatch.setattr(sys, "argv", [
+        "upload_security_events.py", "--events", str(events),
+        "--upload-checkpoint", str(checkpoint),
+    ])
+    sender.main()
+    assert "DRY RUN" in capsys.readouterr().out
+    assert not checkpoint.exists()
