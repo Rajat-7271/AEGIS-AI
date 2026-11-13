@@ -40,7 +40,8 @@ jobs:
             tools/windows/test_source_continuity.py \
             tools/windows/test_upload_security_events.py \
             tools/windows/test_upload_security_events_v2.py \
-            tools/windows/test_plan_v2_migration.py
+            tools/windows/test_plan_v2_migration.py \
+            tools/windows/test_prepare_v2_batch.py
 
   postgres-integration:
     name: Windows pilot PostgreSQL integration
