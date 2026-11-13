@@ -68,7 +68,7 @@ def test_reject_unauthorized(server):
 def test_reject_private_fields(server):
     row = event(1)
     row["EventData"] = {"TargetUserName": "secret"}
-    assert send(server, {"device_id": "test", "events": [row]})[0] == 400
+    assert send(server, {"device_id": "test-device", "events": [row]})[0] == 400
 
 
 def test_reject_wrong_content_type(server):
