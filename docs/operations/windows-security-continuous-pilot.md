@@ -157,3 +157,12 @@ integration still require separate milestone validation.
 
 The receiver suite now covers overlapping retries and rejection of a batch
 containing a later private-field event. Neither test requires real telemetry.
+
+## Loopback adapter request throttling
+
+The prototype adapter now limits authenticated requests to 60 per rolling
+minute by default, returning HTTP 429 when exceeded. The limit is scoped to
+the adapter process and resets on restart. It is **not** a replacement for
+staging gateway IP/device quotas, connection limits, distributed rate limits,
+or network-layer denial-of-service protection. Unauthorized requests are
+rejected before consuming the authenticated request quota.
