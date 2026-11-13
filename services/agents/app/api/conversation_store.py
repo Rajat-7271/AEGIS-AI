@@ -62,7 +62,7 @@ async def _pool() -> asyncpg.Pool:
     dsn = os.environ.get("DATABASE_URL", "").strip()
     if not dsn:
         raise ConversationStoreUnavailable("DATABASE_URL is not set.")
-    _POOL = await asyncpg.create_pool(dsn=_normalise_dsn(dsn), min_size=1, max_size=4, command_timeout=10)
+    _POOL = await asyncpg.create_pool(dsn=_normalise_dsn(dsn), min_size=0, max_size=1, max_inactive_connection_lifetime=30, command_timeout=10)
     return _POOL
 
 
