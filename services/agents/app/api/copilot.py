@@ -422,7 +422,7 @@ async def _get_openai_reply(
             logger.warning(
                 "copilot.unusable_completion",
                 model=model,
-                finish_reason=choice.get("finish_reason") if isinstance(choice.get("finish_reason"), str) else None,
+                finish_reason=choice.get("finish_reason") if choice.get("finish_reason") in ("stop", "length", "tool_calls", "function_call", "content_filter") else "other",
                 content_type=type(content).__name__,
                 has_refusal=bool(message.get("refusal")),
                 prompt_tokens=usage.get("prompt_tokens") if type(usage.get("prompt_tokens")) is int else None,
