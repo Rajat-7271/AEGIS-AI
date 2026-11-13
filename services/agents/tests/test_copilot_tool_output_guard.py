@@ -355,3 +355,30 @@ def test_event_id_list_is_educational_not_uncited_telemetry():
 def test_escaped_inline_code_line_outside_fence():
     raw = r"\`Turn on PowerShell Transcription\`"
     assert copilot._normalize_copilot_markdown(raw) == "`Turn on PowerShell Transcription`"
+
+
+@pytest.mark.asyncio
+async def test_copilot_security_guidance_reaches_provider_once(monkeypatch):
+    from app.llm import contract, factory
+
+    monkeypatch.setattr(factory, "resolve_model_alias", lambda role: "test-model")
+    monkeypatch.setattr(factory, "resolve_api_key", lambda model: "test-key")
+    monkeypatch.setattr(factory, "chat_completions_url", lambda model: "https://example.test/chat")
+    calls = []
+
+    async def fake_completion(**kwargs):
+        calls.append(kwargs)
+        return {"choices": [{"message": {"content": "Review the correlated logon evidence."}}]}
+
+    monkeypatch.setattr(contract, "safe_chat_completions_request", fake_completion)
+    reply, source, reason = await _get_openai_reply({"messages": []}, "Explain Windows events 4624 and 4672")
+    assert (reply, source, reason) == ("Review the correlated logon evidence.", "llm", None)
+    assert len(calls) == 1
+    system = calls[0]["messages"][0]["content"]
+    assert "Do not guess MITRE ATT&CK technique IDs" in system
+    assert "Event ID 4672 indicates special privileges" in system
+    assert "both the computer and logon ID" in system
+    assert "use valid syntax for the named platform" in system
+    assert [m["content"] for m in calls[0]["messages"] if m["role"] == "user"] == [
+        "Explain Windows events 4624 and 4672"
+    ]
