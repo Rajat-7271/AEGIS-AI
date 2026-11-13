@@ -10,11 +10,12 @@ import json
 import os
 from pathlib import Path
 import re
-import tempfile
+import stat
 
 from source_epoch_contract import validate_source_identity
 
 MARKER = re.compile(r"^[A-Za-z0-9._:-]{1,256}$")
+MAX_STATE_BYTES = 4096
 
 
 class ContinuityError(ValueError):
@@ -57,13 +58,25 @@ def verify_observation(state, *, log_instance, newest_record_id):
 
 
 def load_state(path):
+    """Read a small regular state file without following final-component links."""
     path = Path(path)
-    if path.is_symlink():
-        raise ContinuityError("Refusing symlink continuity state")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
     try:
-        with path.open("r", encoding="utf-8") as handle:
-            return validate_state(json.load(handle))
-    except (OSError, ValueError, TypeError) as exc:
+        if path.is_symlink():
+            raise ContinuityError("Refusing symlink continuity state")
+        fd = os.open(path, flags)
+        with os.fdopen(fd, "rb") as handle:
+            metadata = os.fstat(handle.fileno())
+            if not stat.S_ISREG(metadata.st_mode):
+                raise ContinuityError("Continuity state must be a regular file")
+            if metadata.st_size > MAX_STATE_BYTES:
+                raise ContinuityError("Continuity state exceeds size limit")
+            raw = handle.read(MAX_STATE_BYTES + 1)
+            if len(raw) > MAX_STATE_BYTES:
+                raise ContinuityError("Continuity state exceeds size limit")
+        return validate_state(json.loads(raw.decode("utf-8")))
+    except (OSError, ValueError, TypeError, UnicodeError) as exc:
         raise ContinuityError("Missing or invalid continuity state; manual recovery required") from exc
 
 
