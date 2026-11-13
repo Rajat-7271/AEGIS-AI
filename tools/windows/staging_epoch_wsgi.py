@@ -102,7 +102,13 @@ def application(environ, start_response):
                     cursor.execute(
                         "SELECT has_table_privilege(current_user, 'windows_pilot.security_events_v2', 'SELECT') "
                         "AND has_table_privilege(current_user, 'windows_pilot.security_events_v2', 'INSERT') "
-                        "AND pg_has_role(current_user, 'windows_security_receiver', 'USAGE')"
+                        "AND pg_has_role(current_user, 'windows_security_receiver', 'USAGE') "
+                        "AND NOT r.rolsuper AND NOT r.rolbypassrls "
+                        "AND c.relrowsecurity AND c.relowner <> r.oid "
+                        "AND NOT pg_has_role(current_user, c.relowner, 'USAGE') "
+                        "FROM pg_roles r CROSS JOIN pg_class c "
+                        "WHERE r.rolname=current_user "
+                        "AND c.oid='windows_pilot.security_events_v2'::regclass"
                     )
                     ready = cursor.fetchone()[0] is True
             if not ready:

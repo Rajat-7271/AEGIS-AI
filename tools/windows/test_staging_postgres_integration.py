@@ -364,7 +364,7 @@ def test_concurrent_epoch_replays_commit_once(db):
     assert db.execute("SELECT count(*) FROM windows_pilot.security_events_v2 WHERE device_id=%s", (device,)).fetchone()[0] == 2
 
 
-def test_wsgi_real_http_receipts_auth_and_postgres(db, monkeypatch):
+def test_wsgi_real_http_receipts_auth_and_postgres(db, monkeypatch, tmp_path):
     """Exercise the deployable WSGI path through actual HTTP and PostgreSQL."""
     import json
     import threading
@@ -408,6 +408,11 @@ def test_wsgi_real_http_receipts_auth_and_postgres(db, monkeypatch):
     try:
         route = "/v2/windows-security/status"
         assert request("/v2/health/ready") == (200, {"ready": True})
+        # Membership alone must not certify an owner/superuser connection.
+        restricted_dsn = os.environ["AEGIS_WINDOWS_STAGING_DATABASE_URL"]
+        monkeypatch.setenv("AEGIS_WINDOWS_STAGING_DATABASE_URL", os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"])
+        assert request("/v2/health/ready") == (503, {"ready": False})
+        monkeypatch.setenv("AEGIS_WINDOWS_STAGING_DATABASE_URL", restricted_dsn)
         assert request(route, credential="wrong")[0] == 401
         assert request(route)[1]["events_received"] == 0
         batch = {"protocol_version": 2, "device_id": device, "channel": "Security", "source_epoch": "f" * 32, "events": [event(41)]}
@@ -420,6 +425,37 @@ def test_wsgi_real_http_receipts_auth_and_postgres(db, monkeypatch):
         assert status["last_received_at"] is not None
         assert status["scope"] == "staging_metadata"
         assert status["detection_pipeline"] == "not_connected"
+        # A committed HTTP receipt followed by a local acknowledgement failure
+        # must replay the exact batch after restart without multiplying rows.
+        from collector import Spool
+
+        spool_path = tmp_path / "synthetic-spool.sqlite"
+        with Spool(spool_path) as spool:
+            spool.initialize(device, 40, "a" * 64)
+            spool.collect(
+                {
+                    "previous_record_id": 40,
+                    "previous_hash": "a" * 64,
+                    "record_id": 41,
+                    "record_hash": "b" * 64,
+                    "events": [event(41)],
+                }
+            )
+            pending = spool.pending()
+            receipt = request(ingest, pending)
+            assert receipt == (200, {"accepted": True, "last_record_id": 41})
+            spool.db.execute("CREATE TRIGGER ack_failure BEFORE UPDATE ON source BEGIN SELECT RAISE(ABORT, 'synthetic disk failure'); END")
+            with pytest.raises(Exception, match="synthetic disk failure"):
+                spool.acknowledge(pending, receipt[1]["last_record_id"])
+            assert spool.status() == {"pending": 1, "acknowledged": 0}
+            spool.db.execute("DROP TRIGGER ack_failure")
+        with Spool(spool_path) as spool:
+            assert spool.pending() == pending
+            receipt = request(ingest, spool.pending())
+            spool.acknowledge(spool.pending(), receipt[1]["last_record_id"])
+            assert spool.status() == {"pending": 0, "acknowledged": 1}
+        assert request(route)[1]["events_received"] == 2
+        assert request(route)[1]["source_epochs"] == 2
         assert request(ingest, {**batch, "events": [event(41, "conflict")]})[0] == 400
         monkeypatch.setenv("AEGIS_WINDOWS_STAGING_DATABASE_URL", "postgresql://127.0.0.1:1/unavailable")
         assert request(route)[0] == 503
