@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import json
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from source_epoch_contract import SourceIdentityError
 from staging_receiver import MAX_REQUEST_BYTES, InvalidBatch, authorize
@@ -50,9 +53,28 @@ def application(environ, start_response):
                     cursor.execute("SELECT to_regclass('windows_pilot.security_events_v2')")
                     ready = cursor.fetchone()[0] is not None
             if not ready:
+                logger.warning("staging_readiness_failure category=schema_missing")
                 return _reply(start_response, "503 Service Unavailable", {"ready": False})
             return _reply(start_response, "200 OK", {"ready": True})
-        except Exception:
+        except Exception as exc:
+            # Never log exception text, DSNs, credentials, hostnames, or SQL.
+            category = "database_error"
+            sqlstate = getattr(exc, "sqlstate", None)
+            if sqlstate == "28P01":
+                category = "database_auth_failed"
+            elif sqlstate == "42501":
+                category = "database_permission_denied"
+            elif sqlstate == "3D000":
+                category = "database_not_found"
+            elif sqlstate == "42P01":
+                category = "schema_missing"
+            elif isinstance(exc, (TimeoutError, ConnectionError)):
+                category = "connection_timeout_or_network"
+            else:
+                name = type(exc).__name__
+                if name in ("OperationalError", "InterfaceError"):
+                    category = "database_connection_failed"
+            logger.warning("staging_readiness_failure category=%s", category)
             return _reply(start_response, "503 Service Unavailable", {"ready": False})
     if environ.get("CONTENT_TYPE", "").split(";")[0].strip().lower() != "application/json":
         return _reply(start_response, "415 Unsupported Media Type", {"error": "content_type"})
