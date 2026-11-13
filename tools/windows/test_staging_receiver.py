@@ -73,3 +73,22 @@ def test_device_token_check():
     for provided in ("", "incorrect"):
         with pytest.raises(PermissionError):
             receiver.authorize(provided, "correct")
+
+
+def test_duplicate_replay_does_not_increase_rows(tmp_path):
+    db = tmp_path / "events.sqlite"
+    first = payload(make_event(101), make_event(102))
+    receiver.accept_batch(db, first)
+    receiver.accept_batch(db, first)
+    receiver.accept_batch(db, payload(make_event(102), make_event(103)))
+    assert count(db) == 3
+
+
+def test_invalid_later_event_does_not_partially_persist(tmp_path):
+    db = tmp_path / "events.sqlite"
+    first = make_event(201)
+    second = make_event(202)
+    second["EventData"] = {"CommandLine": "private"}
+    with pytest.raises(receiver.InvalidBatch):
+        receiver.accept_batch(db, payload(first, second))
+    assert not db.exists() or count(db) == 0
