@@ -175,3 +175,24 @@ This reduces the impact of stalled local clients and makes shutdown more
 predictable. It does not impose a strict cap on simultaneously running
 handlers and is **not** a public-network security boundary. A real staging
 deployment must enforce connection limits and timeouts at its HTTPS gateway.
+
+## Isolated PostgreSQL staging storage (not deployed)
+
+`tools/windows/staging_postgres_schema.sql` defines a dedicated
+`windows_pilot.security_events` table with a composite idempotency key.
+`tools/windows/staging_postgres_receiver.py` provides a transactional
+persistence function: validate the allowlisted metadata, insert events,
+compare conflicting replays, commit, and only then return the final record
+acknowledgement. It is **not wired to a public HTTPS route**.
+
+The PostgreSQL adapter expects a psycopg 3 connection supplied by a
+staging-only service; importing the module does not open a database
+connection. Its offline tests simulate transaction rollback and replay.
+Actual PostgreSQL integration tests, staging credentials, database role
+permissions, and connection management remain outstanding.
+
+**Do not apply this SQL to the production Supabase database.** Provision
+an isolated staging database and least-privilege service role only after
+explicit staging deployment approval. The existing record identity does
+not yet include a log-reset/source epoch; production-grade ingestion
+requires this before unrestricted use.
