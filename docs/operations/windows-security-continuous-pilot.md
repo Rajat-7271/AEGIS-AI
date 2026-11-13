@@ -145,3 +145,15 @@ and tested together:
 The local sender continues to default to dry run, and now checks the shape
 of historical rows even when their record IDs are below its separate upload
 checkpoint. This protects against silently overlooking modified event files.
+
+## Automated validation
+
+The dedicated `.github/workflows/windows-security-pilot.yml` workflow runs
+the Python sender, receiver, and HTTP adapter tests automatically for changes
+under `tools/windows/` and for workflow edits. It runs without staging
+credentials or Windows Security log access. This replaces repeated manual
+invocations of the offline tests; real Windows collection and remote staging
+integration still require separate milestone validation.
+
+The receiver suite now covers overlapping retries and rejection of a batch
+containing a later private-field event. Neither test requires real telemetry.
