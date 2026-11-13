@@ -38,7 +38,8 @@ jobs:
             tools/windows/test_staging_postgres_receiver.py \
             tools/windows/test_source_epoch_contract.py \
             tools/windows/test_source_continuity.py \
-            tools/windows/test_upload_security_events.py
+            tools/windows/test_upload_security_events.py \
+            tools/windows/test_upload_security_events_v2.py
 
   postgres-integration:
     name: Windows pilot PostgreSQL integration
