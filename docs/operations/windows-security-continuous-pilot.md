@@ -228,3 +228,14 @@ it with production credentials. The uploader's HTTPS requirement remains
 unchanged. The handler tests verify that authentication and device binding
 happen before the storage callback and that storage errors do not produce
 successful acknowledgements.
+
+## End-to-end local HTTP and PostgreSQL CI test
+
+The dedicated PostgreSQL CI job now includes an integration test that
+starts the bounded loopback HTTP adapter with a PostgreSQL persistence
+callback and exercises bearer authentication, device spoof rejection,
+successful acknowledgement after commit, idempotent HTTP replay, and
+conflicting replay rejection. It verifies the committed database rows
+directly afterward. This uses only synthetic test metadata and an ephemeral
+CI PostgreSQL container. It is not a remote HTTPS test and does not access
+real Windows Security logs or the production database.
