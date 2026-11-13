@@ -5,7 +5,6 @@ Not a public service. Do not proxy to the internet or use production DB.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 from pathlib import Path
 
