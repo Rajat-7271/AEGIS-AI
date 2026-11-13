@@ -35,4 +35,5 @@ jobs:
           python -m pytest -q -o asyncio_default_fixture_loop_scope=function \
             tools/windows/test_staging_http_adapter.py \
             tools/windows/test_staging_receiver.py \
+            tools/windows/test_staging_postgres_receiver.py \
             tools/windows/test_upload_security_events.py
