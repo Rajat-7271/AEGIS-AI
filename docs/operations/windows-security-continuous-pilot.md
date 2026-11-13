@@ -211,3 +211,20 @@ outside the dedicated CI job when no isolated database is configured.
 A passing CI job establishes database-adapter behavior, **not** end-to-end
 HTTPS delivery, device authentication at a public gateway, or dashboard
 integration.
+
+## Local HTTP-to-PostgreSQL harness
+
+`tools/windows/staging_postgres_http_adapter.py` wires the existing
+authenticated HTTP handler to `accept_batch_postgres` using a fresh psycopg
+connection per request. It is intentionally bound to `127.0.0.1`, requires
+`AEGIS_WINDOWS_TEST_DATABASE_URL`, `AEGIS_WINDOWS_STAGING_TOKEN`, and
+`AEGIS_WINDOWS_DEVICE_ID`, and must only be used with an isolated test
+database whose schema was applied separately. No database schema is
+automatically created by the adapter.
+
+This is a **local test harness without TLS**. Do not expose it publicly,
+proxy it to the internet, point the uploader at it over HTTP, or configure
+it with production credentials. The uploader's HTTPS requirement remains
+unchanged. The handler tests verify that authentication and device binding
+happen before the storage callback and that storage errors do not produce
+successful acknowledgements.
