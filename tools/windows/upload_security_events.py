@@ -43,8 +43,10 @@ def load_batch(path: Path, acknowledged: int, limit: int = MAX_BATCH) -> list[di
                 raise ValueError("Out-of-order or duplicate unacknowledged record")
             if system.get("Channel") != "Security" or system.get("EventID") not in (4624, 4625, 4672, 4688, 4720, 1102):
                 raise ValueError("Unexpected event channel or ID")
-            if event.get("EventData") != {}:
-                raise ValueError("Refusing to upload event data fields")
+            if set(event) != {"System", "EventData"} or event.get("EventData") != {}:
+                raise ValueError("Refusing to upload unexpected event fields")
+            if set(system) != {"EventID", "Channel", "Computer", "EventRecordID", "TimeCreated", "Provider"}:
+                raise ValueError("Refusing to upload unexpected System fields")
             encoded = json.dumps(event, separators=(",", ":")).encode("utf-8")
             if len(encoded) > MAX_BYTES:
                 raise ValueError("Single event exceeds maximum payload")
