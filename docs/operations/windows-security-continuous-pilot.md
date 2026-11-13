@@ -196,3 +196,18 @@ an isolated staging database and least-privilege service role only after
 explicit staging deployment approval. The existing record identity does
 not yet include a log-reset/source epoch; production-grade ingestion
 requires this before unrestricted use.
+
+## Ephemeral PostgreSQL CI validation
+
+The `postgres-integration` GitHub Actions job launches a temporary
+PostgreSQL 16 service container with a non-production test credential,
+applies the isolated `windows_pilot` schema, and verifies transactional
+acknowledgement, duplicate replay, and conflict rollback using psycopg 3.
+The database is discarded after the job. It does not connect to Supabase,
+use repository secrets, or deploy any receiver.
+
+The tests are gated by `AEGIS_WINDOWS_TEST_DATABASE_URL` and are skipped
+outside the dedicated CI job when no isolated database is configured.
+A passing CI job establishes database-adapter behavior, **not** end-to-end
+HTTPS delivery, device authentication at a public gateway, or dashboard
+integration.
