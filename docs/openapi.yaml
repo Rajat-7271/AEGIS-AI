@@ -21205,6 +21205,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/windows-security/status:
+    get:
+      tags:
+      - windows-security
+      summary: Staging Status
+      operationId: staging_status_api_v1_windows_security_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Staging Status Api V1 Windows Security Status Get
+      security:
+      - HTTPBearer: []
   /api/v1/war-rooms/cases/{case_id}:
     post:
       tags:

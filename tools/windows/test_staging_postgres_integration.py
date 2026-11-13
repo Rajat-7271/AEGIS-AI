@@ -1,4 +1,9 @@
-"""Real PostgreSQL transaction tests; run only with isolated CI test database."""
+"""Real PostgreSQL transaction tests; run only with isolated CI test database.
+
+DATABASE_MIGRATION_URL is used for schema creation and cross-device seeding.
+The v2 RLS/HTTP tests explicitly switch to the non-owner receiver capability;
+API authentication tests use AEGIS_WINDOWS_TEST_DATABASE_URL separately.
+"""
 
 import os
 import sys
@@ -30,7 +35,7 @@ def event(record, provider="Microsoft-Windows-Security-Auditing"):
 
 @pytest.fixture
 def db():
-    dsn = os.environ.get("AEGIS_WINDOWS_TEST_DATABASE_URL")
+    dsn = os.environ.get("DATABASE_MIGRATION_URL")
     if not dsn:
         pytest.skip("No isolated PostgreSQL test database configured")
     with psycopg.connect(dsn, autocommit=True) as conn:
@@ -83,7 +88,7 @@ def test_authenticated_http_to_real_postgres_and_replay(db):
 
     from staging_http_adapter import BoundedThreadingHTTPServer, handler_factory
 
-    dsn = os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"]
+    dsn = os.environ["DATABASE_MIGRATION_URL"]
     device = "ci-" + uuid.uuid4().hex
     token = "local-ci-test-token-" + uuid.uuid4().hex
 
@@ -135,7 +140,7 @@ def test_real_postgres_concurrent_identical_replays(db):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
 
-    dsn = os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"]
+    dsn = os.environ["DATABASE_MIGRATION_URL"]
     device = "ci-" + uuid.uuid4().hex
     payload = {"device_id": device, "events": [event(300), event(301)]}
     barrier = Barrier(2)
@@ -234,7 +239,7 @@ def test_epoch_http_postgres_ingestion_and_replay(db):
     from staging_postgres_epoch_receiver import accept_epoch_batch_postgres
 
     db.execute((Path(__file__).parent / "staging_postgres_epoch_schema.sql").read_text())
-    dsn = os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"]
+    dsn = os.environ["DATABASE_MIGRATION_URL"]
     device = "ci-" + uuid.uuid4().hex
     token = "local-test-" + uuid.uuid4().hex
 
@@ -301,7 +306,7 @@ def test_epoch_rls_receiver_role_can_ingest_replay_and_read_only_its_device(db):
     other = "ci-" + uuid.uuid4().hex
     batch = {"protocol_version": 2, "device_id": device, "channel": "Security", "source_epoch": "d" * 32, "events": [event(21)]}
     accept_epoch_batch_postgres(db, {**batch, "device_id": other})
-    with psycopg.connect(os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"], autocommit=True) as conn:
+    with psycopg.connect(os.environ["DATABASE_MIGRATION_URL"], autocommit=True) as conn:
         conn.execute("SET ROLE windows_security_receiver")
         assert accept_epoch_batch_postgres(conn, batch)["accepted"] is True
         assert accept_epoch_batch_postgres(conn, batch)["accepted"] is True
@@ -355,7 +360,7 @@ def test_concurrent_epoch_replays_commit_once(db):
     batch = {"protocol_version": 2, "device_id": device, "channel": "Security", "source_epoch": "b" * 32, "events": [event(51), event(52)]}
 
     def receive(_):
-        with psycopg.connect(os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"], autocommit=True) as connection:
+        with psycopg.connect(os.environ["DATABASE_MIGRATION_URL"], autocommit=True) as connection:
             connection.execute("SET ROLE windows_security_receiver")
             return accept_epoch_batch_postgres(connection, batch)
 
@@ -387,7 +392,7 @@ def test_wsgi_real_http_receipts_auth_and_postgres(db, monkeypatch, tmp_path):
 
     monkeypatch.setenv(
         "AEGIS_WINDOWS_STAGING_DATABASE_URL",
-        make_conninfo(os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"], options="-c role=windows_security_receiver"),
+        make_conninfo(os.environ["DATABASE_MIGRATION_URL"], options="-c role=windows_security_receiver"),
     )
     server = make_server("127.0.0.1", 0, application, handler_class=Quiet)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -410,7 +415,7 @@ def test_wsgi_real_http_receipts_auth_and_postgres(db, monkeypatch, tmp_path):
         assert request("/v2/health/ready") == (200, {"ready": True})
         # Membership alone must not certify an owner/superuser connection.
         restricted_dsn = os.environ["AEGIS_WINDOWS_STAGING_DATABASE_URL"]
-        monkeypatch.setenv("AEGIS_WINDOWS_STAGING_DATABASE_URL", os.environ["AEGIS_WINDOWS_TEST_DATABASE_URL"])
+        monkeypatch.setenv("AEGIS_WINDOWS_STAGING_DATABASE_URL", os.environ["DATABASE_MIGRATION_URL"])
         assert request("/v2/health/ready") == (503, {"ready": False})
         monkeypatch.setenv("AEGIS_WINDOWS_STAGING_DATABASE_URL", restricted_dsn)
         assert request(route, credential="wrong")[0] == 401

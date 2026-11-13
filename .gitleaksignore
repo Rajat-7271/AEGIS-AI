@@ -159,3 +159,9 @@ services/api/tests/test_evidence_bundle.py:generic-api-key:26
 # generated lock file.
 detections/rule-ids.lock.json:generic-api-key:841
 detections/rule-ids.lock.json:generic-api-key:854
+
+# Blueprint environment-variable name AISOC_DISABLE_KAFKA (line 69), not a
+# credential or value. Gitleaks 8.21.2 interprets the YAML key declaration
+# as generic-api-key; its configured value is the Boolean "true".
+# Only this file/rule/line is excluded; secret-bearing env vars use sync: false.
+infra/render/staging-api.yaml:generic-api-key:69
