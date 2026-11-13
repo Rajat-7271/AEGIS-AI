@@ -60,6 +60,10 @@ then the Connectors panel for the authorized tenant. Verify another tenant sees
 
 ## Detection and alerting integration design
 
+The [local synthetic bridge follow-up](windows-security-synthetic-bridge.md)
+records the isolated prototype, current validation, and remaining deployment
+gates. The retained receipts remain disconnected.
+
 The staging receiver deliberately has no Kafka publisher or alert promotion.
 `services/connectors/app/connectors/windows_event.py` already normalizes Windows
 envelopes and lifts System/EventData into `raw_event`. Its record-only external ID
