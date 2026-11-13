@@ -397,3 +397,35 @@ without modifying ACLs; it requires an existing state file.
 durable log-instance identity and safe checkpoint/epoch transition exist.
 Neither probe writes credentials, changes local files, or enables a
 network listener. Do not expose the loopback HTTP prototype publicly.
+
+## Dedicated HTTPS staging receiver (not deployed)
+
+`tools/windows/staging_epoch_wsgi.py` is a separate v2 WSGI
+application intended to run behind a managed HTTPS ingress. It does
+not import the production API or accept v1 payloads. It checks a
+device-bound bearer credential, request size, and v2 envelope before
+opening a PostgreSQL connection; writes commit before the HTTP 200
+acknowledgement. Its connection variable is
+`AEGIS_WINDOWS_STAGING_DATABASE_URL`, not the production database URL.
+
+For a dedicated staging service with a trusted managed TLS ingress,
+set the root directory to the repository root, install dependencies
+from `tools/windows/staging-requirements.txt`, and use:
+
+```sh
+gunicorn --chdir tools/windows staging_epoch_wsgi:application --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 4 --timeout 30 --access-logfile -
+```
+
+Provision a **separate staging-only PostgreSQL database** and apply
+`staging_postgres_epoch_schema.sql` there before starting. Configure
+`AEGIS_WINDOWS_STAGING_DATABASE_URL`,
+`AEGIS_WINDOWS_STAGING_TOKEN` (random 32+ characters), and
+`AEGIS_WINDOWS_DEVICE_ID` as staging secrets. Configure a managed
+HTTPS domain and restrict access; no direct plain-HTTP internet
+exposure. The endpoint is `POST /v2/windows-security/events`.
+The service should not auto-deploy from this development branch.
+
+**Not activated:** No staging database, hosted TLS endpoint, or
+credentials have been provisioned by these commits. The real Windows
+sender is still blocked by the unverified log-instance identity.
+Do not generate a random epoch to paper over this blocker.
