@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "fix/investigation-startup": false
+    }
+  },
   "headers": [
     {
       "source": "/api/(.*)",
