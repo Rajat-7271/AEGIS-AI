@@ -1,0 +1,39 @@
+name: Investigator diagnostics tests
+
+on:
+  pull_request:
+    branches: [release/public-mvp]
+    paths:
+      - "services/agents/app/investigator/**"
+      - "services/agents/tests/test_investigator_llm_response_diagnostics.py"
+      - "services/agents/pyproject.toml"
+      - "services/agents/poetry.lock"
+      - ".github/workflows/investigator-diagnostics.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: investigator-diagnostics-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  focused-tests:
+    name: Investigator diagnostics unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/agents
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+          cache: poetry
+          cache-dependency-path: services/agents/poetry.lock
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install locked agent dependencies
+        run: poetry install --with dev --no-root
+      - name: Run focused diagnostics tests
+        run: poetry run pytest tests/test_investigator_llm_response_diagnostics.py -q
