@@ -1502,7 +1502,12 @@ async def update_task(
 
 async def _agents_proxy(method: str, path: str, **kwargs: Any) -> httpx.Response:
     safe_path = _validate_agents_path(path)
-    url = f"{_AGENTS_URL}{safe_path}"
+    # Render's internal hostport discovery value has no URL scheme.
+    # Explicit HTTP(S) origins retain their scheme and optional path prefix.
+    origin = _AGENTS_URL.strip().rstrip("/")
+    if "://" not in origin:
+        origin = f"http://{origin}"
+    url = f"{origin}{safe_path}"
     timeout = kwargs.pop("timeout", 30.0)
     headers = dict(kwargs.pop("headers", None) or {})
     if _AGENTS_SERVICE_TOKEN:
@@ -1659,51 +1664,24 @@ async def case_investigate(
     # is scoped by tenant_id, so without this the whole run is never persisted.
     # Service-token path requires the acting tenant on the header, not just
     # in the body: tenant_scope refuses a service token with no tenant.
-    # The agents service stores raw_alert on the run and every downstream
-    # agent reads it; forwarding {} meant the forensic/report models got an
-    # empty payload and filled the gap with fabricated artefacts
-    # (C:\\Windows\\Temp\\malware.exe and friends). Load the case's linked
-    # alerts and pass their real content, truncated so the prompt stays
-    # bounded and free of multi-MB raw blobs.
-    raw_alert_payload: dict[str, Any] = {}
-    try:
-        if case_alert_ids:
-            rows = (
-                (
-                    await db.execute(
-                        text(
-                            "SELECT id, title, description, severity, connector_type, "
-                            "affected_ips, affected_hosts, affected_users, event_time, raw_event "
-                            "FROM alerts WHERE id::text = ANY(:ids) AND tenant_id = :tenant_id "
-                            "ORDER BY event_time DESC LIMIT 3"
-                        ).bindparams(ids=case_alert_ids, tenant_id=user.tenant_id)
-                    )
-                )
-                .mappings()
-                .all()
-            )
-            alerts_out = []
-            for r in rows:
-                raw = r["raw_event"] if isinstance(r["raw_event"], dict) else {}
-                full_log = raw.get("full_log") or ""
-                alerts_out.append(
-                    {
-                        "id": str(r["id"]),
-                        "title": r["title"],
-                        "description": (r["description"] or "")[:1000],
-                        "severity": r["severity"],
-                        "source": r["connector_type"],
-                        "affected_ips": list(r["affected_ips"] or [])[:20],
-                        "affected_hosts": list(r["affected_hosts"] or [])[:20],
-                        "affected_users": list(r["affected_users"] or [])[:20],
-                        "event_time": r["event_time"].isoformat() if r["event_time"] else None,
-                        "full_log": str(full_log)[:4000],
-                    }
-                )
-            if alerts_out:
-                raw_alert_payload = {"alerts": alerts_out}
-    except Exception:  # noqa: BLE001 - never block launch on enrichment
-        logger.warning("investigate.launch.raw_alert_enrichment_failed case_id=%s", cid, exc_info=True)
+    # Preserve the canonical evidence assembled above, including raw events
+    # and truncation metadata. A second projection discarded that evidence.
+    raw_alert_payload = raw_alert
+
+    # Only accepted launches advance workflow state. A connection failure or
+    # upstream rejection must leave the case and linked alerts unchanged.
+    resp = await _agents_proxy(
+        "POST",
+        f"/api/v1/cases/{cid}/investigate",
+        json={
+            "alert_summary": summary,
+            "raw_alert": raw_alert_payload,
+            "tenant_id": str(user.tenant_id),
+        },
+        headers={"X-AiSOC-Tenant-ID": str(user.tenant_id)},
+    )
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
     # Launching an agent investigation IS an analyst action: advance
     # new/triaged cases to 'investigating' in the same request so the
@@ -1758,18 +1736,6 @@ async def case_investigate(
             await db.rollback()
             logger.warning("investigate.launch.alerts_advance_failed case_id=%s", cid, exc_info=True)
 
-    resp = await _agents_proxy(
-        "POST",
-        f"/api/v1/cases/{cid}/investigate",
-        json={
-            "alert_summary": summary,
-            "raw_alert": raw_alert_payload,
-            "tenant_id": str(user.tenant_id),
-        },
-        headers={"X-AiSOC-Tenant-ID": str(user.tenant_id)},
-    )
-    if resp.status_code >= 400:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
     return resp.json()
 
 
@@ -2066,9 +2032,7 @@ async def case_investigation_pdf(
     safe_run_id = quote(run_id, safe="")
     headers = {"X-AiSOC-Tenant-ID": str(user.tenant_id)}
 
-    meta = await _agents_proxy(
-        "GET", f"/api/v1/investigations/{safe_run_id}", headers=headers
-    )
+    meta = await _agents_proxy("GET", f"/api/v1/investigations/{safe_run_id}", headers=headers)
     if meta.status_code >= 400:
         raise HTTPException(status_code=meta.status_code, detail=meta.text)
     run_case_id = meta.json().get("case_id")
@@ -2078,14 +2042,13 @@ async def case_investigation_pdf(
             detail="Investigation run not found for this case",
         )
 
-    html_resp = await _agents_proxy(
-        "GET", f"/api/v1/investigations/{safe_run_id}/report.html", headers=headers
-    )
+    html_resp = await _agents_proxy("GET", f"/api/v1/investigations/{safe_run_id}/report.html", headers=headers)
     if html_resp.status_code >= 400:
         raise HTTPException(status_code=html_resp.status_code, detail=html_resp.text)
 
     try:
         from weasyprint import HTML
+
         pdf_bytes = HTML(string=html_resp.text).write_pdf()
     except (ImportError, OSError) as exc:
         logger.exception("investigation_pdf.renderer_unavailable")
@@ -2105,10 +2068,7 @@ async def case_investigation_pdf(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={
-            "Content-Disposition":
-                f'attachment; filename="case-{safe_case_id}-{safe_run_id_filename}.pdf"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="case-{safe_case_id}-{safe_run_id_filename}.pdf"'},
     )
 
 
